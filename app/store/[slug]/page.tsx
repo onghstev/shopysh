@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Store, Package, Search, Tag, ChevronRight, Star, MapPin, Globe, Mail, Phone, User, Sparkles, ShoppingBag } from 'lucide-react';
+import { Store, Package, Search, Tag, ChevronRight, Star, MapPin, Mail, Phone, User, ShoppingBag, Sparkles } from 'lucide-react';
 
 interface Props {
   params: { slug: string };
@@ -58,7 +58,7 @@ async function getStoreData(slug: string) {
 }
 
 function getCurrencySymbol(c: string) {
-  const s: Record<string, string> = { NGN: '\u20a6', USD: '$', GHS: 'GH\u20b5', KES: 'KSh' };
+  const s: Record<string, string> = { NGN: '₦', USD: '$', GHS: 'GH₵', KES: 'KSh' };
   return s[c] ?? c + ' ';
 }
 
@@ -71,26 +71,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!data) return { title: 'Store Not Found' };
   const { store, products } = data;
   const desc = store.description
-    ? `${store.description} \u2014 Browse ${products.length} products from ${store.name}${store.city ? ` in ${store.city}` : ''}${store.country ? `, ${store.country}` : ''}.`
+    ? `${store.description} — Browse ${products.length} products from ${store.name}${store.city ? ` in ${store.city}` : ''}${store.country ? `, ${store.country}` : ''}.`
     : `Shop ${products.length} products from ${store.name}${store.industry ? `, a ${store.industry} business` : ''}${store.city ? ` in ${store.city}` : ''}${store.country ? `, ${store.country}` : ''}. Quality products at great prices.`;
-
   return {
-    title: `${store.name} | Shop Online \u2014 ${store.industry ?? 'Products'}${store.city ? ` in ${store.city}` : ''}`,
+    title: `${store.name} | Shop Online — ${store.industry ?? 'Products'}${store.city ? ` in ${store.city}` : ''}`,
     description: desc.slice(0, 160),
     openGraph: {
-      title: `${store.name} \u2014 Online Store`,
+      title: `${store.name} — Online Store`,
       description: desc.slice(0, 200),
       type: 'website',
       ...(store.logoUrl ? { images: [{ url: store.logoUrl, alt: store.name }] } : {}),
     },
-    twitter: {
-      card: 'summary_large_image',
-      title: `${store.name} \u2014 Online Store`,
-      description: desc.slice(0, 200),
-    },
-    alternates: {
-      canonical: `/store/${store.subdomain}`,
-    },
+    twitter: { card: 'summary_large_image', title: `${store.name} — Online Store`, description: desc.slice(0, 200) },
+    alternates: { canonical: `/store/${store.subdomain}` },
   };
 }
 
@@ -103,120 +96,36 @@ export default async function StorePage({ params, searchParams }: Props) {
   const searchQuery = searchParams.q?.toLowerCase();
 
   let filteredProducts = products;
-  if (selectedCategory) {
-    filteredProducts = filteredProducts.filter((p: any) => p.category?.id === selectedCategory);
-  }
-  if (searchQuery) {
-    filteredProducts = filteredProducts.filter((p: any) =>
-      p.name.toLowerCase().includes(searchQuery) ||
-      (p.description?.toLowerCase().includes(searchQuery))
-    );
-  }
+  if (selectedCategory) filteredProducts = filteredProducts.filter((p: any) => p.category?.id === selectedCategory);
+  if (searchQuery) filteredProducts = filteredProducts.filter((p: any) =>
+    p.name.toLowerCase().includes(searchQuery) || p.description?.toLowerCase().includes(searchQuery)
+  );
 
   const featuredProducts = filteredProducts.filter((p: any) => p.isFeatured);
   const regularProducts = filteredProducts.filter((p: any) => !p.isFeatured);
 
-  // Build JSON-LD structured data
   const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Store',
-    name: store.name,
+    '@context': 'https://schema.org', '@type': 'Store', name: store.name,
     description: store.description || `${store.name} online store`,
     ...(store.logoUrl ? { image: store.logoUrl } : {}),
     ...(store.phone ? { telephone: store.phone } : {}),
     ...(store.email ? { email: store.email } : {}),
     ...(store.website ? { url: store.website } : {}),
-    ...(store.address || store.city || store.country ? {
-      address: {
-        '@type': 'PostalAddress',
-        ...(store.address ? { streetAddress: store.address } : {}),
-        ...(store.city ? { addressLocality: store.city } : {}),
-        ...(store.state ? { addressRegion: store.state } : {}),
-        ...(store.country ? { addressCountry: store.country } : {}),
-      },
-    } : {}),
-    ...(store.industry ? { '@additionalType': store.industry } : {}),
-    hasOfferCatalog: {
-      '@type': 'OfferCatalog',
-      name: `${store.name} Products`,
-      numberOfItems: products.length,
-      itemListElement: products.slice(0, 20).map((p: any, i: number) => ({
-        '@type': 'ListItem',
-        position: i + 1,
-        item: {
-          '@type': 'Product',
-          name: p.name,
-          ...(p.description ? { description: p.description.slice(0, 200) } : {}),
-          ...(p.image ? { image: p.image } : {}),
-          offers: {
-            '@type': 'Offer',
-            price: p.price,
-            priceCurrency: p.currency,
-            availability: p.stockQuantity > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-          },
-        },
-      })),
-    },
+    ...(store.address || store.city || store.country ? { address: { '@type': 'PostalAddress', ...(store.address ? { streetAddress: store.address } : {}), ...(store.city ? { addressLocality: store.city } : {}), ...(store.state ? { addressRegion: store.state } : {}), ...(store.country ? { addressCountry: store.country } : {}) } } : {}),
+    hasOfferCatalog: { '@type': 'OfferCatalog', name: `${store.name} Products`, numberOfItems: products.length, itemListElement: products.slice(0, 20).map((p: any, i: number) => ({ '@type': 'ListItem', position: i + 1, item: { '@type': 'Product', name: p.name, ...(p.description ? { description: p.description.slice(0, 200) } : {}), ...(p.image ? { image: p.image } : {}), offers: { '@type': 'Offer', price: p.price, priceCurrency: p.currency, availability: p.stockQuantity > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock' } } })) },
   };
 
   const faqJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
+    '@context': 'https://schema.org', '@type': 'FAQPage',
     mainEntity: [
-      {
-        '@type': 'Question',
-        name: `What products does ${store.name} sell?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: categories.length > 0
-            ? `${store.name} sells products in the following categories: ${categories.map((c: any) => c.name).join(', ')}. They offer ${products.length} products in total.`
-            : `${store.name} offers ${products.length} products${store.industry ? ` in the ${store.industry} industry` : ''}.`,
-        },
-      },
-      {
-        '@type': 'Question',
-        name: `Where is ${store.name} located?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: store.city || store.country
-            ? `${store.name} is located${store.address ? ` at ${store.address}` : ''}${store.city ? ` in ${store.city}` : ''}${store.state ? `, ${store.state}` : ''}${store.country ? `, ${store.country}` : ''}.`
-            : `${store.name} operates online. Contact them for location details.`,
-        },
-      },
-      {
-        '@type': 'Question',
-        name: `How can I contact ${store.name}?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: [
-            store.phone ? `Phone: ${store.phone}` : null,
-            store.email ? `Email: ${store.email}` : null,
-            store.website ? `Website: ${store.website}` : null,
-          ].filter(Boolean).join('. ') || `Visit their online store to get in touch.`,
-        },
-      },
-      ...(products.length > 0 ? [{
-        '@type': 'Question',
-        name: `What is the price range at ${store.name}?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: (() => {
-            const prices = products.map((p: any) => p.price).sort((a: number, b: number) => a - b);
-            return `Prices at ${store.name} range from ${formatPrice(prices[0], store.currency)} to ${formatPrice(prices[prices.length - 1], store.currency)} (${store.currency}).`;
-          })(),
-        },
-      }] : []),
+      { '@type': 'Question', name: `What products does ${store.name} sell?`, acceptedAnswer: { '@type': 'Answer', text: categories.length > 0 ? `${store.name} sells products in the following categories: ${categories.map((c: any) => c.name).join(', ')}. They offer ${products.length} products in total.` : `${store.name} offers ${products.length} products${store.industry ? ` in the ${store.industry} industry` : ''}.` } },
+      { '@type': 'Question', name: `Where is ${store.name} located?`, acceptedAnswer: { '@type': 'Answer', text: store.city || store.country ? `${store.name} is located${store.address ? ` at ${store.address}` : ''}${store.city ? ` in ${store.city}` : ''}${store.state ? `, ${store.state}` : ''}${store.country ? `, ${store.country}` : ''}.` : `${store.name} operates online. Contact them for location details.` } },
+      { '@type': 'Question', name: `How can I contact ${store.name}?`, acceptedAnswer: { '@type': 'Answer', text: [store.phone ? `Phone: ${store.phone}` : null, store.email ? `Email: ${store.email}` : null, store.website ? `Website: ${store.website}` : null].filter(Boolean).join('. ') || `Visit their online store to get in touch.` } },
+      ...(products.length > 0 ? [{ '@type': 'Question', name: `What is the price range at ${store.name}?`, acceptedAnswer: { '@type': 'Answer', text: (() => { const prices = products.map((p: any) => p.price).sort((a: number, b: number) => a - b); return `Prices at ${store.name} range from ${formatPrice(prices[0], store.currency)} to ${formatPrice(prices[prices.length - 1], store.currency)} (${store.currency}).`; })() } }] : []),
     ],
   };
 
-  const breadcrumbJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Stores', item: '/store' },
-      { '@type': 'ListItem', position: 2, name: store.name },
-    ],
-  };
+  const breadcrumbJsonLd = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Stores', item: '/store' }, { '@type': 'ListItem', position: 2, name: store.name }] };
 
   return (
     <>
@@ -224,30 +133,42 @@ export default async function StorePage({ params, searchParams }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
-      <div className="min-h-screen bg-gradient-to-b from-gray-50/80 to-white dark:from-gray-950 dark:to-gray-900">
-        {/* Store Header */}
-        <header className="border-b bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl sticky top-0 z-40 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+      <div className="min-h-screen bg-background">
+
+        {/* ── Header ── */}
+        <header className="border-b border-border/60 bg-card/80 backdrop-blur-xl sticky top-0 z-40 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {store.logoUrl ? (
-                  <div className="relative w-11 h-11 rounded-xl overflow-hidden bg-muted ring-1 ring-black/5 shadow-sm">
+                  <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-muted ring-1 ring-border shadow-sm">
                     <Image src={store.logoUrl} alt={store.name} fill className="object-cover" />
                   </div>
                 ) : (
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center text-white text-lg font-bold shadow-md" style={{ backgroundColor: store.primaryColor }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-primary-foreground text-base font-bold shadow-md bg-primary">
                     {store.name.charAt(0)}
                   </div>
                 )}
                 <div>
-                  <h1 className="font-bold text-lg tracking-tight">{store.name}</h1>
-                  {store.industry && <p className="text-xs text-muted-foreground">{store.industry}</p>}
+                  <h1 className="font-bold text-base tracking-tight text-foreground">{store.name}</h1>
+                  {store.industry && <p className="text-[11px] text-muted-foreground">{store.industry}</p>}
                 </div>
               </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                {store.phone && <span className="hidden sm:flex items-center gap-1.5 hover:text-foreground transition-colors"><Phone className="w-3.5 h-3.5" />{store.phone}</span>}
-                {store.email && <span className="hidden md:flex items-center gap-1.5 hover:text-foreground transition-colors"><Mail className="w-3.5 h-3.5" />{store.email}</span>}
-                <Link href={`/store/${store.subdomain}/account`} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-muted/60 transition-colors font-medium">
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                {store.phone && (
+                  <a href={`tel:${store.phone}`} className="hidden sm:flex items-center gap-1.5 hover:text-foreground transition-colors">
+                    <Phone className="w-3.5 h-3.5" />{store.phone}
+                  </a>
+                )}
+                {store.email && (
+                  <a href={`mailto:${store.email}`} className="hidden md:flex items-center gap-1.5 hover:text-foreground transition-colors">
+                    <Mail className="w-3.5 h-3.5" />{store.email}
+                  </a>
+                )}
+                <Link
+                  href={`/store/${store.subdomain}/account`}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/80 text-accent-foreground transition-colors font-medium text-sm"
+                >
                   <User className="w-4 h-4" />
                   <span className="hidden sm:inline">My Account</span>
                 </Link>
@@ -256,41 +177,49 @@ export default async function StorePage({ params, searchParams }: Props) {
           </div>
         </header>
 
-        {/* Hero */}
-        <section className="py-14 sm:py-20 px-4 sm:px-6 relative overflow-hidden">
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full blur-[120px]" style={{ backgroundColor: `${store.primaryColor}08` }} />
-            <div className="absolute bottom-0 -left-32 w-[400px] h-[400px] rounded-full blur-[100px]" style={{ backgroundColor: `${store.primaryColor}05` }} />
+        {/* ── Hero ── */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-primary/90 via-primary to-primary/80 py-16 sm:py-24 px-4 sm:px-6">
+          {/* decorative blobs */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute -top-24 -right-24 w-[480px] h-[480px] rounded-full bg-gold/10 blur-[100px]" />
+            <div className="absolute bottom-0 -left-24 w-[360px] h-[360px] rounded-full bg-white/5 blur-[80px]" />
           </div>
+          {/* subtle grid texture */}
+          <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 40px),repeating-linear-gradient(90deg,#fff 0,#fff 1px,transparent 1px,transparent 40px)' }} />
+
           <div className="max-w-7xl mx-auto relative">
-            <div className="max-w-3xl">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-muted/50 border border-border/50">
-                  <Store className="w-3.5 h-3.5" />
-                  <span className="font-medium">{store.industry ?? 'Online Store'}</span>
-                </div>
+            <div className="max-w-2xl">
+              {/* badges */}
+              <div className="flex flex-wrap items-center gap-2 mb-5">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 border border-white/20 text-white/90 text-xs font-medium backdrop-blur-sm">
+                  <Store className="w-3 h-3" />{store.industry ?? 'Online Store'}
+                </span>
                 {store.city && (
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted/50 border border-border/50">
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span>{store.city}{store.country ? `, ${store.country}` : ''}</span>
-                  </div>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 border border-white/20 text-white/90 text-xs font-medium backdrop-blur-sm">
+                    <MapPin className="w-3 h-3" />{store.city}{store.country ? `, ${store.country}` : ''}
+                  </span>
                 )}
               </div>
-              <h2 className="text-4xl sm:text-5xl font-bold tracking-tight mb-4 leading-[1.1]">
+
+              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-[1.08] mb-4">
                 Welcome to{' '}
-                <span style={{ color: store.primaryColor }}>{store.name}</span>
+                <span className="text-gold underline decoration-gold/40 decoration-wavy underline-offset-4">
+                  {store.name}
+                </span>
               </h2>
+
               {store.description && (
-                <p className="text-lg text-muted-foreground leading-relaxed mb-5 max-w-2xl">{store.description}</p>
+                <p className="text-white/75 text-lg leading-relaxed mb-7 max-w-xl">{store.description}</p>
               )}
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 font-medium">
-                  <Package className="w-4 h-4" />
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 border border-white/20 text-white text-sm font-semibold backdrop-blur-sm">
+                  <Package className="w-4 h-4 text-gold" />
                   {products.length} product{products.length !== 1 ? 's' : ''}
                 </div>
                 {categories.length > 0 && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/60 font-medium">
-                    <Tag className="w-4 h-4" />
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 border border-white/20 text-white text-sm font-semibold backdrop-blur-sm">
+                    <Tag className="w-4 h-4 text-gold" />
                     {categories.length} categor{categories.length !== 1 ? 'ies' : 'y'}
                   </div>
                 )}
@@ -299,8 +228,8 @@ export default async function StorePage({ params, searchParams }: Props) {
           </div>
         </section>
 
-        {/* Filters */}
-        <section className="px-4 sm:px-6 pb-8">
+        {/* ── Filters ── */}
+        <section className="px-4 sm:px-6 py-6 bg-secondary/40 border-b border-border/40">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-wrap items-center gap-3">
               <form method="get" className="flex-1 min-w-[200px] max-w-sm">
@@ -308,8 +237,8 @@ export default async function StorePage({ params, searchParams }: Props) {
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
                   <input
                     type="text" name="q" defaultValue={searchQuery ?? ''}
-                    placeholder="Search products..."
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border bg-white dark:bg-gray-800/80 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40 shadow-sm transition-all"
+                    placeholder="Search products…"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 shadow-sm transition-all"
                   />
                   {selectedCategory && <input type="hidden" name="category" value={selectedCategory} />}
                 </div>
@@ -319,8 +248,8 @@ export default async function StorePage({ params, searchParams }: Props) {
                   href={`/store/${store.subdomain}${searchQuery ? `?q=${searchQuery}` : ''}`}
                   className={`px-4 py-2 rounded-full text-xs font-semibold border transition-all duration-200 ${
                     !selectedCategory
-                      ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white shadow-sm'
-                      : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border-border/50'
+                      ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                      : 'bg-card text-foreground hover:bg-accent hover:text-accent-foreground border-border/60'
                   }`}
                 >
                   All
@@ -331,8 +260,8 @@ export default async function StorePage({ params, searchParams }: Props) {
                     href={`/store/${store.subdomain}?category=${cat.id}${searchQuery ? `&q=${searchQuery}` : ''}`}
                     className={`px-4 py-2 rounded-full text-xs font-semibold border transition-all duration-200 ${
                       selectedCategory === cat.id
-                        ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white shadow-sm'
-                        : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border-border/50'
+                        ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                        : 'bg-card text-foreground hover:bg-accent hover:text-accent-foreground border-border/60'
                     }`}
                   >
                     {cat.icon && <span className="mr-1">{cat.icon}</span>}{cat.name}
@@ -343,15 +272,15 @@ export default async function StorePage({ params, searchParams }: Props) {
           </div>
         </section>
 
-        {/* Featured Products */}
+        {/* ── Featured Products ── */}
         {featuredProducts.length > 0 && (
-          <section className="px-4 sm:px-6 pb-12">
+          <section className="px-4 sm:px-6 py-12">
             <div className="max-w-7xl mx-auto">
               <div className="flex items-center gap-2.5 mb-6">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                  <Star className="w-4 h-4 text-amber-500" />
+                <div className="w-8 h-8 rounded-lg bg-gold/15 flex items-center justify-center">
+                  <Star className="w-4 h-4 text-gold" fill="currentColor" />
                 </div>
-                <h3 className="text-xl font-bold tracking-tight">Featured Products</h3>
+                <h3 className="text-xl font-bold tracking-tight text-foreground">Featured Products</h3>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 {featuredProducts.map((product: any) => (
@@ -362,17 +291,17 @@ export default async function StorePage({ params, searchParams }: Props) {
           </section>
         )}
 
-        {/* All Products */}
+        {/* ── All Products ── */}
         <section className="px-4 sm:px-6 pb-20">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center gap-2.5 mb-6">
-              <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-                <ShoppingBag className="w-4 h-4 text-muted-foreground" />
+              <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
+                <ShoppingBag className="w-4 h-4 text-accent-foreground" />
               </div>
-              <h3 className="text-xl font-bold tracking-tight">
+              <h3 className="text-xl font-bold tracking-tight text-foreground">
                 {selectedCategory
                   ? categories.find((c: any) => c.id === selectedCategory)?.name ?? 'Products'
-                  : searchQuery ? `Results for \u201c${searchQuery}\u201d` : 'All Products'}
+                  : searchQuery ? `Results for “${searchQuery}”` : 'All Products'}
                 <span className="text-sm font-normal text-muted-foreground ml-2">({regularProducts.length})</span>
               </h3>
             </div>
@@ -383,11 +312,11 @@ export default async function StorePage({ params, searchParams }: Props) {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-20 bg-white dark:bg-gray-800/50 rounded-2xl border border-dashed">
+              <div className="text-center py-20 bg-card rounded-2xl border border-dashed border-border">
                 <Package className="w-14 h-14 text-muted-foreground/20 mx-auto mb-4" />
                 <p className="text-muted-foreground font-medium">No products found</p>
                 {(searchQuery || selectedCategory) && (
-                  <Link href={`/store/${store.subdomain}`} className="text-sm text-emerald-600 hover:underline mt-2 inline-block font-medium">
+                  <Link href={`/store/${store.subdomain}`} className="text-sm text-primary hover:underline mt-2 inline-block font-medium">
                     View all products
                   </Link>
                 )}
@@ -396,69 +325,73 @@ export default async function StorePage({ params, searchParams }: Props) {
           </div>
         </section>
 
-        {/* FAQ Section */}
-        <section className="px-4 sm:px-6 pb-20">
-          <div className="max-w-4xl mx-auto">
+        {/* ── FAQ ── */}
+        <section className="px-4 sm:px-6 pb-20 bg-secondary/30">
+          <div className="max-w-4xl mx-auto pt-16">
             <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold tracking-tight">Frequently Asked Questions</h3>
+              <h3 className="text-2xl font-bold tracking-tight text-foreground">Frequently Asked Questions</h3>
               <p className="text-sm text-muted-foreground mt-2">Find answers to common questions about {store.name}</p>
             </div>
             <div className="space-y-3">
-              <FaqItem
-                question={`What products does ${store.name} sell?`}
-                answer={
-                  categories.length > 0
-                    ? `${store.name} offers ${products.length} products across categories including ${categories.map((c: any) => c.name).join(', ')}. Browse our catalog above to explore our full range.`
-                    : `${store.name} offers ${products.length} quality products${store.industry ? ` in the ${store.industry} space` : ''}. Browse our catalog above to explore our full range.`
-                }
-              />
-              <FaqItem
-                question={`Where is ${store.name} located?`}
-                answer={
-                  store.city || store.country
-                    ? `${store.name} is based${store.address ? ` at ${store.address}` : ''}${store.city ? ` in ${store.city}` : ''}${store.state ? `, ${store.state}` : ''}${store.country ? `, ${store.country}` : ''}. We serve customers across our region and beyond.`
-                    : `${store.name} operates online. Reach out via our contact details above for more information.`
-                }
-              />
-              <FaqItem
-                question={`How can I contact ${store.name}?`}
-                answer={[
-                  store.phone ? `Call us at ${store.phone}` : null,
-                  store.email ? `Email us at ${store.email}` : null,
-                  store.website ? `Visit our website at ${store.website}` : null,
-                  'You can also use the chat widget on our website for instant assistance.',
-                ].filter(Boolean).join('. ')}
-              />
+              <FaqItem question={`What products does ${store.name} sell?`} answer={categories.length > 0 ? `${store.name} offers ${products.length} products across categories including ${categories.map((c: any) => c.name).join(', ')}. Browse our catalog above to explore our full range.` : `${store.name} offers ${products.length} quality products${store.industry ? ` in the ${store.industry} space` : ''}. Browse our catalog above to explore our full range.`} />
+              <FaqItem question={`Where is ${store.name} located?`} answer={store.city || store.country ? `${store.name} is based${store.address ? ` at ${store.address}` : ''}${store.city ? ` in ${store.city}` : ''}${store.state ? `, ${store.state}` : ''}${store.country ? `, ${store.country}` : ''}. We serve customers across our region and beyond.` : `${store.name} operates online. Reach out via our contact details above for more information.`} />
+              <FaqItem question={`How can I contact ${store.name}?`} answer={[store.phone ? `Call us at ${store.phone}` : null, store.email ? `Email us at ${store.email}` : null, store.website ? `Visit our website at ${store.website}` : null, 'You can also use the chat widget on our website for instant assistance.'].filter(Boolean).join('. ')} />
               {products.length > 0 && (
-                <FaqItem
-                  question={`What is the price range at ${store.name}?`}
-                  answer={(() => {
-                    const prices = products.map((p: any) => p.price).sort((a: number, b: number) => a - b);
-                    return `Our products range from ${formatPrice(prices[0], store.currency)} to ${formatPrice(prices[prices.length - 1], store.currency)}. We offer quality products at competitive prices for our customers.`;
-                  })()}
-                />
+                <FaqItem question={`What is the price range at ${store.name}?`} answer={(() => { const prices = products.map((p: any) => p.price).sort((a: number, b: number) => a - b); return `Our products range from ${formatPrice(prices[0], store.currency)} to ${formatPrice(prices[prices.length - 1], store.currency)}. We offer quality products at competitive prices for our customers.`; })()} />
               )}
             </div>
           </div>
         </section>
 
-        {/* Footer */}
-        <footer className="border-t bg-white/50 dark:bg-gray-900/50 py-10 px-4 sm:px-6">
-          <div className="max-w-7xl mx-auto text-center">
-            <p className="text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} {store.name}. Powered by{' '}
-              <Link href="/pitch" className="text-emerald-600 hover:underline font-semibold">SHOPYSH</Link>
-            </p>
-            {(store.city || store.country) && (
-              <p className="text-xs text-muted-foreground/50 mt-2 flex items-center justify-center gap-1">
-                <MapPin className="w-3 h-3" />
-                {[store.address, store.city, store.state, store.country].filter(Boolean).join(', ')}
+        {/* ── Footer ── */}
+        <footer className="border-t-4 border-primary bg-card py-12 px-4 sm:px-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-3">
+                {store.logoUrl ? (
+                  <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-muted ring-1 ring-border">
+                    <Image src={store.logoUrl} alt={store.name} fill className="object-cover" />
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-bold">
+                    {store.name.charAt(0)}
+                  </div>
+                )}
+                <div>
+                  <p className="font-bold text-foreground">{store.name}</p>
+                  {store.industry && <p className="text-xs text-muted-foreground">{store.industry}</p>}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
+                {store.phone && (
+                  <a href={`tel:${store.phone}`} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+                    <Phone className="w-3.5 h-3.5" />{store.phone}
+                  </a>
+                )}
+                {store.email && (
+                  <a href={`mailto:${store.email}`} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+                    <Mail className="w-3.5 h-3.5" />{store.email}
+                  </a>
+                )}
+                {(store.city || store.country) && (
+                  <span className="flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5" />
+                    {[store.city, store.state, store.country].filter(Boolean).join(', ')}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-border/50 text-center">
+              <p className="text-xs text-muted-foreground/60">
+                &copy; {new Date().getFullYear()} {store.name}. Powered by{' '}
+                <Link href="/pitch" className="text-primary font-semibold hover:text-gold transition-colors">SHOPYSH</Link>
               </p>
-            )}
+            </div>
           </div>
         </footer>
 
-        {/* Chat Widget */}
         <script src="/widget/tekhuna-chat.js" data-tenant-id={store.id} />
       </div>
     </>
@@ -469,8 +402,8 @@ function ProductCard({ product, slug, currency }: { product: any; slug: string; 
   const displayCurrency = product.currency || currency;
   return (
     <Link href={`/store/${slug}/products/${product.id}`} className="group">
-      <article className="bg-white dark:bg-gray-800/80 rounded-2xl border border-border/50 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-black/[0.04] hover:-translate-y-1">
-        <div className="relative aspect-square bg-gray-50 dark:bg-gray-700/50 overflow-hidden">
+      <article className="bg-card rounded-2xl border border-border/60 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/8 hover:-translate-y-1 hover:border-primary/30">
+        <div className="relative aspect-square bg-secondary/50 overflow-hidden">
           {product.image ? (
             <Image src={product.image} alt={product.imageAlt || product.name} fill className="object-cover group-hover:scale-[1.06] transition-transform duration-500 ease-out" />
           ) : (
@@ -479,33 +412,37 @@ function ProductCard({ product, slug, currency }: { product: any; slug: string; 
             </div>
           )}
           {product.isFeatured && (
-            <span className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-amber-500 text-white text-[10px] font-bold tracking-wide uppercase shadow-sm flex items-center gap-1">
-              <Star className="w-3 h-3" />Featured
+            <span className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-gold text-gold-foreground text-[10px] font-bold tracking-wide uppercase shadow-sm flex items-center gap-1">
+              <Star className="w-3 h-3" fill="currentColor" />Featured
             </span>
           )}
           {product.stockQuantity === 0 && (
-            <span className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-red-500/90 text-white text-[10px] font-bold tracking-wide uppercase shadow-sm">Out of Stock</span>
+            <span className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-destructive/90 text-destructive-foreground text-[10px] font-bold tracking-wide uppercase shadow-sm">
+              Out of Stock
+            </span>
           )}
-          {/* Hover overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
+
         <div className="p-4">
           {product.category && (
-            <span className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground/70 font-semibold">
+            <span className="text-[10px] uppercase tracking-[0.08em] text-primary/70 font-semibold">
               {product.category.icon && <span className="mr-0.5">{product.category.icon}</span>}
               {product.category.name}
             </span>
           )}
-          <h4 className="font-semibold text-sm mt-1.5 line-clamp-2 group-hover:text-emerald-600 transition-colors duration-200">{product.name}</h4>
+          <h4 className="font-semibold text-sm mt-1.5 line-clamp-2 text-foreground group-hover:text-primary transition-colors duration-200">
+            {product.name}
+          </h4>
           {product.description && (
-            <p className="text-xs text-muted-foreground/70 mt-1 line-clamp-2 leading-relaxed">{product.description}</p>
+            <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">{product.description}</p>
           )}
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/30">
-            <span className="text-base font-bold text-emerald-600">
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/40">
+            <span className="text-base font-bold text-gold">
               {formatPrice(product.price, displayCurrency)}
             </span>
-            <span className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950/30 transition-colors">
-              <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-emerald-600 transition-colors" />
+            <span className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200">
+              <ChevronRight className="w-4 h-4 text-accent-foreground group-hover:text-primary-foreground transition-colors" />
             </span>
           </div>
         </div>
@@ -516,14 +453,12 @@ function ProductCard({ product, slug, currency }: { product: any; slug: string; 
 
 function FaqItem({ question, answer }: { question: string; answer: string }) {
   return (
-    <details className="group bg-white dark:bg-gray-800/80 rounded-xl border border-border/50 shadow-sm hover:shadow-md transition-shadow">
-      <summary className="cursor-pointer px-6 py-4 font-medium text-sm flex items-center justify-between hover:bg-muted/30 rounded-xl transition-colors">
+    <details className="group bg-card rounded-xl border border-border/60 shadow-sm hover:border-primary/30 hover:shadow-md transition-all">
+      <summary className="cursor-pointer px-6 py-4 font-medium text-sm flex items-center justify-between hover:bg-accent/50 rounded-xl transition-colors text-foreground">
         {question}
         <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-open:rotate-90 transition-transform duration-200 shrink-0 ml-3" />
       </summary>
-      <div className="px-6 pb-4 text-sm text-muted-foreground leading-relaxed">
-        {answer}
-      </div>
+      <div className="px-6 pb-4 text-sm text-muted-foreground leading-relaxed">{answer}</div>
     </details>
   );
 }
