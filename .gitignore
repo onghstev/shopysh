@@ -1,0 +1,36 @@
+# Dependencies
+/node_modules
+.pnp
+.pnp.*
+.yarn/*
+
+# Next.js build output
+/.next
+/out
+/build
+next-env.d.ts
+*.tsbuildinfo
+
+# Environment / secrets — NEVER commit these
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Prisma generated client (regenerated on build)
+/prisma/generated
+
+# Local LLM model (large; download via deploy/download-model.sh)
+*.gguf

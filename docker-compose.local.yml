@@ -1,0 +1,111 @@
+# ============================================================================
+# SHOPYSH — LOCAL development stack (mirrors the 5 production containers)
+#   db · llm · app · nginx · certbot
+# Run:  docker compose -p shopysh -f docker-compose.local.yml up -d --build
+# Open: http://localhost:8088   (direct app: http://localhost:3000)
+# ============================================================================
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shopysh
+      POSTGRES_USER: shopysh
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-shopysh_local}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shopysh"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shopysh-net
+  llm:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    restart: unless-stopped
+    volumes:
+      - llm_models:/models
+    ports:
+      - "127.0.0.1:8081:8080"
+    command: >
+      -m /models/qwen2.5-3b-instruct-q4_k_m.gguf
+      --host 0.0.0.0
+      --port 8080
+      -c 4096
+      -t ${LLM_THREADS:-4}
+      --chat-template chatml
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    networks:
+      - shopysh-net
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      llm:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://shopysh:${DB_PASSWORD:-shopysh_local}@db:5432/shopysh?schema=public
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:8088}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-local_dev_secret_change_me}
+      LLM_BASE_URL: http://llm:8080/v1
+      LLM_MODEL: qwen2.5-3b-instruct
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      AWS_REGION: ${AWS_REGION:-}
+      AWS_BUCKET_NAME: ${AWS_BUCKET_NAME:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_FOLDER_PREFIX: ${AWS_FOLDER_PREFIX:-}
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
+      NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    networks:
+      - shopysh-net
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_started
+    ports:
+      - "8088:80"
+    volumes:
+      - ./deploy/nginx.local.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - shopysh-net
+  certbot:
+    image: certbot/certbot
+    restart: unless-stopped
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 12h; done'"
+    networks:
+      - shopysh-net
+volumes:
+  postgres_data:
+  llm_models:
+    external: true
+    name: shopysh_llm_models
+networks:
+  shopysh-net:
+    driver: bridge

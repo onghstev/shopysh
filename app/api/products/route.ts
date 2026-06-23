@@ -1,0 +1,99 @@
+export const dynamic = 'force-dynamic';
+
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+import { getAuthSession, unauthorized, badRequest, serverError, toNumber } from '@/lib/api-helpers';
+
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getAuthSession();
+    if (!session?.user?.tenantId) return unauthorized();
+    const tenantId = session.user.tenantId;
+
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1'));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '20')));
+    const search = searchParams.get('search') ?? '';
+    const categoryId = searchParams.get('categoryId');
+    const stockStatus = searchParams.get('stockStatus');
+    const skip = (page - 1) * limit;
+
+    const where: any = { tenantId, deletedAt: null };
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { sku: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (categoryId) where.categoryId = categoryId;
+
+    if (stockStatus === 'low') {
+      where.trackInventory = true;
+      where.stockQuantity = { lte: 10 };
+    } else if (stockStatus === 'out') {
+      where.stockQuantity = 0;
+    }
+
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        include: { category: { select: { id: true, name: true } }, images: { orderBy: { displayOrder: 'asc' }, take: 1 } },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.product.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      products: (products ?? []).map((p: any) => ({
+        ...p,
+        price: toNumber(p?.price),
+        costPrice: p?.costPrice ? toNumber(p.costPrice) : null,
+      })),
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    });
+  } catch (error: any) {
+    return serverError(error);
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getAuthSession();
+    if (!session?.user?.tenantId) return unauthorized();
+    const tenantId = session.user.tenantId;
+
+    const body = await request.json();
+    const { name, description, sku, price, costPrice, currency, stockQuantity, lowStockThreshold, categoryId, trackInventory, isFeatured } = body ?? {};
+
+    if (!name || price === undefined) return badRequest('Name and price are required');
+
+    const product = await prisma.product.create({
+      data: {
+        tenantId,
+        name,
+        description: description ?? null,
+        sku: sku ?? null,
+        price: parseFloat(price),
+        costPrice: costPrice ? parseFloat(costPrice) : null,
+        currency: currency ?? 'NGN',
+        stockQuantity: parseInt(String(stockQuantity ?? '0'), 10) || 0,
+        lowStockThreshold: parseInt(String(lowStockThreshold ?? '10'), 10) || 10,
+        categoryId: categoryId ?? null,
+        trackInventory: trackInventory ?? true,
+        isFeatured: isFeatured ?? false,
+      },
+      include: { category: true, images: true },
+    });
+
+    return NextResponse.json({ product: { ...product, price: toNumber(product?.price), costPrice: product?.costPrice ? toNumber(product.costPrice) : null } }, { status: 201 });
+  } catch (error: any) {
+    return serverError(error);
+  }
+}

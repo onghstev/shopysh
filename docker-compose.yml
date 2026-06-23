@@ -1,0 +1,140 @@
+# ============================================================================
+# SHOPYSH — Production stack (5 containers: db, llm, app, nginx, certbot)
+# Used on the VPS. The `app` service runs the image built & pushed by GitHub
+# Actions (see .github/workflows/deploy.yml). For local development use
+# docker-compose.local.yml instead.
+# ============================================================================
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shopysh
+      POSTGRES_USER: shopysh
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme_in_production}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shopysh"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shopysh-net
+
+  llm:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    restart: unless-stopped
+    volumes:
+      - llm_models:/models
+    ports:
+      - "127.0.0.1:8081:8080"
+    command: >
+      -m /models/qwen2.5-3b-instruct-q4_k_m.gguf
+      --host 0.0.0.0
+      --port 8080
+      -c 4096
+      -t ${LLM_THREADS:-4}
+      --chat-template chatml
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    networks:
+      - shopysh-net
+
+  app:
+    # Pulled from GitHub Container Registry — built & pushed by CI on every
+    # push to main. `docker compose pull app && up -d app` works because this
+    # service has an image (it previously only had a build: block, so pull
+    # was a no-op and deploys silently used stale code).
+    image: ghcr.io/onghstev/shopysh:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      llm:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://shopysh:${DB_PASSWORD:-changeme_in_production}@db:5432/shopysh?schema=public
+      NEXTAUTH_URL: https://${DOMAIN:-www.shopysh.com}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      # Local LLM (default — no API key needed)
+      LLM_BASE_URL: http://llm:8080/v1
+      LLM_MODEL: qwen2.5-3b-instruct
+      # Override with an external OpenAI-compatible API if desired:
+      # LLM_API_KEY: ${LLM_API_KEY:-}
+      # LLM_BASE_URL: ${LLM_BASE_URL:-http://llm:8080/v1}
+      # LLM_MODEL: ${LLM_MODEL:-qwen2.5-3b-instruct}
+      # SMTP (for campaign emails)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      # Google SSO (optional)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      # Cloud Storage (optional)
+      AWS_REGION: ${AWS_REGION:-}
+      AWS_BUCKET_NAME: ${AWS_BUCKET_NAME:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_FOLDER_PREFIX: ${AWS_FOLDER_PREFIX:-}
+      # WhatsApp (optional)
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
+      # Analytics (optional)
+      NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - shopysh-net
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot_data:/var/www/certbot:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    networks:
+      - shopysh-net
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - certbot_data:/var/www/certbot
+      - /etc/letsencrypt:/etc/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h; done'"
+    networks:
+      - shopysh-net
+
+volumes:
+  postgres_data:
+  llm_models:
+  certbot_data:
+
+networks:
+  shopysh-net:
+    driver: bridge

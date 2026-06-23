@@ -1,0 +1,601 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Building2, Bot, CreditCard, Save, CheckCircle2, Loader2, Key, AlertTriangle, CheckCircle, Cpu, Wallet, Bell } from 'lucide-react';
+// format helpers imported if needed
+// import { formatCurrency } from '@/lib/format';
+import { toast } from 'sonner';
+
+export default function SettingsPage() {
+  const { data: session, update } = useSession() || {};
+  const [tab, setTab] = useState('profile');
+  const [profile, setProfile] = useState<any>({});
+  const [aiConfig, setAiConfig] = useState<any>({});
+  const [billing, setBilling] = useState<any>({});
+  const [saving, setSaving] = useState(false);
+  const [llmConfig, setLlmConfig] = useState<any>({});
+  const [llmSaving, setLlmSaving] = useState(false);
+  const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
+  const [paymentConfig, setPaymentConfig] = useState<any>({ gateway: 'paystack', paystackSecretKey: '', paystackPublicKey: '', flutterwaveSecretKey: '', flutterwavePublicKey: '', flutterwaveWebhookHash: '', bankName: '', accountNumber: '', accountName: '' });
+  const [paymentSaving, setPaymentSaving] = useState(false);
+  const [smsConfig, setSmsConfig] = useState<any>({ provider: 'termii', termiiApiKey: '', termiiSenderId: '', africastalkingApiKey: '', africastalkingUsername: '', africastalkingSenderId: '' });
+  const [smsSaving, setSmsSaving] = useState(false);
+  const isSuperAdmin = session?.user?.role === 'SUPER_ADMIN';
+
+  const fetchProfile = useCallback(async () => {
+    try { const r = await fetch('/api/settings/profile'); if (r.ok) { const d = await r.json(); setProfile(d?.tenant ?? {}); } } catch (e: any) { console.error(e); }
+  }, []);
+  const fetchAi = useCallback(async () => {
+    try { const r = await fetch('/api/settings/ai'); if (r.ok) { const d = await r.json(); setAiConfig(d?.config ?? {}); } } catch (e: any) { console.error(e); }
+  }, []);
+  const fetchBilling = useCallback(async () => {
+    try { const r = await fetch('/api/settings/billing'); if (r.ok) { const d = await r.json(); setBilling(d ?? {}); } } catch (e: any) { console.error(e); }
+  }, []);
+  const fetchLlm = useCallback(async () => {
+    try { const r = await fetch('/api/settings/llm'); if (r.ok) { const d = await r.json(); setLlmConfig(d ?? {}); } } catch (e: any) { console.error(e); }
+  }, []);
+
+  const handleUpgrade = async (planId: string) => {
+    if (!confirm('Switch to this plan? Your subscription will be updated immediately.')) return;
+    setUpgradingPlan(planId);
+    try {
+      const res = await fetch('/api/settings/billing/upgrade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Failed');
+      toast.success(data?.message || 'Plan updated successfully');
+      await fetchBilling();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to switch plan');
+    } finally {
+      setUpgradingPlan(null);
+    }
+  };
+
+  const fetchPaymentConfig = useCallback(async () => {
+    try { const r = await fetch('/api/settings/payment-config'); if (r.ok) { const d = await r.json(); if (d?.config) setPaymentConfig((prev: any) => ({ ...prev, ...d.config })); } } catch (e: any) { console.error(e); }
+  }, []);
+
+  const savePaymentConfig = async () => {
+    setPaymentSaving(true);
+    try {
+      const res = await fetch('/api/settings/payment-config', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(paymentConfig) });
+      if (!res.ok) { const d = await res.json(); throw new Error(d?.error || 'Failed'); }
+      toast.success('Payment settings saved');
+    } catch (e: any) { toast.error(e.message || 'Failed to save payment settings'); } finally { setPaymentSaving(false); }
+  };
+
+  const fetchSmsConfig = useCallback(async () => {
+    try { const r = await fetch('/api/settings/sms-config'); if (r.ok) { const d = await r.json(); if (d?.config) setSmsConfig((prev: any) => ({ ...prev, ...d.config })); } } catch (e: any) { console.error(e); }
+  }, []);
+
+  const saveSmsConfig = async () => {
+    setSmsSaving(true);
+    try {
+      const res = await fetch('/api/settings/sms-config', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(smsConfig) });
+      if (!res.ok) { const d = await res.json(); throw new Error(d?.error || 'Failed'); }
+      toast.success('SMS settings saved');
+    } catch (e: any) { toast.error(e.message || 'Failed to save SMS settings'); } finally { setSmsSaving(false); }
+  };
+
+  useEffect(() => { fetchProfile(); fetchAi(); fetchBilling(); fetchPaymentConfig(); fetchSmsConfig(); }, [fetchProfile, fetchAi, fetchBilling, fetchPaymentConfig, fetchSmsConfig]);
+  useEffect(() => { if (isSuperAdmin) fetchLlm(); }, [isSuperAdmin, fetchLlm]);
+
+  const saveProfile = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/settings/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ businessName: profile?.businessName, description: profile?.description, address: profile?.address, city: profile?.city, state: profile?.state, country: profile?.country, phone: profile?.phone, email: profile?.email, website: profile?.website, defaultCurrency: profile?.defaultCurrency }) });
+      if (res.ok) { toast.success('Profile updated successfully'); await update(); } else toast.error('Failed to update profile');
+    } catch (e: any) { toast.error('Error saving profile'); } finally { setSaving(false); }
+  };
+
+  const saveAi = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/settings/ai', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ welcomeMessage: aiConfig?.welcomeMessage, personality: aiConfig?.personality, autoReply: aiConfig?.autoReply }) });
+      if (res.ok) toast.success('AI settings updated'); else toast.error('Failed to update');
+    } catch (e: any) { toast.error('Error'); } finally { setSaving(false); }
+  };
+
+  const saveLlm = async () => {
+    setLlmSaving(true);
+    try {
+      const res = await fetch('/api/settings/llm', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: llmConfig?.provider || 'auto',
+          apiKey: llmConfig?.apiKey || '',
+          baseUrl: llmConfig?.baseUrl || '',
+          model: llmConfig?.model || '',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (data?.warning) {
+          toast.warning(data.warning);
+        } else {
+          toast.success('LLM provider settings saved successfully');
+        }
+        fetchLlm();
+      } else {
+        toast.error(data?.error || 'Failed to save LLM settings');
+      }
+    } catch (e: any) {
+      toast.error('Error saving LLM settings');
+    } finally {
+      setLlmSaving(false);
+    }
+  };
+
+  const upd = (setter: any, key: string, val: any) => setter((prev: any) => ({ ...(prev ?? {}), [key]: val }));
+  const currency = session?.user?.tenantCurrency ?? 'NGN';
+  const plan = billing?.subscription?.plan;
+  const usage = billing?.usage ?? {};
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight">Settings</h1>
+        <p className="text-muted-foreground text-sm mt-1">Manage your business configuration</p>
+      </div>
+
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="bg-muted/50 p-1 rounded-xl">
+          <TabsTrigger value="profile" className="flex items-center gap-1.5 rounded-lg data-[state=active]:shadow-sm">
+            <Building2 className="w-4 h-4" /><span className="hidden sm:inline">Profile</span>
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="flex items-center gap-1.5 rounded-lg data-[state=active]:shadow-sm">
+            <Bot className="w-4 h-4" /><span className="hidden sm:inline">AI</span>
+          </TabsTrigger>
+          <TabsTrigger value="billing" className="flex items-center gap-1.5 rounded-lg data-[state=active]:shadow-sm">
+            <CreditCard className="w-4 h-4" /><span className="hidden sm:inline">Billing</span>
+          </TabsTrigger>
+          <TabsTrigger value="payments" className="flex items-center gap-1.5 rounded-lg data-[state=active]:shadow-sm">
+            <Wallet className="w-4 h-4" /><span className="hidden sm:inline">Payments</span>
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="flex items-center gap-1.5 rounded-lg data-[state=active]:shadow-sm">
+            <Bell className="w-4 h-4" /><span className="hidden sm:inline">Notifications</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Profile Tab */}
+        <TabsContent value="profile" className="mt-6">
+          <Card className="shadow-sm border-border/50">
+            <CardHeader>
+              <CardTitle className="text-lg">Business Profile</CardTitle>
+              <CardDescription>Update your business information visible to customers</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2"><Label className="text-sm font-medium">Business Name</Label><Input className="h-10" value={profile?.businessName ?? ''} onChange={(e: any) => upd(setProfile, 'businessName', e.target.value)} /></div>
+                <div className="space-y-2"><Label className="text-sm font-medium">Phone</Label><Input className="h-10" value={profile?.phone ?? ''} onChange={(e: any) => upd(setProfile, 'phone', e.target.value)} /></div>
+                <div className="space-y-2"><Label className="text-sm font-medium">Email</Label><Input className="h-10" value={profile?.email ?? ''} onChange={(e: any) => upd(setProfile, 'email', e.target.value)} /></div>
+                <div className="space-y-2"><Label className="text-sm font-medium">Website</Label><Input className="h-10" value={profile?.website ?? ''} onChange={(e: any) => upd(setProfile, 'website', e.target.value)} /></div>
+              </div>
+              <div className="space-y-2"><Label className="text-sm font-medium">Description</Label><Textarea value={profile?.description ?? ''} onChange={(e: any) => upd(setProfile, 'description', e.target.value)} rows={3} /></div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2"><Label className="text-sm font-medium">Address</Label><Input className="h-10" value={profile?.address ?? ''} onChange={(e: any) => upd(setProfile, 'address', e.target.value)} /></div>
+                <div className="space-y-2"><Label className="text-sm font-medium">City</Label><Input className="h-10" value={profile?.city ?? ''} onChange={(e: any) => upd(setProfile, 'city', e.target.value)} /></div>
+                <div className="space-y-2"><Label className="text-sm font-medium">Country</Label><Input className="h-10" value={profile?.country ?? ''} onChange={(e: any) => upd(setProfile, 'country', e.target.value)} /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Default Currency</Label>
+                  <Select value={profile?.defaultCurrency ?? 'NGN'} onValueChange={(v: string) => upd(setProfile, 'defaultCurrency', v)}>
+                    <SelectTrigger className="h-10"><SelectValue placeholder="Select currency" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NGN">₦ Nigerian Naira (NGN)</SelectItem>
+                      <SelectItem value="USD">$ US Dollar (USD)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">This currency will be used across all financial records, invoices, and reports</p>
+                </div>
+              </div>
+              <Button onClick={saveProfile} disabled={saving} className="h-10">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                {saving ? 'Saving...' : 'Save Profile'}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* AI Tab */}
+        <TabsContent value="ai" className="mt-6">
+          <Card className="shadow-sm border-border/50">
+            <CardHeader>
+              <CardTitle className="text-lg">AI Assistant Configuration</CardTitle>
+              <CardDescription>Customize how the AI interacts with your customers via the chat widget</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Welcome Message</Label>
+                <Textarea value={aiConfig?.welcomeMessage ?? ''} onChange={(e: any) => upd(setAiConfig, 'welcomeMessage', e.target.value)} rows={3} placeholder="Hello! Welcome to our store. How can I help you today?" />
+                <p className="text-[11px] text-muted-foreground">Sent automatically when a new customer messages your business</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">AI Personality</Label>
+                <Textarea value={aiConfig?.personality ?? ''} onChange={(e: any) => upd(setAiConfig, 'personality', e.target.value)} rows={3} placeholder="e.g. Friendly, helpful sales assistant who speaks Pidgin and English..." />
+                <p className="text-[11px] text-muted-foreground">Describe how the AI should communicate — tone, language, style</p>
+              </div>
+              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50">
+                <div className="flex items-center gap-3">
+                  <Bot className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">Auto-reply to messages</p>
+                    <p className="text-xs text-muted-foreground">AI will respond automatically to incoming chat messages</p>
+                  </div>
+                </div>
+                <Switch checked={aiConfig?.autoReply ?? true} onCheckedChange={(v: boolean) => upd(setAiConfig, 'autoReply', v)} />
+              </div>
+              <Button onClick={saveAi} disabled={saving} className="h-10">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                {saving ? 'Saving...' : 'Save AI Settings'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* LLM Provider Config - Super Admin Only */}
+          {isSuperAdmin && (
+            <Card className="shadow-sm border-border/50 mt-6">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Cpu className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">AI Provider Configuration</CardTitle>
+                    <CardDescription>Configure which AI model powers your assistant. Only visible to super admins.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Provider</Label>
+                  <Select
+                    value={llmConfig?.provider || 'auto'}
+                    onValueChange={(v) => {
+                      upd(setLlmConfig, 'provider', v);
+                      // Auto-fill defaults when switching providers
+                      if (v === 'deepseek') {
+                        upd(setLlmConfig, 'baseUrl', 'https://api.deepseek.com/v1');
+                        upd(setLlmConfig, 'model', 'deepseek-chat');
+                      } else if (v === 'openai') {
+                        upd(setLlmConfig, 'baseUrl', 'https://api.openai.com/v1');
+                        upd(setLlmConfig, 'model', 'gpt-4o-mini');
+                      } else if (v === 'groq') {
+                        upd(setLlmConfig, 'baseUrl', 'https://api.groq.com/openai/v1');
+                        upd(setLlmConfig, 'model', 'llama-3.1-70b-versatile');
+                      } else if (v === 'auto') {
+                        upd(setLlmConfig, 'apiKey', '');
+                        upd(setLlmConfig, 'baseUrl', '');
+                        upd(setLlmConfig, 'model', '');
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Select provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="local">Local (Qwen2.5 3B via llama.cpp)</SelectItem>
+                      <SelectItem value="deepseek">DeepSeek</SelectItem>
+                      <SelectItem value="openai">OpenAI</SelectItem>
+                      <SelectItem value="groq">Groq</SelectItem>
+                      <SelectItem value="custom">Custom (OpenAI-compatible)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground">{llmConfig?.provider === 'local' ? 'Uses Qwen2.5 3B running locally on your server — no API key needed' : 'Choose "Local" for the built-in AI, or select an external provider'}</p>
+                </div>
+
+                {llmConfig?.provider && llmConfig.provider !== 'auto' && llmConfig.provider !== 'local' && (
+                  <>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium flex items-center gap-1.5">
+                        <Key className="w-3.5 h-3.5" />
+                        API Key
+                      </Label>
+                      <Input
+                        className="h-10 font-mono text-sm"
+                        type="password"
+                        value={llmConfig?.apiKey ?? ''}
+                        onChange={(e: any) => upd(setLlmConfig, 'apiKey', e.target.value)}
+                        placeholder={llmConfig?.provider === 'deepseek' ? 'sk-...' : 'sk-...'}
+                      />
+                      {llmConfig?.hasKey && (
+                        <p className="text-[11px] text-emerald-600 flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3" />
+                          API key is configured. Enter a new key to replace it.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Base URL</Label>
+                        <Input
+                          className="h-10 font-mono text-sm"
+                          value={llmConfig?.baseUrl ?? ''}
+                          onChange={(e: any) => upd(setLlmConfig, 'baseUrl', e.target.value)}
+                          placeholder="https://api.deepseek.com/v1"
+                        />
+                        <p className="text-[11px] text-muted-foreground">The API endpoint (auto-filled for known providers)</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Model</Label>
+                        <Input
+                          className="h-10 font-mono text-sm"
+                          value={llmConfig?.model ?? ''}
+                          onChange={(e: any) => upd(setLlmConfig, 'model', e.target.value)}
+                          placeholder="deepseek-chat"
+                        />
+                        <p className="text-[11px] text-muted-foreground">Model name to use for completions</p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                        <div className="text-xs text-amber-800 dark:text-amber-300">
+                          <p className="font-medium">Important</p>
+                          <p className="mt-0.5">Your API key is stored securely and never exposed to clients. When you save, a quick test request is sent to validate the connection. Changing the provider affects all AI features across your platform.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <Button onClick={saveLlm} disabled={llmSaving} className="h-10">
+                  {llmSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                  {llmSaving ? 'Saving & Validating...' : 'Save Provider Settings'}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Billing Tab */}
+        <TabsContent value="billing" className="mt-6 space-y-6">
+          <Card className="shadow-sm border-border/50">
+            <CardHeader><CardTitle className="text-lg">Current Plan</CardTitle></CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold">{plan?.name ?? 'Free'}</h3>
+                  <p className="text-2xl font-bold text-primary mt-1">
+                    {currency === 'USD'
+                      ? `$${(plan?.priceUsdMonthly ?? 0).toLocaleString()}`
+                      : `₦${(plan?.priceNgnMonthly ?? 0).toLocaleString()}`}
+                    <span className="text-sm text-muted-foreground font-normal">/month</span>
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-xs font-medium">{billing?.subscription?.status ?? 'ACTIVE'}</Badge>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm border-border/50">
+            <CardHeader><CardTitle className="text-lg">Usage This Month</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                {[
+                  { label: 'Products', value: `${usage?.products ?? 0} / ${usage?.maxProducts ?? '∞'}`, color: 'text-orange-600' },
+                  { label: 'AI Conversations', value: `${usage?.aiConversations ?? 0} / ${usage?.maxAiConversations ?? '∞'}`, color: 'text-purple-600' },
+                ].map((item) => (
+                  <div key={item.label} className="text-center p-4 rounded-xl bg-muted/40">
+                    <p className={`text-2xl font-bold font-mono ${item.color}`}>{item.value}</p>
+                    <p className="text-xs text-muted-foreground mt-1 font-medium">{item.label}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {(billing?.plans ?? []).length > 0 && (
+            <Card className="shadow-sm border-border/50">
+              <CardHeader><CardTitle className="text-lg">Available Plans</CardTitle></CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {(billing?.plans ?? []).map((p: any) => {
+                    const price = currency === 'USD' ? (p?.priceUsdMonthly ?? 0) : (p?.priceNgnMonthly ?? 0);
+                    const currSymbol = currency === 'USD' ? '$' : '₦';
+                    const featureItems = p?.features && typeof p.features === 'object'
+                      ? Object.entries(p.features).filter(([, v]: any) => v).map(([k, v]: any) => typeof v === 'string' ? v : k.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()))
+                      : [];
+                    return (
+                      <div key={p?.id} className={`p-5 rounded-xl border-2 transition-all ${p?.id === plan?.id ? 'border-primary bg-primary/5 shadow-sm' : 'border-border/60 hover:border-primary/30'}`}>
+                        <h4 className="font-bold text-base">{p?.name ?? ''}</h4>
+                        <p className="text-2xl font-bold mt-2">
+                          {currSymbol}{price.toLocaleString()}
+                          <span className="text-xs font-normal text-muted-foreground">/mo</span>
+                        </p>
+                        {p?.description && <p className="text-xs text-muted-foreground mt-1">{p.description}</p>}
+                        <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
+                          {featureItems.map((f: string, idx: number) => (
+                            <li key={idx} className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />{f}</li>
+                          ))}
+                        </ul>
+                        {p?.id === plan?.id
+                          ? <Badge className="mt-4">Current Plan</Badge>
+                          : <Button size="sm" variant="outline" className="mt-4 w-full" onClick={() => handleUpgrade(p.id)} disabled={upgradingPlan === p.id}>
+                              {upgradingPlan === p.id ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+                              {Number(price) > Number(currency === 'USD' ? (plan?.priceUsdMonthly ?? 0) : (plan?.priceNgnMonthly ?? 0)) ? 'Upgrade' : 'Switch'}
+                            </Button>
+                        }
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+        {/* Notifications Tab */}
+        <TabsContent value="notifications" className="mt-6">
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Bell className="w-5 h-5" /> SMS Provider Settings</CardTitle>
+              <CardDescription>Configure your SMS provider for campaign broadcasts to customers</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label>SMS Provider</Label>
+                <Select value={smsConfig.provider || 'termii'} onValueChange={(v) => setSmsConfig((prev: any) => ({ ...prev, provider: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select provider" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="termii">Termii</SelectItem>
+                    <SelectItem value="africastalking">Africa&apos;s Talking</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {(smsConfig.provider === 'termii' || !smsConfig.provider) && (
+                <div className="space-y-4 p-4 border rounded-lg">
+                  <h4 className="font-semibold text-sm">Termii Configuration</h4>
+                  <p className="text-xs text-muted-foreground">Get your API key from <a href="https://accounts.termii.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">accounts.termii.com</a></p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>API Key</Label>
+                      <Input type="password" placeholder="TL..." value={smsConfig.termiiApiKey || ''} onChange={(e) => setSmsConfig((prev: any) => ({ ...prev, termiiApiKey: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Sender ID</Label>
+                      <Input placeholder="e.g. MyStore" value={smsConfig.termiiSenderId || ''} onChange={(e) => setSmsConfig((prev: any) => ({ ...prev, termiiSenderId: e.target.value }))} />
+                      <p className="text-xs text-muted-foreground">Your registered sender name (max 11 chars)</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {smsConfig.provider === 'africastalking' && (
+                <div className="space-y-4 p-4 border rounded-lg">
+                  <h4 className="font-semibold text-sm">Africa&apos;s Talking Configuration</h4>
+                  <p className="text-xs text-muted-foreground">Get your credentials from <a href="https://account.africastalking.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">account.africastalking.com</a></p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>API Key</Label>
+                      <Input type="password" placeholder="Your API key" value={smsConfig.africastalkingApiKey || ''} onChange={(e) => setSmsConfig((prev: any) => ({ ...prev, africastalkingApiKey: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Username</Label>
+                      <Input placeholder="sandbox or production username" value={smsConfig.africastalkingUsername || ''} onChange={(e) => setSmsConfig((prev: any) => ({ ...prev, africastalkingUsername: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Sender ID (Optional)</Label>
+                    <Input placeholder="Your short code or alphanumeric" value={smsConfig.africastalkingSenderId || ''} onChange={(e) => setSmsConfig((prev: any) => ({ ...prev, africastalkingSenderId: e.target.value }))} />
+                  </div>
+                </div>
+              )}
+
+              <div className="p-4 border rounded-lg bg-muted/30">
+                <h4 className="font-semibold text-sm mb-2">Email Broadcasts</h4>
+                <p className="text-xs text-muted-foreground">Email broadcasts use the built-in email system automatically. Customers with email addresses on file will receive campaign emails — no additional configuration needed.</p>
+              </div>
+
+              <Button onClick={saveSmsConfig} disabled={smsSaving} className="gap-2">
+                {smsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Save SMS Settings
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Payments Tab */}
+        <TabsContent value="payments" className="mt-6">
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Wallet className="w-5 h-5" /> Payment Settings</CardTitle>
+              <CardDescription>Configure how you accept payments from customers</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label>Active Payment Gateway</Label>
+                <Select value={paymentConfig.gateway || 'paystack'} onValueChange={(v) => setPaymentConfig((prev: any) => ({ ...prev, gateway: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select gateway" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="paystack">Paystack</SelectItem>
+                    <SelectItem value="flutterwave">Flutterwave</SelectItem>
+                    <SelectItem value="bank_transfer">Bank Transfer Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {(paymentConfig.gateway === 'paystack' || !paymentConfig.gateway) && (
+                <div className="space-y-4 p-4 border rounded-lg">
+                  <h4 className="font-semibold text-sm">Paystack Configuration</h4>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>Secret Key</Label>
+                      <Input type="password" placeholder="sk_live_..." value={paymentConfig.paystackSecretKey || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, paystackSecretKey: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Public Key</Label>
+                      <Input placeholder="pk_live_..." value={paymentConfig.paystackPublicKey || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, paystackPublicKey: e.target.value }))} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {paymentConfig.gateway === 'flutterwave' && (
+                <div className="space-y-4 p-4 border rounded-lg">
+                  <h4 className="font-semibold text-sm">Flutterwave Configuration</h4>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>Secret Key</Label>
+                      <Input type="password" placeholder="FLWSECK_..." value={paymentConfig.flutterwaveSecretKey || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, flutterwaveSecretKey: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Public Key</Label>
+                      <Input placeholder="FLWPUBK_..." value={paymentConfig.flutterwavePublicKey || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, flutterwavePublicKey: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Webhook Hash (Optional)</Label>
+                    <Input type="password" placeholder="Webhook verification hash" value={paymentConfig.flutterwaveWebhookHash || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, flutterwaveWebhookHash: e.target.value }))} />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4 p-4 border rounded-lg">
+                <h4 className="font-semibold text-sm">Bank Transfer Details</h4>
+                <p className="text-xs text-muted-foreground">Displayed to customers who choose bank transfer payment</p>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <Label>Bank Name</Label>
+                    <Input placeholder="e.g. GTBank" value={paymentConfig.bankName || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, bankName: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Account Number</Label>
+                    <Input placeholder="0123456789" value={paymentConfig.accountNumber || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, accountNumber: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Account Name</Label>
+                    <Input placeholder="Business name" value={paymentConfig.accountName || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, accountName: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+
+              <Button onClick={savePaymentConfig} disabled={paymentSaving} className="gap-2">
+                {paymentSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Save Payment Settings
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
