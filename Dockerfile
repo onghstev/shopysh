@@ -64,6 +64,15 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
+# Copy seed scripts and required runtime deps for seeding
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/node_modules/tsx ./node_modules/tsx
+COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
+COPY --from=builder /app/node_modules/@esbuild ./node_modules/@esbuild
+COPY --from=builder /app/node_modules/esbuild ./node_modules/esbuild
+COPY --from=builder /app/node_modules/get-tsconfig ./node_modules/get-tsconfig
+COPY --from=builder /app/node_modules/resolve-pkg-maps ./node_modules/resolve-pkg-maps
+
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 
@@ -72,7 +81,7 @@ USER nextjs
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=5 \
-  CMD curl -f http://localhost:3000/api/health || exit 1
+HEALTHCHECK --interval=10s --timeout=5s --start-period=40s --retries=10 \
+  CMD curl -f http://127.0.0.1:3000/api/health || exit 1
 
 ENTRYPOINT ["./docker-entrypoint.sh"]
