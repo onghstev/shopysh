@@ -1,5 +1,5 @@
 /**
- * Tekhuna Biz AI — Embeddable Chat Widget
+ * Shopysh — Embeddable Chat Widget
  * Usage: <script src="https://YOUR_DOMAIN/widget/tekhuna-chat.js" data-tenant-id="YOUR_TENANT_ID"></script>
  */
 (function() {
@@ -155,7 +155,7 @@
       '    <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>',
       '  </button>',
       '</div>',
-      '<div id="tk-powered">Powered by <a href="#">Tekhuna Biz AI</a></div>',
+      '<div id="tk-powered">Powered by <a href="#">Shopysh</a></div>',
     ].join('');
     container.appendChild(win);
 

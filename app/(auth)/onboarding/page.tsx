@@ -31,7 +31,7 @@ const BANK_DETAILS = {
   accountName: 'Tekhuna Technologies Ltd',
   accountNumber: '0123456789',
   sortCode: '058-XXXXXX',
-  narration: 'Tekhuna Biz AI Subscription',
+  narration: 'Shopysh Subscription',
 };
 
 interface Plan {
@@ -253,7 +253,7 @@ function OnboardingPageInner() {
             <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
               <MessageSquare className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-display font-bold text-base tracking-tight">TEKHUNA BIZ AI</span>
+            <span className="font-display font-bold text-base tracking-tight">SHOPYSH</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             {STEP_LABELS.map((label, i) => (
