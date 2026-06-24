@@ -149,7 +149,7 @@ export default function LoginPage() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-white/90">{f.title}</p>
-                    <p className="text-[12.5px] leading-relaxed mt-0.5 text-white/45">{f.desc}</p>
+                    <p className="text-[12.5px] leading-relaxed mt-0.5 text-white/75">{f.desc}</p>
                   </div>
                 </div>
               ))}
