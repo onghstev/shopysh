@@ -9,30 +9,46 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Loader2, ArrowRight, ShieldCheck, Zap, BarChart3,
-  Sparkles, MessageSquare, ShoppingBag, TrendingUp, Bot,
+  Sparkles, Bot, Search, CreditCard, PieChart, Wallet, Megaphone,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const FEATURES = [
   {
     icon: Bot,
-    title: 'Conversational AI',
-    desc: 'Automate customer conversations and take orders 24/7 via smart chat widget',
+    emoji: '🤖',
+    title: 'AI Sales Assistant',
+    desc: 'Respond to customers 24/7 in English & Pidgin',
   },
   {
-    icon: ShoppingBag,
-    title: 'Smart Product Discovery',
-    desc: 'AI-guided shopping experiences that surface the right products at the right time',
+    icon: Search,
+    emoji: '🔍',
+    title: 'Get Found Online',
+    desc: 'SEO-optimized storefronts discoverable on Google & AI search',
   },
   {
-    icon: MessageSquare,
-    title: 'Automated Engagement',
-    desc: 'Campaigns, follow-ups, and customer messaging — all on autopilot',
+    icon: CreditCard,
+    emoji: '💳',
+    title: 'Accept Payments Instantly',
+    desc: 'Paystack & Flutterwave built-in, zero setup',
   },
   {
-    icon: TrendingUp,
-    title: 'Business Analytics',
-    desc: 'Real-time revenue tracking, growth metrics and actionable insights',
+    icon: PieChart,
+    emoji: '📊',
+    title: 'Smart Customer Insights',
+    desc: 'AI segmentation identifies your VIPs and at-risk customers',
+  },
+  {
+    icon: Wallet,
+    emoji: '💰',
+    title: 'Track Your Money',
+    desc: 'Income, expenses, invoices, and cash flow in one place',
+  },
+  {
+    icon: Megaphone,
+    emoji: '📢',
+    title: 'Reach Customers',
+    desc: 'SMS & Email campaigns targeted to the right segment',
   },
 ];
 
@@ -79,9 +95,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col lg:flex-row">
 
-      {/* ── Left Hero Panel ── */}
+      {/* ── Left Hero Panel (desktop) ── */}
       <div className="hidden lg:flex lg:w-[58%] relative overflow-hidden sidebar-gradient">
 
         {/* Ambient glow orbs */}
@@ -108,7 +124,7 @@ export default function LoginPage() {
           </div>
 
           {/* Main copy */}
-          <div className="space-y-10 max-w-lg">
+          <div className="space-y-8 max-w-lg">
             <div>
               {/* Pill badge */}
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.07] border border-white/[0.10] text-xs font-semibold text-gold/90 mb-7 tracking-wide uppercase">
@@ -125,31 +141,29 @@ export default function LoginPage() {
                 </span>
               </h1>
 
-              {/* Tagline / brand description */}
-              <div className="mt-6 p-4 rounded-2xl bg-white/[0.05] border border-white/[0.08] backdrop-blur-sm">
+              {/* Tagline */}
+              <div className="mt-5 p-4 rounded-2xl bg-white/[0.05] border border-white/[0.08] backdrop-blur-sm">
                 <p className="text-white/75 text-sm leading-relaxed">
                   <span className="font-semibold text-white/95">Shopysh</span>{' '}
                   <span className="text-gold/80 font-medium text-xs">(Shop + Your Smart Hub)</span>{' '}
-                  is an AI-powered commerce platform that helps businesses create intelligent shopping
-                  experiences through conversational AI, smart product discovery, and automated
-                  customer engagement.
+                  is an AI-powered commerce platform that helps African businesses grow with smart tools — from storefront to cashflow.
                 </p>
               </div>
             </div>
 
-            {/* Feature cards */}
-            <div className="grid grid-cols-1 gap-2.5">
+            {/* Feature cards — 2-column grid */}
+            <div className="grid grid-cols-2 gap-2.5">
               {FEATURES.map((f, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-3.5 p-4 rounded-2xl border border-white/[0.07] bg-white/[0.03] backdrop-blur-sm hover:bg-white/[0.06] hover:border-white/[0.11] transition-all duration-300"
+                  className="flex items-start gap-3 p-3.5 rounded-2xl border border-white/[0.07] bg-white/[0.03] backdrop-blur-sm hover:bg-white/[0.06] hover:border-white/[0.11] transition-all duration-300"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-gold/10 border border-gold/20 flex items-center justify-center shrink-0">
-                    <f.icon className="w-[17px] h-[17px] text-gold" />
+                  <div className="w-8 h-8 rounded-xl bg-gold/10 border border-gold/20 flex items-center justify-center shrink-0 text-base leading-none">
+                    {f.emoji}
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-white/90">{f.title}</p>
-                    <p className="text-[12.5px] leading-relaxed mt-0.5 text-white/75">{f.desc}</p>
+                  <div className="min-w-0">
+                    <p className="text-[12.5px] font-semibold text-white/90 leading-tight">{f.title}</p>
+                    <p className="text-[11px] leading-relaxed mt-0.5 text-white/75">{f.desc}</p>
                   </div>
                 </div>
               ))}
@@ -169,11 +183,50 @@ export default function LoginPage() {
       </div>
 
       {/* ── Right Form Panel ── */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-10 bg-background">
-        <div className="w-full max-w-[400px] space-y-7">
+      <div className="flex-1 flex flex-col items-center justify-start lg:justify-center bg-background">
 
+        {/* ── Mobile Feature Banner (phone/tablet only) ── */}
+        <div className="lg:hidden w-full sidebar-gradient px-5 pt-5 pb-4">
           {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="w-8 h-8 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center ring-1 ring-white/20">
+              <Sparkles className="w-4 h-4 text-gold" />
+            </div>
+            <div>
+              <span className="font-display font-bold text-white text-base tracking-tight">SHOPYSH</span>
+              <p className="text-[9px] text-gold/70 leading-none mt-0.5 tracking-wide uppercase">AI Commerce Platform</p>
+            </div>
+          </div>
+
+          <p className="text-white/80 text-xs leading-relaxed mb-4">
+            <span className="font-semibold text-white">Shopysh</span> helps African SMEs sell smarter with AI — storefront, payments, campaigns & insights in one place.
+          </p>
+
+          {/* Horizontally scrollable feature chips */}
+          <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide snap-x snap-mandatory">
+            {FEATURES.map((f, i) => (
+              <div
+                key={i}
+                className="flex-none snap-start w-[160px] flex items-start gap-2.5 p-2.5 rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-sm"
+              >
+                <span className="text-xl leading-none shrink-0">{f.emoji}</span>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold text-white leading-tight">{f.title}</p>
+                  <p className="text-[10px] text-white/65 leading-relaxed mt-0.5 line-clamp-2">{f.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Scroll hint */}
+          <p className="text-[9px] text-white/35 mt-2 text-right tracking-wide">← swipe to see more</p>
+        </div>
+
+        {/* Form area */}
+        <div className="w-full max-w-[400px] space-y-7 p-6 sm:p-10">
+
+          {/* Desktop logo (shown only lg+, inside form col) */}
+          <div className="hidden lg:flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-md shadow-primary/25">
               <Sparkles className="w-5 h-5 text-primary-foreground" />
             </div>
@@ -278,11 +331,6 @@ export default function LoginPage() {
             <Link href="/signup/code" className="text-gold hover:text-primary font-semibold transition-colors">
               Sign up with secure code
             </Link>
-          </p>
-
-          {/* Mobile tagline */}
-          <p className="lg:hidden text-center text-[11px] text-muted-foreground/50 leading-relaxed pt-2 border-t border-border/40">
-            Shopysh (Shop + Your Smart Hub) — AI-powered commerce for growing businesses.
           </p>
         </div>
       </div>
