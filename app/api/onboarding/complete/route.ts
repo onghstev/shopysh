@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { businessName, industry, phone, email, address, city, country, planId, billingCycle, paymentMethod } = body;
+    const { businessName, industry, phone, email, address, city, country, planId, billingCycle, paymentMethod, accessCode } = body;
 
     if (!businessName || !planId) {
       return NextResponse.json({ error: 'Business name and plan are required' }, { status: 400 });
@@ -22,6 +22,20 @@ export async function POST(request: NextRequest) {
     const plan = await prisma.subscriptionPlan.findUnique({ where: { id: planId } });
     if (!plan || !plan.isActive) {
       return NextResponse.json({ error: 'Invalid plan selected' }, { status: 400 });
+    }
+
+    // Validate access code if provided
+    let validatedCode = null;
+    if (accessCode) {
+      validatedCode = await prisma.accessCode.findUnique({
+        where: { code: accessCode.trim().toUpperCase() },
+      });
+      if (!validatedCode || validatedCode.isUsed) {
+        return NextResponse.json({ error: 'Invalid or already used access code' }, { status: 400 });
+      }
+      if (validatedCode.expiresAt && validatedCode.expiresAt < new Date()) {
+        return NextResponse.json({ error: 'Access code has expired' }, { status: 400 });
+      }
     }
 
     const tenantId = session.user.tenantId;
@@ -58,7 +72,7 @@ export async function POST(request: NextRequest) {
         ? new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000)
         : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-      const paymentGw = paymentMethod === 'bank_transfer' ? 'bank_transfer' : 'online';
+      const paymentGw = validatedCode ? 'access_code' : paymentMethod === 'bank_transfer' ? 'bank_transfer' : 'online';
 
       if (existingSub) {
         await tx.subscription.update({
@@ -88,6 +102,14 @@ export async function POST(request: NextRequest) {
             currentPeriodEnd: periodEnd,
             trialEndsAt: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000),
           },
+        });
+      }
+
+      // Mark access code as used
+      if (validatedCode) {
+        await tx.accessCode.update({
+          where: { id: validatedCode.id },
+          data: { isUsed: true, usedByTenantId: tenantId, usedAt: new Date() },
         });
       }
 

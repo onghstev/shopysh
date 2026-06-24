@@ -266,6 +266,20 @@ export default function LoginPage() {
             </Link>
           </p>
 
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">or</span>
+            </div>
+          </div>
+
+          <p className="text-center text-sm text-muted-foreground">
+            Have an access code?{' '}
+            <Link href="/signup/code" className="text-gold hover:text-primary font-semibold transition-colors">
+              Sign up with secure code
+            </Link>
+          </p>
+
           {/* Mobile tagline */}
           <p className="lg:hidden text-center text-[11px] text-muted-foreground/50 leading-relaxed pt-2 border-t border-border/40">
             Shopysh (Shop + Your Smart Hub) — AI-powered commerce for growing businesses.

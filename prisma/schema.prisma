@@ -619,6 +619,7 @@ model SubscriptionPlan {
   updatedAt                DateTime @updatedAt @map("updated_at")
 
   subscriptions Subscription[]
+  accessCodes   AccessCode[]
 
   @@index([isActive, displayOrder], map: "idx_subscription_plans_active")
   @@map("subscription_plans")
@@ -898,4 +899,28 @@ model SystemSetting {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("system_settings")
+}
+
+// ========================================
+// 14. ACCESS CODES (manual payment bypass)
+// ========================================
+
+model AccessCode {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code            String    @unique @db.VarChar(20)
+  planId          String    @map("plan_id") @db.Uuid
+  billingCycle    String    @default("monthly") @map("billing_cycle") @db.VarChar(10)
+  isUsed          Boolean   @default(false) @map("is_used")
+  usedByTenantId  String?   @map("used_by_tenant_id") @db.Uuid
+  createdByUserId String    @map("created_by_user_id") @db.Uuid
+  expiresAt       DateTime? @map("expires_at")
+  usedAt          DateTime? @map("used_at")
+  note            String?   @db.Text
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  plan SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@index([code], map: "idx_access_codes_code")
+  @@index([isUsed, expiresAt], map: "idx_access_codes_status")
+  @@map("access_codes")
 }

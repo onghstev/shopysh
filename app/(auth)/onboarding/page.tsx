@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   MessageSquare, ArrowRight, ArrowLeft, Building2, CreditCard,
   Check, Loader2, Sparkles, Users, Database, Headphones, Zap,
-  Landmark, Globe, Copy, CheckCircle,
+  Landmark, Globe, Copy, CheckCircle, KeyRound,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -23,7 +23,8 @@ const INDUSTRIES = [
   'Hospitality & Tourism', 'Professional Services', 'Other',
 ];
 
-const STEP_LABELS = ['Business Info', 'Choose Plan', 'Payment Method', 'Confirm'];
+const STEP_LABELS_NORMAL = ['Business Info', 'Choose Plan', 'Payment Method', 'Confirm'];
+const STEP_LABELS_CODE   = ['Business Info', 'Plan (Activated)', 'Confirm'];
 
 const BANK_DETAILS = {
   bankName: 'Guaranty Trust Bank (GTBank)',
@@ -52,9 +53,15 @@ interface Plan {
   prioritySupport: boolean;
 }
 
-export default function OnboardingPage() {
+function OnboardingPageInner() {
   const { data: session, status } = useSession() || {};
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const accessCode = searchParams.get('code') ?? '';
+  const usingCode = Boolean(accessCode);
+
+  const STEP_LABELS = usingCode ? STEP_LABELS_CODE : STEP_LABELS_NORMAL;
+
   const [step, setStep] = useState(0);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
@@ -64,6 +71,7 @@ export default function OnboardingPage() {
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<'online' | 'bank_transfer' | ''>('');
   const [copiedField, setCopiedField] = useState('');
+  const [codeVerified, setCodeVerified] = useState(false);
 
   const [form, setForm] = useState({
     businessName: '',
@@ -119,6 +127,27 @@ export default function OnboardingPage() {
     fetchPlans();
   }, [fetchPlans]);
 
+  // Verify access code and pre-select plan
+  useEffect(() => {
+    if (!accessCode || plans.length === 0) return;
+    fetch('/api/auth/verify-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: accessCode }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.valid && data.plan) {
+          setSelectedPlanId(data.plan.id);
+          if (data.billingCycle) setBillingCycle(data.billingCycle);
+          setCodeVerified(true);
+        } else {
+          toast.error('Access code is invalid or expired. Please select a plan manually.');
+        }
+      })
+      .catch(() => toast.error('Could not verify access code'));
+  }, [accessCode, plans]);
+
   // Check if already onboarded
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -157,8 +186,10 @@ export default function OnboardingPage() {
   const nextStep = () => {
     if (step === 0 && !validateStep0()) return;
     if (step === 1 && !validateStep1()) return;
-    if (step === 2 && !validateStep2()) return;
-    setStep((s) => Math.min(s + 1, 3));
+    // Skip payment method step (step 2) when using an access code
+    if (!usingCode && step === 2 && !validateStep2()) return;
+    const maxStep = usingCode ? 2 : 3;
+    setStep((s) => Math.min(s + 1, maxStep));
   };
 
   const prevStep = () => setStep((s) => Math.max(s - 1, 0));
@@ -173,7 +204,8 @@ export default function OnboardingPage() {
           ...form,
           planId: selectedPlanId,
           billingCycle,
-          paymentMethod,
+          paymentMethod: usingCode ? 'access_code' : paymentMethod,
+          ...(usingCode ? { accessCode } : {}),
         }),
       });
       const data = await res.json();
@@ -352,7 +384,50 @@ export default function OnboardingPage() {
         )}
 
         {/* Step 1: Plan Selection */}
-        {step === 1 && (
+        {step === 1 && usingCode && (
+          <div className="max-w-xl mx-auto space-y-6">
+            <div className="text-center space-y-2">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <KeyRound className="w-7 h-7 text-primary" />
+              </div>
+              <h1 className="text-2xl font-display font-bold">Plan activated by code</h1>
+              <p className="text-muted-foreground">Your access code pre-activates the following subscription</p>
+            </div>
+            <Card>
+              <CardContent className="pt-6 space-y-4">
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-accent border border-primary/20">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold">Code verified</p>
+                    <p className="text-xs text-muted-foreground font-mono mt-0.5">{accessCode}</p>
+                  </div>
+                </div>
+                {selectedPlan ? (
+                  <div className="border border-primary/30 rounded-xl p-4 bg-primary/5">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-bold text-lg">{selectedPlan.name} Plan</span>
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold capitalize">{billingCycle}</span>
+                    </div>
+                    {selectedPlan.description && <p className="text-sm text-muted-foreground mb-3">{selectedPlan.description}</p>}
+                    <p className="text-xs text-muted-foreground">No payment required — your plan is covered by the access code.</p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4"><Loader2 className="w-4 h-4 animate-spin inline mr-2" />Loading plan details…</p>
+                )}
+              </CardContent>
+            </Card>
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={prevStep} className="h-11">
+                <ArrowLeft className="w-4 h-4 mr-2" /> Back
+              </Button>
+              <Button onClick={nextStep} className="h-11 px-8 font-medium" disabled={!selectedPlanId}>
+                Continue <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === 1 && !usingCode && (
           <div className="space-y-6">
             <div className="text-center space-y-2">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
@@ -536,8 +611,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 2: Payment Method */}
-        {step === 2 && (
+        {/* Step 2: Payment Method (normal flow only) */}
+        {step === 2 && !usingCode && (
           <div className="max-w-xl mx-auto space-y-6">
             <div className="text-center space-y-2">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
@@ -685,8 +760,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 3: Confirmation */}
-        {step === 3 && (
+        {/* Step 3: Confirmation (normal) or Step 2: Confirmation (code path) */}
+        {(step === 3 || (usingCode && step === 2)) && (
           <div className="max-w-xl mx-auto space-y-6">
             <div className="text-center space-y-2">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
@@ -798,5 +873,17 @@ export default function OnboardingPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    }>
+      <OnboardingPageInner />
+    </Suspense>
   );
 }

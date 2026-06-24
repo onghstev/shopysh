@@ -178,7 +178,7 @@ export default async function StorePage({ params, searchParams }: Props) {
         </header>
 
         {/* ── Hero ── */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-primary/90 via-primary to-primary/80 py-16 sm:py-24 px-4 sm:px-6">
+        <section className="relative overflow-hidden bg-gradient-to-br from-primary/90 via-primary to-primary/80 py-8 sm:py-12 px-4 sm:px-6">
           {/* decorative blobs */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute -top-24 -right-24 w-[480px] h-[480px] rounded-full bg-gold/10 blur-[100px]" />
@@ -190,36 +190,33 @@ export default async function StorePage({ params, searchParams }: Props) {
           <div className="max-w-7xl mx-auto relative">
             <div className="max-w-2xl">
               {/* badges */}
-              <div className="flex flex-wrap items-center gap-2 mb-5">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 border border-white/20 text-white/90 text-xs font-medium backdrop-blur-sm">
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 border border-white/20 text-white/90 text-xs font-medium backdrop-blur-sm">
                   <Store className="w-3 h-3" />{store.industry ?? 'Online Store'}
                 </span>
                 {store.city && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 border border-white/20 text-white/90 text-xs font-medium backdrop-blur-sm">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 border border-white/20 text-white/90 text-xs font-medium backdrop-blur-sm">
                     <MapPin className="w-3 h-3" />{store.city}{store.country ? `, ${store.country}` : ''}
                   </span>
                 )}
               </div>
 
-              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-[1.08] mb-4">
-                Welcome to{' '}
-                <span className="text-gold underline decoration-gold/40 decoration-wavy underline-offset-4">
-                  {store.name}
-                </span>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white leading-snug mb-2">
+                <span className="text-gold">{store.name}</span>
               </h2>
 
               {store.description && (
-                <p className="text-white/75 text-lg leading-relaxed mb-7 max-w-xl">{store.description}</p>
+                <p className="text-white/70 text-sm leading-relaxed mb-4 max-w-xl">{store.description}</p>
               )}
 
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 border border-white/20 text-white text-sm font-semibold backdrop-blur-sm">
-                  <Package className="w-4 h-4 text-gold" />
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 border border-white/20 text-white text-xs font-semibold backdrop-blur-sm">
+                  <Package className="w-3.5 h-3.5 text-gold" />
                   {products.length} product{products.length !== 1 ? 's' : ''}
                 </div>
                 {categories.length > 0 && (
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 border border-white/20 text-white text-sm font-semibold backdrop-blur-sm">
-                    <Tag className="w-4 h-4 text-gold" />
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 border border-white/20 text-white text-xs font-semibold backdrop-blur-sm">
+                    <Tag className="w-3.5 h-3.5 text-gold" />
                     {categories.length} categor{categories.length !== 1 ? 'ies' : 'y'}
                   </div>
                 )}
