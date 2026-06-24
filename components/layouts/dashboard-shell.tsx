@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, MessageSquare,
   Settings, LogOut, Menu, X, ChevronDown, ChevronRight, Bell, Bot,
-  CreditCard, Megaphone, BarChart3, Search, Shield, FolderTree,
+  CreditCard, Megaphone, BarChart3, Search, Shield, FolderTree, KeyRound,
   UsersRound, FileBarChart, BookOpen, Presentation, ExternalLink, Code,
   Sparkles, Wallet, TrendingUp, TrendingDown, Landmark, FileText, PieChart,
 } from 'lucide-react';
@@ -216,6 +216,7 @@ export function DashboardShell({ children, session }: { children: React.ReactNod
               {expandedGroups['platform'] && (
                 <div className="space-y-0.5 mt-0.5">
                   <NavLink item={{ href: '/admin', label: 'Admin Panel', icon: Shield }} />
+                  <NavLink item={{ href: '/admin/access-codes', label: 'Access Codes', icon: KeyRound }} />
                 </div>
               )}
             </div>
