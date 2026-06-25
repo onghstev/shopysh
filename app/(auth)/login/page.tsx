@@ -207,12 +207,12 @@ export default function LoginPage() {
             {FEATURES.map((f, i) => (
               <div
                 key={i}
-                className="flex-none snap-start w-[160px] flex items-start gap-2.5 p-2.5 rounded-xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-sm"
+                className="flex-none snap-start w-[160px] flex items-start gap-2.5 p-2.5 rounded-xl border border-white/[0.15] bg-white/[0.08] backdrop-blur-sm"
               >
                 <span className="text-xl leading-none shrink-0">{f.emoji}</span>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold text-white leading-tight">{f.title}</p>
-                  <p className="text-[10px] text-white/65 leading-relaxed mt-0.5 line-clamp-2">{f.desc}</p>
+                  <p className="text-[11px] font-semibold leading-tight" style={{ color: 'rgba(255,255,255,0.95)' }}>{f.title}</p>
+                  <p className="text-[10px] leading-relaxed mt-0.5 line-clamp-2" style={{ color: 'rgba(255,255,255,0.75)' }}>{f.desc}</p>
                 </div>
               </div>
             ))}

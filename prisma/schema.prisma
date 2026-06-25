@@ -224,7 +224,7 @@ model Customer {
   name                String?   @db.VarChar(255)
   email               String?   @db.VarChar(255)
   passwordHash        String?   @map("password_hash") @db.Text
-  googleId            String?   @unique @map("google_id") @db.VarChar(255)
+  googleId            String?   @map("google_id") @db.VarChar(255)
   profilePictureUrl   String?   @map("profile_picture_url") @db.Text
   location            String?   @db.VarChar(255)
   dateOfBirth         DateTime? @map("date_of_birth") @db.Date
@@ -252,6 +252,7 @@ model Customer {
   incomes               Income[]
 
   @@unique([tenantId, phone], map: "idx_customers_phone_tenant")
+  @@unique([tenantId, googleId], map: "idx_customers_google_tenant")
   @@index([tenantId, isBlocked, lastInteractionAt(sort: Desc)], map: "idx_customers_tenant_active")
   @@index([tenantId, segment], map: "idx_customers_segment")
   @@index([tenantId, lifetimeValue(sort: Desc)], map: "idx_customers_lifetime_value")
