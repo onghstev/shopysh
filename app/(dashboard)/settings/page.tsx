@@ -15,15 +15,26 @@ import { Building2, Bot, CreditCard, Save, CheckCircle2, Loader2, Key, AlertTria
 import { toast } from 'sonner';
 
 function EmailTestSection() {
-  const [status, setStatus] = useState<'idle' | 'checking' | 'sending'>('idle');
+  const [status, setStatus] = useState<'idle' | 'sending'>('idle');
   const [configured, setConfigured] = useState<boolean | null>(null);
+  const [missing, setMissing] = useState<string[]>([]);
+  const [rechecking, setRechecking] = useState(false);
 
-  useEffect(() => {
-    fetch('/api/settings/test-email')
-      .then(r => r.json())
-      .then(d => setConfigured(d.configured))
-      .catch(() => setConfigured(false));
-  }, []);
+  const checkConfig = async () => {
+    setRechecking(true);
+    try {
+      const res = await fetch('/api/settings/test-email', { cache: 'no-store' });
+      const d = await res.json();
+      setConfigured(d.configured ?? false);
+      setMissing(d.missing ?? []);
+    } catch {
+      setConfigured(false);
+    } finally {
+      setRechecking(false);
+    }
+  };
+
+  useEffect(() => { checkConfig(); }, []);
 
   const sendTest = async () => {
     setStatus('sending');
@@ -46,36 +57,47 @@ function EmailTestSection() {
           <Mail className="w-4 h-4 text-muted-foreground" />
           <h4 className="font-semibold text-sm">Email Broadcasts (SMTP)</h4>
         </div>
-        {configured === null ? (
-          <span className="text-xs text-muted-foreground">Checking…</span>
-        ) : configured ? (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
-            <CheckCircle className="w-3 h-3" /> Configured
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
-            <XCircle className="w-3 h-3" /> Not configured
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {configured === null || rechecking ? (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Loader2 className="w-3 h-3 animate-spin" /> Checking…
+            </span>
+          ) : configured ? (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
+              <CheckCircle className="w-3 h-3" /> Configured
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+              <XCircle className="w-3 h-3" /> Not configured
+            </span>
+          )}
+          <button
+            onClick={checkConfig}
+            disabled={rechecking}
+            className="text-xs text-muted-foreground underline hover:text-foreground disabled:opacity-40"
+          >
+            Re-check
+          </button>
+        </div>
       </div>
 
-      {configured === false && (
+      {configured === false && missing.length > 0 && (
         <div className="text-xs text-muted-foreground leading-relaxed bg-muted/40 rounded p-3 space-y-1">
-          <p className="font-medium text-foreground">Add these to your server <code className="bg-muted px-1 py-0.5 rounded">.env</code> file:</p>
-          <pre className="text-[11px] font-mono text-muted-foreground leading-5">
-{`SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your@gmail.com
-SMTP_PASS=your-app-password
-SMTP_FROM=noreply@yourdomain.com`}
-          </pre>
-          <p>For Gmail, generate an <strong>App Password</strong> at myaccount.google.com → Security → App Passwords.</p>
+          <p className="font-medium text-foreground">
+            Missing env vars (add to your server <code className="bg-muted px-1 py-0.5 rounded">.env</code>, then restart the app container):
+          </p>
+          <pre className="text-[11px] font-mono text-destructive leading-5">{missing.join('\n')}</pre>
+          <p className="text-muted-foreground">
+            For Gmail use port 587 with an <strong>App Password</strong> (myaccount.google.com → Security → App Passwords).
+            After editing .env, run: <code className="bg-muted px-1 rounded">docker compose restart app</code>
+            then click <strong>Re-check</strong> above.
+          </p>
         </div>
       )}
 
       {configured && (
         <p className="text-xs text-muted-foreground">
-          Campaign emails will be sent from <code className="bg-muted px-1 rounded">{'{SMTP_FROM}'}</code> to all customers who have an email address on file.
+          Campaign emails will be sent from your configured SMTP address to all customers who have an email on file.
         </p>
       )}
 
@@ -83,7 +105,7 @@ SMTP_FROM=noreply@yourdomain.com`}
         size="sm"
         variant="outline"
         onClick={sendTest}
-        disabled={status === 'sending' || configured === false}
+        disabled={status === 'sending'}
         className="gap-2"
       >
         {status === 'sending' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}

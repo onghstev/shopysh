@@ -7,7 +7,11 @@ import { sendEmail, verifyEmailConfig, isEmailConfigured } from '@/lib/email';
 import { prisma } from '@/lib/db';
 
 export async function GET() {
-  return NextResponse.json({ configured: isEmailConfigured() });
+  const missing = ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS'].filter(k => !process.env[k]);
+  return NextResponse.json(
+    { configured: missing.length === 0, missing },
+    { headers: { 'Cache-Control': 'no-store' } }
+  );
 }
 
 export async function POST() {
