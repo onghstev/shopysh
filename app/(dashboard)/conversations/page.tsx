@@ -34,17 +34,14 @@ interface Conversation {
 
 const CHANNEL_ICONS: Record<string, any> = {
   webchat: Globe,
-  whatsapp: MessageSquare,
 };
 
 const CHANNEL_COLORS: Record<string, string> = {
   webchat: 'bg-blue-500/10 text-blue-600 border-blue-200',
-  whatsapp: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
 };
 
 const CHANNEL_LABELS: Record<string, string> = {
   webchat: 'Web Chat',
-  whatsapp: 'WhatsApp',
 };
 
 export default function ConversationsPage() {
@@ -153,7 +150,7 @@ export default function ConversationsPage() {
             </div>
             {/* Channel Filter */}
             <div className="flex gap-1.5 flex-wrap">
-              {['all', 'webchat', 'whatsapp'].map((ch) => (
+              {['all', 'webchat'].map((ch) => (
                 <button
                   key={ch}
                   onClick={() => setChannelFilter(ch)}
