@@ -73,23 +73,21 @@ export default function DashboardPage() {
       )}
 
       {/* Welcome Banner */}
-      <div className="rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 p-6 lg:p-8 text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-2xl" />
-        <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 blur-xl" />
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-5 h-5 text-yellow-300" />
-            <span className="text-white/70 text-sm font-medium">AI-Powered Dashboard</span>
+      <div className="rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 px-5 py-4 text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-2xl" />
+        <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <Sparkles className="w-4 h-4 text-yellow-300 shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-base lg:text-lg font-display font-bold leading-snug">Welcome back, {displayName}! 👋</h1>
+              <p className="text-white/65 text-xs hidden sm:block">Manage orders, track revenue, and let AI handle your customer conversations.</p>
+            </div>
           </div>
-          <h1 className="text-2xl lg:text-3xl font-display font-bold">Welcome back, {displayName}! 👋</h1>
-          <p className="text-white/70 mt-2 text-sm lg:text-base max-w-xl">
-            Here&apos;s your business overview. Manage orders, track revenue, and let AI handle your customer conversations.
-          </p>
-          <div className="flex gap-3 mt-5">
-            <Button asChild variant="secondary" size="sm" className="bg-white/20 text-white border-0 hover:bg-white/30 backdrop-blur">
+          <div className="flex gap-2 shrink-0">
+            <Button asChild variant="secondary" size="sm" className="bg-white/20 text-white border-0 hover:bg-white/30 backdrop-blur h-8 text-xs">
               <Link href="/orders">View Orders</Link>
             </Button>
-            <Button asChild variant="secondary" size="sm" className="bg-white/10 text-white border border-white/20 hover:bg-white/20 backdrop-blur">
+            <Button asChild variant="secondary" size="sm" className="bg-white/10 text-white border border-white/20 hover:bg-white/20 backdrop-blur h-8 text-xs">
               <Link href="/ai-assistant">AI Assistant</Link>
             </Button>
           </div>
