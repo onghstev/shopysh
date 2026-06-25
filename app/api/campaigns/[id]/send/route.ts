@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession, unauthorized, badRequest, notFound, serverError } from '@/lib/api-helpers';
 import { prisma } from '@/lib/db';
-import nodemailer from 'nodemailer';
+import { sendEmail } from '@/lib/email';
 
 async function sendSms(phone: string, message: string, smsConfig: any): Promise<{ success: boolean; error?: string }> {
   try {
@@ -63,55 +63,6 @@ async function sendSms(phone: string, message: string, smsConfig: any): Promise<
   }
 }
 
-function buildEmailHtml(message: string, appName: string): string {
-  return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: #10b981; padding: 20px; border-radius: 8px 8px 0 0;">
-        <h2 style="color: white; margin: 0;">${appName}</h2>
-      </div>
-      <div style="background: #f9fafb; padding: 24px; border-radius: 0 0 8px 8px;">
-        <div style="background: white; padding: 20px; border-radius: 8px; line-height: 1.6;">
-          ${message.replace(/\n/g, '<br/>')}
-        </div>
-      </div>
-      <p style="color: #999; font-size: 11px; text-align: center; margin-top: 16px;">Sent from ${appName}</p>
-    </div>
-  `;
-}
-
-async function sendEmailViaSMTP(email: string, subject: string, htmlBody: string, appName: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: (process.env.SMTP_PORT === '465'),
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
-    await transporter.sendMail({
-      from: `"${appName}" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-      to: email,
-      subject,
-      html: htmlBody,
-    });
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-}
-
-async function sendEmail(email: string, subject: string, message: string, tenantName: string): Promise<{ success: boolean; error?: string }> {
-  const appName = tenantName || 'Shopysh';
-  const htmlBody = buildEmailHtml(message, appName);
-
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) {
-    return { success: false, error: 'SMTP not configured. Set SMTP_HOST, SMTP_USER, and SMTP_PASS in environment variables.' };
-  }
-  return sendEmailViaSMTP(email, subject, htmlBody, appName);
-}
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -191,12 +142,13 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
         // Send Email
         if ((channel === 'email' || channel === 'both') && customer.email) {
-          const emailResult = await sendEmail(
-            customer.email,
-            `${campaign.name} — ${tenant?.name || 'Store'}`,
-            personalizedMsg,
-            tenant?.name || 'Store',
-          );
+          const emailResult = await sendEmail({
+            to: customer.email,
+            subject: `${campaign.name} — ${tenant?.name || 'Store'}`,
+            headline: campaign.name,
+            body: personalizedMsg,
+            senderName: tenant?.name || 'Store',
+          });
           if (emailResult.success) {
             results.email++;
             customerSent = true;

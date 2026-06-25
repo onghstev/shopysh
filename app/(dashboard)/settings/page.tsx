@@ -11,10 +11,87 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Bot, CreditCard, Save, CheckCircle2, Loader2, Key, AlertTriangle, CheckCircle, Cpu, Wallet, Bell } from 'lucide-react';
-// format helpers imported if needed
-// import { formatCurrency } from '@/lib/format';
+import { Building2, Bot, CreditCard, Save, CheckCircle2, Loader2, Key, AlertTriangle, CheckCircle, Cpu, Wallet, Bell, Mail, XCircle, Send } from 'lucide-react';
 import { toast } from 'sonner';
+
+function EmailTestSection() {
+  const [status, setStatus] = useState<'idle' | 'checking' | 'sending'>('idle');
+  const [configured, setConfigured] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch('/api/settings/test-email')
+      .then(r => r.json())
+      .then(d => setConfigured(d.configured))
+      .catch(() => setConfigured(false));
+  }, []);
+
+  const sendTest = async () => {
+    setStatus('sending');
+    try {
+      const res = await fetch('/api/settings/test-email', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) toast.success(data.message);
+      else toast.error(data.error ?? 'Test email failed');
+    } catch {
+      toast.error('Network error');
+    } finally {
+      setStatus('idle');
+    }
+  };
+
+  return (
+    <div className="p-4 border rounded-lg space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Mail className="w-4 h-4 text-muted-foreground" />
+          <h4 className="font-semibold text-sm">Email Broadcasts (SMTP)</h4>
+        </div>
+        {configured === null ? (
+          <span className="text-xs text-muted-foreground">Checking…</span>
+        ) : configured ? (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
+            <CheckCircle className="w-3 h-3" /> Configured
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+            <XCircle className="w-3 h-3" /> Not configured
+          </span>
+        )}
+      </div>
+
+      {configured === false && (
+        <div className="text-xs text-muted-foreground leading-relaxed bg-muted/40 rounded p-3 space-y-1">
+          <p className="font-medium text-foreground">Add these to your server <code className="bg-muted px-1 py-0.5 rounded">.env</code> file:</p>
+          <pre className="text-[11px] font-mono text-muted-foreground leading-5">
+{`SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your@gmail.com
+SMTP_PASS=your-app-password
+SMTP_FROM=noreply@yourdomain.com`}
+          </pre>
+          <p>For Gmail, generate an <strong>App Password</strong> at myaccount.google.com → Security → App Passwords.</p>
+        </div>
+      )}
+
+      {configured && (
+        <p className="text-xs text-muted-foreground">
+          Campaign emails will be sent from <code className="bg-muted px-1 rounded">{'{SMTP_FROM}'}</code> to all customers who have an email address on file.
+        </p>
+      )}
+
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={sendTest}
+        disabled={status === 'sending' || configured === false}
+        className="gap-2"
+      >
+        {status === 'sending' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+        Send Test Email to My Account
+      </Button>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const { data: session, update } = useSession() || {};
@@ -500,10 +577,7 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              <div className="p-4 border rounded-lg bg-muted/30">
-                <h4 className="font-semibold text-sm mb-2">Email Broadcasts</h4>
-                <p className="text-xs text-muted-foreground">Email broadcasts use the built-in email system automatically. Customers with email addresses on file will receive campaign emails — no additional configuration needed.</p>
-              </div>
+              <EmailTestSection />
 
               <Button onClick={saveSmsConfig} disabled={smsSaving} className="gap-2">
                 {smsSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
