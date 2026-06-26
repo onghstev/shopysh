@@ -25,7 +25,7 @@ export default function SignupWithCodePage() {
   const [codeInfo, setCodeInfo] = useState<CodeInfo | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [registering, setRegistering] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '', tenantName: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '', businessName: '' });
 
   const upd = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
@@ -53,8 +53,8 @@ export default function SignupWithCodePage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.password || !form.tenantName) {
-      toast.error('Please fill all fields'); return;
+    if (!form.firstName || !form.email || !form.password || !form.businessName) {
+      toast.error('Please fill all required fields'); return;
     }
     if (form.password !== form.confirmPassword) {
       toast.error('Passwords do not match'); return;
@@ -62,16 +62,20 @@ export default function SignupWithCodePage() {
     if (form.password.length < 8) {
       toast.error('Password must be at least 8 characters'); return;
     }
+    if (!/[A-Z]/.test(form.password) || !/[a-z]/.test(form.password) || !/[0-9]/.test(form.password) || !/[^A-Za-z0-9]/.test(form.password)) {
+      toast.error('Password must contain uppercase, lowercase, a number, and a special character'); return;
+    }
     setRegistering(true);
     try {
       const res = await fetch('/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: form.name,
+          firstName: form.firstName,
+          lastName: form.lastName,
           email: form.email,
           password: form.password,
-          tenantName: form.tenantName,
+          businessName: form.businessName,
         }),
       });
       const data = await res.json();
@@ -227,27 +231,38 @@ export default function SignupWithCodePage() {
 
               <form onSubmit={handleRegister} className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Business Name</Label>
+                  <Label className="text-sm font-medium">Business Name <span className="text-destructive">*</span></Label>
                   <Input
                     placeholder="Ada's Fashion Store"
-                    value={form.tenantName}
-                    onChange={(e) => upd('tenantName', e.target.value)}
+                    value={form.businessName}
+                    onChange={(e) => upd('businessName', e.target.value)}
                     className="h-11 rounded-xl bg-secondary/50 border-border/60"
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Your Full Name</Label>
-                  <Input
-                    placeholder="Ada Okonkwo"
-                    value={form.name}
-                    onChange={(e) => upd('name', e.target.value)}
-                    className="h-11 rounded-xl bg-secondary/50 border-border/60"
-                    required
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">First Name <span className="text-destructive">*</span></Label>
+                    <Input
+                      placeholder="Ada"
+                      value={form.firstName}
+                      onChange={(e) => upd('firstName', e.target.value)}
+                      className="h-11 rounded-xl bg-secondary/50 border-border/60"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Last Name</Label>
+                    <Input
+                      placeholder="Okonkwo"
+                      value={form.lastName}
+                      onChange={(e) => upd('lastName', e.target.value)}
+                      className="h-11 rounded-xl bg-secondary/50 border-border/60"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Email Address</Label>
+                  <Label className="text-sm font-medium">Email Address <span className="text-destructive">*</span></Label>
                   <Input
                     type="email"
                     placeholder="you@business.com"
@@ -259,7 +274,7 @@ export default function SignupWithCodePage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Password</Label>
+                    <Label className="text-sm font-medium">Password <span className="text-destructive">*</span></Label>
                     <Input
                       type="password"
                       placeholder="Min 8 chars"
@@ -270,7 +285,7 @@ export default function SignupWithCodePage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Confirm</Label>
+                    <Label className="text-sm font-medium">Confirm <span className="text-destructive">*</span></Label>
                     <Input
                       type="password"
                       placeholder="Repeat"
@@ -281,6 +296,9 @@ export default function SignupWithCodePage() {
                     />
                   </div>
                 </div>
+                {form.confirmPassword.length > 0 && form.confirmPassword !== form.password && (
+                  <p className="text-xs text-destructive">Passwords do not match</p>
+                )}
 
                 <Button
                   type="submit"
