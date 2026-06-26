@@ -13,6 +13,7 @@ import {
   CreditCard, Megaphone, BarChart3, Search, Shield, FolderTree, KeyRound,
   UsersRound, FileBarChart, BookOpen, Presentation, ExternalLink, Code,
   Sparkles, Wallet, TrendingUp, TrendingDown, Landmark, FileText, PieChart,
+  Layers, Building2, Scale,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -61,12 +62,18 @@ const NAV_GROUPS: NavGroup[] = [
     key: 'finance',
     label: 'Finance',
     items: [
-      { href: '/finance', label: 'Overview', icon: Wallet },
-      { href: '/finance/income', label: 'Income', icon: TrendingUp },
-      { href: '/finance/expenses', label: 'Expenses', icon: TrendingDown },
-      { href: '/finance/daily-banking', label: 'Daily Banking', icon: Landmark },
-      { href: '/finance/invoices', label: 'Invoices', icon: FileText },
-      { href: '/finance/statements', label: 'Statements', icon: PieChart },
+      { href: '/finance',                         label: 'Command Center',  icon: Wallet },
+      { href: '/finance/accounts',                label: 'Chart of Accounts', icon: Layers },
+      { href: '/finance/journal',                 label: 'Journal Entries', icon: BookOpen },
+      { href: '/finance/vendors',                 label: 'Vendors',         icon: Building2 },
+      { href: '/finance/income',                  label: 'Income',          icon: TrendingUp },
+      { href: '/finance/expenses',                label: 'Expenses',        icon: TrendingDown },
+      { href: '/finance/daily-banking',           label: 'Daily Banking',   icon: Landmark },
+      { href: '/finance/invoices',                label: 'Invoices',        icon: FileText },
+      { href: '/finance/reports',                 label: 'Reports',         icon: BarChart3 },
+      { href: '/finance/reports/trial-balance',   label: 'Trial Balance',   icon: Scale },
+      { href: '/finance/reports/income-statement',label: 'Income Statement',icon: PieChart },
+      { href: '/finance/reports/balance-sheet',   label: 'Balance Sheet',   icon: FileBarChart },
     ],
   },
   {

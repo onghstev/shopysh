@@ -51,7 +51,23 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
       await tx.campaign.deleteMany({ where: { tenantId } });
       await tx.orderItem.deleteMany({ where: { order: { tenantId } } });
 
-      // Finance module (Income references Customer & Tenant; Expense references ExpenseCategory)
+      // Finance Module v2 — Accounting Engine (children before parents)
+      await tx.assetDepreciation.deleteMany({ where: { tenantId } });
+      await tx.fixedAsset.deleteMany({ where: { tenantId } });
+      await tx.budgetLine.deleteMany({ where: { budget: { tenantId } } });
+      await tx.budget.deleteMany({ where: { tenantId } });
+      await tx.journalLine.deleteMany({ where: { journalEntry: { tenantId } } });
+      await tx.journalEntry.deleteMany({ where: { tenantId } });
+      await tx.accountingPeriod.deleteMany({ where: { tenantId } });
+      await tx.fiscalYear.deleteMany({ where: { tenantId } });
+      await tx.glAccount.deleteMany({ where: { tenantId } });
+      await tx.taxRate.deleteMany({ where: { tenantId } });
+      await tx.purchaseInvoiceLine.deleteMany({ where: { purchaseInvoice: { tenantId } } });
+      await tx.purchaseInvoice.deleteMany({ where: { tenantId } });
+      await tx.vendor.deleteMany({ where: { tenantId } });
+      await tx.currencyRate.deleteMany({ where: { tenantId } });
+
+      // Finance module v1 (Income references Customer & Tenant; Expense references ExpenseCategory)
       await tx.income.deleteMany({ where: { tenantId } });
       await tx.dailyCashEntry.deleteMany({ where: { tenantId } });
       await tx.expense.deleteMany({ where: { tenantId } });
