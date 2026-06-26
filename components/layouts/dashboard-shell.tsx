@@ -113,6 +113,11 @@ export function DashboardShell({ children, session }: { children: React.ReactNod
 
   useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
 
+  // Clear the dot the moment the user opens the dropdown
+  useEffect(() => {
+    if (notifOpen) setUrgentCount(0);
+  }, [notifOpen]);
+
   const user = session?.user ?? {};
   const initials = `${(user?.firstName ?? user?.name?.[0] ?? 'U')?.[0] ?? 'U'}${(user?.lastName ?? '')?.[0] ?? ''}`;
   const displayName = user?.firstName ?? user?.name ?? 'User';
