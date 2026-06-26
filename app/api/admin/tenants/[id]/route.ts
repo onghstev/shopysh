@@ -40,68 +40,61 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, name: true } });
     if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
 
-    // Delete all related data in dependency order (children before parents)
+    // Delete all related data in FK-safe dependency order (children before parents).
+    // Each deleteMany uses the exact Prisma model accessor name from schema.prisma.
     await prisma.$transaction(async (tx: any) => {
-      // 1. Campaign messages
+      // Leaf records that reference Conversations / Campaigns / Orders / Products
       await tx.campaignMessage.deleteMany({ where: { campaign: { tenantId } } });
-
-      // 2. AI usage tracking
       await tx.aIUsageTracking.deleteMany({ where: { tenantId } });
-
-      // 3. Messages (inside conversations)
       await tx.message.deleteMany({ where: { conversation: { tenantId } } });
-
-      // 4. Conversations
       await tx.conversation.deleteMany({ where: { tenantId } });
-
-      // 5. Campaigns
       await tx.campaign.deleteMany({ where: { tenantId } });
-
-      // 6. Order items
       await tx.orderItem.deleteMany({ where: { order: { tenantId } } });
 
-      // 7. Orders
+      // Finance module (Income references Customer & Tenant; Expense references ExpenseCategory)
+      await tx.income.deleteMany({ where: { tenantId } });
+      await tx.dailyCashEntry.deleteMany({ where: { tenantId } });
+      await tx.expense.deleteMany({ where: { tenantId } });
+      await tx.expenseCategory.deleteMany({ where: { tenantId } });
+      await tx.bankAccount.deleteMany({ where: { tenantId } });
+
+      // Orders, invoices, payments all have direct tenantId
+      await tx.invoice.deleteMany({ where: { tenantId } });
+      await tx.payment.deleteMany({ where: { tenantId } });
       await tx.order.deleteMany({ where: { tenantId } });
 
-      // 8. Product images
+      // Products & categories (ProductCategory, not Category)
       await tx.productImage.deleteMany({ where: { product: { tenantId } } });
-
-      // 9. Products
       await tx.product.deleteMany({ where: { tenantId } });
+      await tx.productCategory.deleteMany({ where: { tenantId } });
 
-      // 10. Categories
-      await tx.category.deleteMany({ where: { tenantId } });
-
-      // 11. Customer tags
+      // Customers & tags
       await tx.customerTag.deleteMany({ where: { tenantId } });
-
-      // 12. Customers
       await tx.customer.deleteMany({ where: { tenantId } });
 
-      // 13. Subscription usage + payments + invoices
+      // Subscription data
       await tx.subscriptionUsage.deleteMany({ where: { tenantId } });
-      await tx.payment.deleteMany({ where: { subscription: { tenantId } } });
-      await tx.invoice.deleteMany({ where: { tenantId } });
-
-      // 14. Subscription
       await tx.subscription.deleteMany({ where: { tenantId } });
 
-      // 15. Access codes used by this tenant (nullify, not delete — code history stays)
+      // WhatsApp config
+      await tx.whatsAppConfig.deleteMany({ where: { tenantId } });
+
+      // Nullify access code back-references (keep code records for audit)
       await tx.accessCode.updateMany({
         where: { usedByTenantId: tenantId },
         data: { usedByTenantId: null },
       });
 
-      // 16. AI config, prompt templates, analytics, audit logs
+      // Misc tenant-scoped records
       await tx.aIConfig.deleteMany({ where: { tenantId } });
       await tx.promptTemplate.deleteMany({ where: { tenantId } });
       await tx.analyticsEvent.deleteMany({ where: { tenantId } });
       await tx.auditLog.deleteMany({ where: { tenantId } });
 
-      // 17. Users
+      // Users
       await tx.user.deleteMany({ where: { tenantId } });
 
-      // 18. Finally, the tenant itself
+      // Finally the tenant itself
       await tx.tenant.delete({ where: { id: tenantId } });
     }, { timeout: 30_000 });
 
