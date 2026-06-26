@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Building2, Users, Package, ShoppingCart, DollarSign,
   Search, RefreshCw, Shield, Globe, UserCheck, AlertTriangle,
-  TrendingUp, Activity, CheckCircle2, XCircle, Pencil, Plus, Trash2, CreditCard, Wallet, Save, Loader2,
+  TrendingUp, Activity, CheckCircle2, XCircle, Pencil, Plus, Trash2, CreditCard, Wallet, Save, Loader2, TriangleAlert,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -91,6 +91,9 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [toggling, setToggling] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<TenantInfo | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const [plans, setPlans] = useState<PlanInfo[]>([]);
   const [editPlan, setEditPlan] = useState<PlanInfo | null>(null);
   const [showPlanDialog, setShowPlanDialog] = useState(false);
@@ -173,6 +176,28 @@ export default function AdminPage() {
       toast({ title: 'Error', description: 'Failed to update tenant', variant: 'destructive' });
     } finally {
       setToggling(null);
+    }
+  };
+
+  const openDeleteDialog = (tenant: TenantInfo) => {
+    setDeleteTarget(tenant);
+    setDeleteConfirmText('');
+  };
+
+  const executeTenantDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/tenants/${deleteTarget.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Delete failed');
+      toast({ title: 'Tenant deleted', description: data.message });
+      setDeleteTarget(null);
+      await Promise.all([fetchOverview(), fetchTenants(search)]);
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -453,6 +478,15 @@ export default function AdminPage() {
                           <><CheckCircle2 className="w-3.5 h-3.5 mr-1" />Activate</>
                         )}
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        onClick={() => openDeleteDialog(t)}
+                        disabled={toggling === t.id}
+                      >
+                        <Trash2 className="w-3.5 h-3.5 mr-1" />Delete
+                      </Button>
                     </div>
                   </div>
                   {t.trialEndsAt && new Date(t.trialEndsAt) > new Date() && (
@@ -618,6 +652,63 @@ export default function AdminPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Tenant Delete Confirmation Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open && !deleting) setDeleteTarget(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <TriangleAlert className="w-5 h-5" />
+              Permanently Delete Tenant
+            </DialogTitle>
+          </DialogHeader>
+
+          {deleteTarget && (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-2 text-sm">
+                <p className="font-semibold text-destructive">This action cannot be undone.</p>
+                <p className="text-muted-foreground">
+                  Deleting <span className="font-semibold text-foreground">{deleteTarget.name}</span> will permanently erase:
+                </p>
+                <ul className="space-y-1 text-muted-foreground pl-4 list-disc">
+                  <li><span className="font-medium text-foreground">{deleteTarget.userCount}</span> user account{deleteTarget.userCount !== 1 ? 's' : ''}</li>
+                  <li><span className="font-medium text-foreground">{deleteTarget.productCount}</span> product{deleteTarget.productCount !== 1 ? 's' : ''}</li>
+                  <li><span className="font-medium text-foreground">{deleteTarget.orderCount}</span> order{deleteTarget.orderCount !== 1 ? 's' : ''}</li>
+                  <li><span className="font-medium text-foreground">{deleteTarget.customerCount}</span> customer{deleteTarget.customerCount !== 1 ? 's' : ''}</li>
+                  <li>All conversations, campaigns, payments, and settings</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm">
+                  Type <span className="font-mono font-bold">{deleteTarget.name}</span> to confirm:
+                </Label>
+                <Input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder={deleteTarget.name}
+                  className="border-destructive/40 focus-visible:ring-destructive"
+                  disabled={deleting}
+                  autoFocus
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={executeTenantDelete}
+              disabled={deleting || deleteConfirmText !== deleteTarget?.name}
+            >
+              {deleting ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Deleting…</> : <><Trash2 className="w-4 h-4 mr-2" />Permanently Delete</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Plan Create/Edit Dialog */}
       <Dialog open={showPlanDialog} onOpenChange={setShowPlanDialog}>
