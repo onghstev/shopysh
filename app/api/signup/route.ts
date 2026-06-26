@@ -11,7 +11,13 @@ export async function POST(request: NextRequest) {
     const { email, password, firstName, lastName, businessName } = body ?? {};
 
     if (!email || !password || !firstName || !businessName) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json({ error: 'First name, email, password, and business name are all required.' }, { status: 400 });
+    }
+    if (password.length < 8) {
+      return NextResponse.json({ error: 'Password must be at least 8 characters.' }, { status: 400 });
+    }
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+      return NextResponse.json({ error: 'Password must contain uppercase, lowercase, a number, and a special character.' }, { status: 400 });
     }
 
     // Check if email already exists

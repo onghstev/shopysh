@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, ArrowRight, ShieldCheck, Zap, BarChart3, Sparkles } from 'lucide-react';
+import { Loader2, ArrowRight, ShieldCheck, Zap, BarChart3, Sparkles, Eye, EyeOff, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 const FEATURES = [
@@ -17,24 +17,63 @@ const FEATURES = [
   { icon: ShieldCheck, title: 'Secure Payments', desc: 'Accept payments via Paystack & Flutterwave seamlessly' },
 ];
 
+const PASSWORD_RULES = [
+  { label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
+  { label: 'One uppercase letter (A–Z)', test: (p: string) => /[A-Z]/.test(p) },
+  { label: 'One lowercase letter (a–z)', test: (p: string) => /[a-z]/.test(p) },
+  { label: 'One number (0–9)', test: (p: string) => /[0-9]/.test(p) },
+  { label: 'One special character (!@#$...)', test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+];
+
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: '', email: '', password: '', tenantName: '' });
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    businessName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+
+  const upd = (key: string, val: string) => setForm((p) => ({ ...p, [key]: val }));
+
+  const passwordStrength = PASSWORD_RULES.filter(r => r.test(form.password)).length;
+
+  const strengthColor = passwordStrength <= 2 ? 'bg-red-500' : passwordStrength <= 3 ? 'bg-amber-500' : passwordStrength === 4 ? 'bg-yellow-400' : 'bg-green-500';
+  const strengthLabel = passwordStrength <= 2 ? 'Weak' : passwordStrength <= 3 ? 'Fair' : passwordStrength === 4 ? 'Good' : 'Strong';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.password || !form.tenantName) {
-      toast.error('Please fill all fields'); return;
+    const { firstName, email, password, confirmPassword, businessName } = form;
+
+    if (!firstName || !email || !password || !businessName) {
+      toast.error('Please fill all required fields'); return;
     }
-    if (form.password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
+    if (PASSWORD_RULES.some(r => !r.test(password))) {
+      toast.error('Password does not meet the requirements below'); return;
+    }
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match'); return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch('/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          firstName: form.firstName,
+          lastName: form.lastName,
+          email: form.email,
+          password: form.password,
+          businessName: form.businessName,
+        }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data?.error ?? 'Registration failed'); return; }
@@ -45,7 +84,7 @@ export default function RegisterPage() {
       } else {
         router.replace('/onboarding');
       }
-    } catch (err: any) {
+    } catch {
       toast.error('Registration failed');
     } finally {
       setLoading(false);
@@ -57,23 +96,19 @@ export default function RegisterPage() {
     signIn('google', { redirect: true, callbackUrl: '/onboarding' });
   };
 
-  const upd = (key: string, val: string) => setForm((p) => ({ ...p, [key]: val }));
-
   return (
     <div className="min-h-screen flex">
       {/* Left Hero Panel */}
       <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden sidebar-gradient">
-        {/* Ambient glow orbs */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-24 -left-24 w-[500px] h-[500px] bg-emerald-400/[0.07] rounded-full blur-[100px]" />
           <div className="absolute bottom-10 right-0 w-[400px] h-[400px] bg-amber-300/[0.05] rounded-full blur-[80px]" />
-          <div className="absolute top-1/2 left-1/3 w-[200px] h-[200px] bg-white/[0.03] rounded-full blur-[60px]" />
         </div>
         <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
 
         <div className="relative z-10 flex flex-col justify-between w-full p-12 xl:p-16">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400/30 to-emerald-600/20 backdrop-blur flex items-center justify-center ring-1 ring-white/10 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400/30 to-emerald-600/20 backdrop-blur flex items-center justify-center ring-1 ring-white/10">
               <Sparkles className="w-5 h-5 text-emerald-300" />
             </div>
             <span className="font-display font-bold text-white text-lg tracking-tight">SHOPYSH</span>
@@ -93,10 +128,9 @@ export default function RegisterPage() {
                 Join hundreds of African businesses already using AI to automate sales, support, and marketing.
               </p>
             </div>
-
             <div className="grid grid-cols-1 gap-3">
               {FEATURES.map((f, i) => (
-                <div key={i} className="flex items-start gap-3.5 p-4 rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm hover:bg-white/[0.05] transition-colors duration-300">
+                <div key={i} className="flex items-start gap-3.5 p-4 rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm">
                   <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-400/10 flex items-center justify-center shrink-0">
                     <f.icon className="w-[18px] h-[18px] text-emerald-400" />
                   </div>
@@ -114,10 +148,10 @@ export default function RegisterPage() {
       </div>
 
       {/* Right Form Panel */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-8 bg-background">
-        <div className="w-full max-w-[420px] space-y-7">
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-8 bg-background overflow-y-auto">
+        <div className="w-full max-w-[440px] space-y-6 py-6">
           {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-4">
+          <div className="lg:hidden flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-primary-foreground" />
             </div>
@@ -126,7 +160,7 @@ export default function RegisterPage() {
 
           <div>
             <h2 className="text-2xl font-display font-bold tracking-tight">Create your account</h2>
-            <p className="text-muted-foreground mt-2 text-sm">Get started with your AI business assistant</p>
+            <p className="text-muted-foreground mt-1 text-sm">Get started with your AI business assistant</p>
           </div>
 
           {/* Google SSO */}
@@ -147,27 +181,117 @@ export default function RegisterPage() {
             <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-4 text-muted-foreground/60 font-medium">or sign up with email</span></div>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Name row */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Full Name</Label>
-                <Input className="h-12 rounded-xl bg-muted/30 border-border/50 focus:bg-background" placeholder="John Doe" value={form.name} onChange={(e: any) => upd('name', e.target.value)} required />
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">First Name <span className="text-destructive">*</span></Label>
+                <Input className="h-11 rounded-xl bg-muted/30 border-border/50 focus:bg-background" placeholder="John" value={form.firstName} onChange={(e: any) => upd('firstName', e.target.value)} required />
               </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Business Name</Label>
-                <Input className="h-12 rounded-xl bg-muted/30 border-border/50 focus:bg-background" placeholder="My Business" value={form.tenantName} onChange={(e: any) => upd('tenantName', e.target.value)} required />
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Last Name</Label>
+                <Input className="h-11 rounded-xl bg-muted/30 border-border/50 focus:bg-background" placeholder="Doe" value={form.lastName} onChange={(e: any) => upd('lastName', e.target.value)} />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Email address</Label>
-              <Input className="h-12 rounded-xl bg-muted/30 border-border/50 focus:bg-background" type="email" placeholder="you@business.com" value={form.email} onChange={(e: any) => upd('email', e.target.value)} required />
+
+            {/* Business name */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Business Name <span className="text-destructive">*</span></Label>
+              <Input className="h-11 rounded-xl bg-muted/30 border-border/50 focus:bg-background" placeholder="My Business" value={form.businessName} onChange={(e: any) => upd('businessName', e.target.value)} required />
             </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Password</Label>
-              <Input className="h-12 rounded-xl bg-muted/30 border-border/50 focus:bg-background" type="password" placeholder="Min. 6 characters" value={form.password} onChange={(e: any) => upd('password', e.target.value)} required />
+
+            {/* Email */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Email Address <span className="text-destructive">*</span></Label>
+              <Input className="h-11 rounded-xl bg-muted/30 border-border/50 focus:bg-background" type="email" placeholder="you@business.com" value={form.email} onChange={(e: any) => upd('email', e.target.value)} required />
             </div>
-            <Button type="submit" className="w-full h-12 font-semibold rounded-xl shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/25 transition-all" disabled={loading}>
+
+            {/* Password */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Password <span className="text-destructive">*</span></Label>
+              <div className="relative">
+                <Input
+                  className="h-11 rounded-xl bg-muted/30 border-border/50 focus:bg-background pr-10"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Create a strong password"
+                  value={form.password}
+                  onChange={(e: any) => upd('password', e.target.value)}
+                  onFocus={() => setPasswordFocused(true)}
+                  required
+                />
+                <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowPassword(v => !v)} tabIndex={-1}>
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {/* Strength bar */}
+              {(passwordFocused || form.password.length > 0) && (
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${strengthColor}`}
+                        style={{ width: `${(passwordStrength / PASSWORD_RULES.length) * 100}%` }}
+                      />
+                    </div>
+                    <span className={`text-[11px] font-medium ${passwordStrength <= 2 ? 'text-red-500' : passwordStrength <= 3 ? 'text-amber-500' : passwordStrength === 4 ? 'text-yellow-500' : 'text-green-600'}`}>
+                      {form.password.length > 0 ? strengthLabel : ''}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-1">
+                    {PASSWORD_RULES.map((rule, i) => {
+                      const passed = rule.test(form.password);
+                      return (
+                        <div key={i} className="flex items-center gap-1.5">
+                          {passed
+                            ? <Check className="w-3 h-3 text-green-600 shrink-0" />
+                            : <X className="w-3 h-3 text-muted-foreground/40 shrink-0" />}
+                          <span className={`text-[11px] ${passed ? 'text-green-700 dark:text-green-500' : 'text-muted-foreground'}`}>{rule.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Confirm Password */}
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Confirm Password <span className="text-destructive">*</span></Label>
+              <div className="relative">
+                <Input
+                  className={`h-11 rounded-xl bg-muted/30 border-border/50 focus:bg-background pr-10 ${
+                    form.confirmPassword.length > 0 && form.confirmPassword !== form.password
+                      ? 'border-destructive focus-visible:ring-destructive'
+                      : ''
+                  }`}
+                  type={showConfirm ? 'text' : 'password'}
+                  placeholder="Re-enter your password"
+                  value={form.confirmPassword}
+                  onChange={(e: any) => upd('confirmPassword', e.target.value)}
+                  required
+                />
+                <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowConfirm(v => !v)} tabIndex={-1}>
+                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {form.confirmPassword.length > 0 && form.confirmPassword !== form.password && (
+                <p className="text-[11px] text-destructive flex items-center gap-1">
+                  <X className="w-3 h-3" /> Passwords do not match
+                </p>
+              )}
+              {form.confirmPassword.length > 0 && form.confirmPassword === form.password && (
+                <p className="text-[11px] text-green-600 flex items-center gap-1">
+                  <Check className="w-3 h-3" /> Passwords match
+                </p>
+              )}
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-12 font-semibold rounded-xl shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/25 transition-all mt-2"
+              disabled={loading}
+            >
               {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Create Account
               {!loading && <ArrowRight className="w-4 h-4 ml-2" />}
