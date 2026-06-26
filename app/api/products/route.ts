@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthSession, unauthorized, badRequest, serverError, toNumber } from '@/lib/api-helpers';
+import { checkPlanLimit } from '@/lib/plan-limits';
 
 export async function GET(request: NextRequest) {
   try {
@@ -73,6 +74,9 @@ export async function POST(request: NextRequest) {
     const { name, description, sku, price, costPrice, currency, stockQuantity, lowStockThreshold, categoryId, trackInventory, isFeatured } = body ?? {};
 
     if (!name || price === undefined) return badRequest('Name and price are required');
+
+    const limit = await checkPlanLimit(tenantId, 'products');
+    if (!limit.allowed) return NextResponse.json({ error: limit.message }, { status: 403 });
 
     const product = await prisma.product.create({
       data: {

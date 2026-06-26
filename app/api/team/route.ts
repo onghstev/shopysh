@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { prisma } from '@/lib/db';
+import { checkPlanLimit } from '@/lib/plan-limits';
 import bcrypt from 'bcryptjs';
 
 export const dynamic = 'force-dynamic';
@@ -52,6 +53,9 @@ export async function POST(req: NextRequest) {
     if (!validRoles.includes(role)) {
       return NextResponse.json({ error: 'Invalid role. Must be TENANT_MANAGER or TENANT_USER' }, { status: 400 });
     }
+
+    const limit = await checkPlanLimit(session.user.tenantId, 'team_members');
+    if (!limit.allowed) return NextResponse.json({ error: limit.message }, { status: 403 });
 
     // Check if user already exists in this tenant
     const existing = await prisma.user.findFirst({

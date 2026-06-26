@@ -85,6 +85,7 @@ export function DashboardShell({ children, session }: { children: React.ReactNod
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [lowStockCount, setLowStockCount] = useState(0);
+  const [urgentCount, setUrgentCount] = useState(0);
   const pathname = usePathname();
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
@@ -105,6 +106,7 @@ export function DashboardShell({ children, session }: { children: React.ReactNod
         const data = await res.json();
         setNotifications(data?.notifications ?? []);
         setLowStockCount(data?.lowStockCount ?? 0);
+        setUrgentCount(data?.urgentCount ?? 0);
       }
     } catch { /* ignore */ }
   }, []);
@@ -271,7 +273,7 @@ export function DashboardShell({ children, session }: { children: React.ReactNod
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative rounded-xl hover:bg-muted/60">
                     <Bell className="w-[18px] h-[18px]" />
-                    {(lowStockCount > 0 || notifications.length > 0) && (
+                    {urgentCount > 0 && (
                       <span className="absolute top-2 right-2 w-2 h-2 bg-orange-500 rounded-full animate-pulse-dot ring-2 ring-card" />
                     )}
                   </Button>
@@ -279,7 +281,9 @@ export function DashboardShell({ children, session }: { children: React.ReactNod
                 <DropdownMenuContent align="end" className="w-80 max-h-[420px] overflow-y-auto rounded-xl shadow-xl border">
                   <div className="px-4 py-3 border-b">
                     <p className="text-sm font-bold">Notifications</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{notifications.length} recent activities</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {urgentCount > 0 ? `${urgentCount} item${urgentCount > 1 ? 's' : ''} need attention` : 'No urgent alerts'}
+                    </p>
                   </div>
                   {notifications.length === 0 ? (
                     <div className="px-4 py-8 text-center">

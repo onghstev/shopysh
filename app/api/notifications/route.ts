@@ -92,7 +92,14 @@ export async function GET() {
     // Sort by date descending
     notifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    return NextResponse.json({ notifications: notifications.slice(0, 20), lowStockCount: lowStockProducts.length });
+    const escalatedCount = recentConversations.filter((c: any) => c.escalatedToHuman).length;
+    const urgentCount = lowStockProducts.length + escalatedCount;
+
+    return NextResponse.json({
+      notifications: notifications.slice(0, 20),
+      lowStockCount: lowStockProducts.length,
+      urgentCount,
+    });
   } catch (error: any) {
     console.error('Notifications error:', error);
     return NextResponse.json({ error: 'Failed to fetch notifications' }, { status: 500 });

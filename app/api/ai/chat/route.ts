@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthSession } from '@/lib/api-helpers';
+import { checkPlanLimit } from '@/lib/plan-limits';
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,6 +18,11 @@ export async function POST(request: NextRequest) {
 
     if (!message) {
       return new Response(JSON.stringify({ error: 'Message is required' }), { status: 400 });
+    }
+
+    const aiLimit = await checkPlanLimit(tenantId, 'ai_conversations');
+    if (!aiLimit.allowed) {
+      return new Response(JSON.stringify({ error: aiLimit.message }), { status: 403 });
     }
 
     // Load business context

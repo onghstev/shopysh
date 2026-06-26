@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession, unauthorized, badRequest, notFound, serverError } from '@/lib/api-helpers';
 import { prisma } from '@/lib/db';
 import { sendEmail } from '@/lib/email';
+import { checkPlanLimit } from '@/lib/plan-limits';
 
 async function sendSms(phone: string, message: string, smsConfig: any): Promise<{ success: boolean; error?: string }> {
   try {
@@ -69,6 +70,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const session = await getAuthSession();
     if (!session?.user?.tenantId) return unauthorized();
     const tenantId = session.user.tenantId;
+
+    const broadcastLimit = await checkPlanLimit(tenantId, 'broadcasts_monthly');
+    if (!broadcastLimit.allowed) return NextResponse.json({ error: broadcastLimit.message }, { status: 403 });
 
     const campaign = await prisma.campaign.findFirst({
       where: { id: params.id, tenantId },
