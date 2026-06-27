@@ -15,43 +15,49 @@ function generateCode(): string {
 
 // POST — generate a new access code
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user || (session.user as any).role !== 'SUPER_ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || (session.user as any).role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json().catch(() => null);
+    const { planId, billingCycle = 'monthly', expiresInDays, note } = body ?? {};
+    if (!planId) return NextResponse.json({ error: 'planId is required' }, { status: 400 });
+
+    const plan = await prisma.subscriptionPlan.findUnique({ where: { id: planId } });
+    if (!plan) return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
+
+    let code: string;
+    let attempts = 0;
+    do {
+      code = generateCode();
+      attempts++;
+      const exists = await prisma.accessCode.findUnique({ where: { code } });
+      if (!exists) break;
+    } while (attempts < 10);
+
+    const expiresAt = expiresInDays
+      ? new Date(Date.now() + Number(expiresInDays) * 24 * 60 * 60 * 1000)
+      : null;
+
+    const accessCode = await prisma.accessCode.create({
+      data: {
+        code,
+        planId,
+        billingCycle,
+        createdByUserId: (session.user as any).id,
+        expiresAt,
+        note: note || null,
+      },
+      include: { plan: { select: { name: true } } },
+    });
+
+    return NextResponse.json({ accessCode });
+  } catch (err: any) {
+    console.error('[access-codes POST] error:', err?.message ?? err);
+    return NextResponse.json({ error: 'Failed to generate access code. Please try again.' }, { status: 500 });
   }
-
-  const { planId, billingCycle = 'monthly', expiresInDays, note } = await request.json();
-  if (!planId) return NextResponse.json({ error: 'planId is required' }, { status: 400 });
-
-  const plan = await prisma.subscriptionPlan.findUnique({ where: { id: planId } });
-  if (!plan) return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
-
-  let code: string;
-  let attempts = 0;
-  do {
-    code = generateCode();
-    attempts++;
-    const exists = await prisma.accessCode.findUnique({ where: { code } });
-    if (!exists) break;
-  } while (attempts < 10);
-
-  const expiresAt = expiresInDays
-    ? new Date(Date.now() + Number(expiresInDays) * 24 * 60 * 60 * 1000)
-    : null;
-
-  const accessCode = await prisma.accessCode.create({
-    data: {
-      code,
-      planId,
-      billingCycle,
-      createdByUserId: (session.user as any).id,
-      expiresAt,
-      note: note || null,
-    },
-    include: { plan: { select: { name: true } } },
-  });
-
-  return NextResponse.json({ accessCode });
 }
 
 // GET — list all access codes
