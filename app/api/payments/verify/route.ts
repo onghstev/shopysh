@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession, unauthorized, badRequest, serverError } from '@/lib/api-helpers';
 import { prisma } from '@/lib/db';
+import { postOrderPayment } from '@/lib/accounting/auto-post';
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,18 +54,30 @@ export async function POST(request: NextRequest) {
     }
 
     if (verified) {
+      let order: any = null;
       await prisma.$transaction(async (tx: any) => {
         await tx.payment.update({
           where: { id: payment.id },
           data: { status: 'success', gatewayResponse, paidAt: new Date() },
         });
         if (payment.orderId) {
-          await tx.order.update({
+          order = await tx.order.update({
             where: { id: payment.orderId },
             data: { paymentStatus: 'PAID', paidAt: new Date() },
           });
         }
       });
+      // Auto-post to GL (fire-and-forget — never breaks payment flow)
+      if (order) {
+        await postOrderPayment({
+          tenantId,
+          orderId: order.id,
+          amount: Number(order.totalAmount),
+          currency: order.currency ?? 'NGN',
+          paymentMethod: order.paymentMethod ?? 'cash',
+          description: `Payment verified – Order #${order.orderNumber}`,
+        });
+      }
       return NextResponse.json({ status: 'success', message: 'Payment verified successfully' });
     }
 

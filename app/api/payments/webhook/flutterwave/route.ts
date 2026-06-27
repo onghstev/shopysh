@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { postOrderPayment } from '@/lib/accounting/auto-post';
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,18 +28,29 @@ export async function POST(request: NextRequest) {
       });
 
       if (payment && payment.status !== 'success') {
+        let order: any = null;
         await prisma.$transaction(async (tx: any) => {
           await tx.payment.update({
             where: { id: payment.id },
             data: { status: 'success', gatewayResponse: body.data, paidAt: new Date(), paymentMethod: body.data.payment_type },
           });
           if (payment.orderId) {
-            await tx.order.update({
+            order = await tx.order.update({
               where: { id: payment.orderId },
               data: { paymentStatus: 'PAID', paymentMethod: body.data.payment_type, paidAt: new Date() },
             });
           }
         });
+        if (order) {
+          await postOrderPayment({
+            tenantId: payment.tenantId,
+            orderId: order.id,
+            amount: Number(order.totalAmount),
+            currency: order.currency ?? 'NGN',
+            paymentMethod: body.data.payment_type ?? 'card',
+            description: `Flutterwave payment – Order #${order.orderNumber}`,
+          });
+        }
       }
     }
 

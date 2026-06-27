@@ -47,6 +47,36 @@ export async function postOrderPayment(opts: {
   });
 }
 
+/** Order fulfilled: DR COGS, CR Inventory (if inventory account exists) */
+export async function postOrderCOGS(opts: {
+  tenantId: string;
+  orderId: string;
+  cogsAmount: number;
+  currency?: string;
+  description?: string;
+}) {
+  await safePost(async () => {
+    await ensureDefaultAccounts(opts.tenantId);
+    const cogsId = await findSystemAccount(opts.tenantId, 'COGS');
+    const inventoryId = await findSystemAccount(opts.tenantId, 'INVENTORY');
+    if (!cogsId || !inventoryId || opts.cogsAmount <= 0) return;
+
+    await createAndPostJournal({
+      tenantId: opts.tenantId,
+      entryDate: new Date(),
+      description: opts.description ?? `Cost of goods – Order #${opts.orderId.slice(-6)}`,
+      entryType: 'INVENTORY_ADJUSTMENT',
+      sourceType: 'ORDER',
+      sourceId: opts.orderId,
+      currency: opts.currency ?? 'NGN',
+      lines: [
+        { accountId: cogsId, debit: opts.cogsAmount, description: 'Cost of goods sold' },
+        { accountId: inventoryId, credit: opts.cogsAmount, description: 'Inventory reduction' },
+      ],
+    });
+  });
+}
+
 /** Invoice raised against customer: DR AR, CR Sales Revenue */
 export async function postInvoiceCreated(opts: {
   tenantId: string;
