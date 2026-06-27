@@ -83,7 +83,7 @@ function RecordCashModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
             {(['RECEIPT', 'PAYMENT'] as const).map(t => (
               <button
                 key={t}
-                onClick={() => { setForm(p => ({ ...p, type: t })); setCustomerId(''); setVendorId(''); }}}
+                onClick={() => { setForm(p => ({ ...p, type: t })); setCustomerId(''); setVendorId(''); }}
                 className={`flex-1 py-2 rounded-xl border text-xs font-medium transition-colors ${
                   form.type === t
                     ? 'bg-primary text-primary-foreground border-primary'

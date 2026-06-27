@@ -56,7 +56,7 @@ const QUICK_LINKS = [
   { href: '/finance/bank-book',      label: 'Bank Book',         icon: CreditCard,   desc: 'Bank ledger'           },
   { href: '/finance/receivables',    label: 'Debtors / AR',      icon: UserCheck,    desc: 'Customer aging'        },
   { href: '/finance/payables',       label: 'Creditors / AP',    icon: UserX,        desc: 'Supplier aging'        },
-  { href: '/finance/customers',      label: 'Customers',         icon: UserCheck,    desc: 'Customer accounts'     },
+  { href: '/customers',              label: 'Customers',         icon: UserCheck,    desc: 'Customer accounts'     },
   { href: '/finance/vendors',        label: 'Vendors',           icon: Building2,    desc: 'Supplier management'   },
   { href: '/finance/reports',        label: 'Reports',           icon: BarChart3,    desc: 'Financial statements'  },
 ];
