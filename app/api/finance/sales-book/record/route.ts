@@ -12,7 +12,8 @@ export async function POST(req: NextRequest) {
   const userId = session.user.id;
 
   const body = await req.json();
-  const { date, customerName, reference, description, amount, vatAmount = 0, paymentMethod } = body;
+  const { date, customerId, customerName, reference, description, amount, vatAmount = 0, paymentMethod } = body;
+  const effectiveCustomerName = customerName || 'Sundry Customer';
 
   if (!date || !description || !amount || !paymentMethod) {
     return NextResponse.json({ error: 'date, description, amount, and paymentMethod are required' }, { status: 400 });
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
 
   // Build journal lines
   const lines: any[] = [
-    { accountId: debitAccountId, debit: total, credit: 0, description: `${description}${customerName ? ` — ${customerName}` : ''}` },
+    { accountId: debitAccountId, debit: total, credit: 0, description: `${description} — ${effectiveCustomerName}`, customerId: customerId || undefined },
     { accountId: salesId, debit: 0, credit: Number(amount), description },
   ];
 
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
     const entry = await createAndPostJournal({
       tenantId,
       entryDate: new Date(date),
-      description: `${description}${customerName ? ` — ${customerName}` : ''}`,
+      description: `${description} — ${effectiveCustomerName}`,
       entryType,
       reference,
       createdById: userId,

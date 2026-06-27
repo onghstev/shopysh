@@ -71,6 +71,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/finance/bank-book',                 label: 'Bank Book',           icon: CreditCard },
       { href: '/finance/receivables',               label: 'Debtors / AR',        icon: UserCheck },
       { href: '/finance/payables',                  label: 'Creditors / AP',      icon: UserX },
+      { href: '/finance/customers',                 label: 'Customers',           icon: UserCheck },
       { href: '/finance/vendors',                   label: 'Vendors',             icon: Building2 },
       { href: '/finance/reports',                   label: 'Reports',             icon: BarChart3 },
       { href: '/finance/reports/trial-balance',     label: 'Trial Balance',       icon: Scale },

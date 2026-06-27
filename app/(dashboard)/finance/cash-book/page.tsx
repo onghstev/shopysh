@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import CustomerLookup from '@/components/finance/CustomerLookup';
+import VendorLookup from '@/components/finance/VendorLookup';
 
 const fmt = (n: number) => n.toLocaleString('en-NG', { minimumFractionDigits: 2 });
 
@@ -26,6 +28,8 @@ function RecordCashModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
     amount: '',
     contraAccountId: '',
   });
+  const [customerId, setCustomerId] = useState('');
+  const [vendorId, setVendorId] = useState('');
   const [accounts, setAccounts] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -54,6 +58,8 @@ function RecordCashModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
           description: form.description,
           amount: parseFloat(form.amount),
           contraAccountId: form.contraAccountId,
+          customerId: form.type === 'RECEIPT' && customerId ? customerId : undefined,
+          vendorId: form.type === 'PAYMENT' && vendorId ? vendorId : undefined,
         }),
       });
       const data = await res.json();
@@ -77,7 +83,7 @@ function RecordCashModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
             {(['RECEIPT', 'PAYMENT'] as const).map(t => (
               <button
                 key={t}
-                onClick={() => setForm(p => ({ ...p, type: t }))}
+                onClick={() => { setForm(p => ({ ...p, type: t })); setCustomerId(''); setVendorId(''); }}}
                 className={`flex-1 py-2 rounded-xl border text-xs font-medium transition-colors ${
                   form.type === t
                     ? 'bg-primary text-primary-foreground border-primary'
@@ -103,6 +109,26 @@ function RecordCashModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
             <Label className="text-xs">Description *</Label>
             <Input value={form.description} onChange={e => set('description', e.target.value)} placeholder="e.g. Cash sales collection" className="h-9 rounded-xl" />
           </div>
+          {form.type === 'RECEIPT' && (
+            <div className="space-y-1.5 col-span-2">
+              <Label className="text-xs">Link to Customer (optional)</Label>
+              <CustomerLookup
+                value={customerId}
+                onChange={(id) => setCustomerId(id)}
+                onClear={() => setCustomerId('')}
+              />
+            </div>
+          )}
+          {form.type === 'PAYMENT' && (
+            <div className="space-y-1.5 col-span-2">
+              <Label className="text-xs">Link to Vendor (optional)</Label>
+              <VendorLookup
+                value={vendorId}
+                onChange={(id) => setVendorId(id)}
+                onClear={() => setVendorId('')}
+              />
+            </div>
+          )}
           <div className="space-y-1.5 col-span-2">
             <Label className="text-xs">Contra Account *</Label>
             <select

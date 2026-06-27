@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   const userId = session.user.id;
 
   const body = await req.json();
-  const { type, date, description, amount, contraAccountId } = body;
+  const { type, date, description, amount, contraAccountId, customerId, vendorId } = body;
 
   if (!type || !date || !description || !amount || !contraAccountId) {
     return NextResponse.json({ error: 'type, date, description, amount, and contraAccountId are required' }, { status: 400 });
@@ -30,12 +30,12 @@ export async function POST(req: NextRequest) {
   const lines =
     type === 'RECEIPT'
       ? [
-          { accountId: cashId, debit: amt, credit: 0, description },
+          { accountId: cashId, debit: amt, credit: 0, description, customerId: customerId || undefined },
           { accountId: contraAccountId, debit: 0, credit: amt, description },
         ]
       : [
           { accountId: contraAccountId, debit: amt, credit: 0, description },
-          { accountId: cashId, debit: 0, credit: amt, description },
+          { accountId: cashId, debit: 0, credit: amt, description, vendorId: vendorId || undefined },
         ];
 
   try {

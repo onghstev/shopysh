@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import VendorLookup from '@/components/finance/VendorLookup';
 
 const fmt = (n: number) => n.toLocaleString('en-NG', { minimumFractionDigits: 2 });
 
@@ -35,7 +36,6 @@ function RecordPurchaseModal({ onClose, onSaved }: { onClose: () => void; onSave
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
     date: today,
-    vendorName: '',
     reference: '',
     description: '',
     amount: '',
@@ -43,6 +43,8 @@ function RecordPurchaseModal({ onClose, onSaved }: { onClose: () => void; onSave
     expenseAccountId: '',
     paymentMethod: 'ON_CREDIT',
   });
+  const [vendorId, setVendorId] = useState('');
+  const [vendorName, setVendorName] = useState('');
   const [expenseAccounts, setExpenseAccounts] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -69,6 +71,8 @@ function RecordPurchaseModal({ onClose, onSaved }: { onClose: () => void; onSave
           ...form,
           amount: parseFloat(form.amount),
           vatAmount: parseFloat(form.vatAmount) || 0,
+          vendorId: vendorId || undefined,
+          vendorName: vendorName || 'Sundry Vendor',
         }),
       });
       const data = await res.json();
@@ -93,9 +97,13 @@ function RecordPurchaseModal({ onClose, onSaved }: { onClose: () => void; onSave
             <Label className="text-xs">Date *</Label>
             <Input type="date" value={form.date} onChange={e => set('date', e.target.value)} className="h-9 rounded-xl" />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Vendor Name</Label>
-            <Input value={form.vendorName} onChange={e => set('vendorName', e.target.value)} placeholder="Optional" className="h-9 rounded-xl" />
+          <div className="space-y-1.5 col-span-2">
+            <Label className="text-xs">Vendor</Label>
+            <VendorLookup
+              value={vendorId}
+              onChange={(id, name) => { setVendorId(id); setVendorName(name); }}
+              onClear={() => { setVendorId(''); setVendorName(''); }}
+            />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Reference</Label>

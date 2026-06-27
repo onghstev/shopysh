@@ -56,6 +56,7 @@ const QUICK_LINKS = [
   { href: '/finance/bank-book',      label: 'Bank Book',         icon: CreditCard,   desc: 'Bank ledger'           },
   { href: '/finance/receivables',    label: 'Debtors / AR',      icon: UserCheck,    desc: 'Customer aging'        },
   { href: '/finance/payables',       label: 'Creditors / AP',    icon: UserX,        desc: 'Supplier aging'        },
+  { href: '/finance/customers',      label: 'Customers',         icon: UserCheck,    desc: 'Customer accounts'     },
   { href: '/finance/vendors',        label: 'Vendors',           icon: Building2,    desc: 'Supplier management'   },
   { href: '/finance/reports',        label: 'Reports',           icon: BarChart3,    desc: 'Financial statements'  },
 ];
@@ -190,7 +191,7 @@ export default function FinanceDashboardPage() {
       {/* Module grid */}
       <div>
         <h2 className="font-semibold text-sm mb-3 text-muted-foreground uppercase tracking-wider">Finance Modules</h2>
-        <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-10 gap-3">
+        <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-11 gap-3">
           {QUICK_LINKS.map(({ href, label, icon: Icon, desc }) => (
             <Link key={href} href={href}
               className="group flex flex-col items-center gap-2 p-3 rounded-2xl border border-border/50 bg-card hover:border-primary/40 hover:bg-primary/5 transition-all text-center shadow-sm">

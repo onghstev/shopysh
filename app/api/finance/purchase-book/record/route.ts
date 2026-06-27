@@ -12,7 +12,8 @@ export async function POST(req: NextRequest) {
   const userId = session.user.id;
 
   const body = await req.json();
-  const { date, vendorName, reference, description, amount, vatAmount = 0, expenseAccountId, paymentMethod } = body;
+  const { date, vendorId, vendorName, reference, description, amount, vatAmount = 0, expenseAccountId, paymentMethod } = body;
+  const effectiveVendorName = vendorName || 'Sundry Vendor';
 
   if (!date || !description || !amount || !paymentMethod || !expenseAccountId) {
     return NextResponse.json({ error: 'date, description, amount, expenseAccountId, and paymentMethod are required' }, { status: 400 });
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid paymentMethod. Use ON_CREDIT, CASH, or BANK.' }, { status: 400 });
   }
 
-  const desc = `${description}${vendorName ? ` — ${vendorName}` : ''}`;
+  const desc = `${description} — ${effectiveVendorName}`;
 
   // Build journal lines
   const lines: any[] = [
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
     lines.push({ accountId: vatInputId, debit: Number(vatAmount), credit: 0, description: 'VAT Input' });
   }
 
-  lines.push({ accountId: creditAccountId, debit: 0, credit: total, description: desc });
+  lines.push({ accountId: creditAccountId, debit: 0, credit: total, description: desc, vendorId: vendorId || undefined });
 
   try {
     const entry = await createAndPostJournal({

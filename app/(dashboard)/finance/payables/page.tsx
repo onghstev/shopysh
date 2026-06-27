@@ -114,10 +114,11 @@ export default function PayablesPage() {
               ) : (
                 <>
                   {rows.map((r: any) => (
-                    <tr key={r.vendorId} className="border-b border-border/40 hover:bg-accent/40 transition-colors">
+                    <tr key={r.vendorId ?? r.vendorName} className="border-b border-border/40 hover:bg-accent/40 transition-colors">
                       <td className="py-3 px-4">
-                        <p className="font-medium text-sm">{r.vendorName}</p>
+                        <p className="font-medium text-sm">{r.vendorName || 'Sundry Vendor'}</p>
                         {r.vendorEmail && <p className="text-xs text-muted-foreground">{r.vendorEmail}</p>}
+                        {r.vendorPhone && <p className="text-xs text-muted-foreground">{r.vendorPhone}</p>}
                       </td>
                       <td className="py-3 px-4 text-right font-mono font-semibold" style={{ color: 'hsl(168 84% 26%)' }}>
                         ₦{fmt(r.outstanding)}

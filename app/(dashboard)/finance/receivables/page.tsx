@@ -114,10 +114,18 @@ export default function ReceivablesPage() {
               ) : (
                 <>
                   {rows.map((r: any) => (
-                    <tr key={r.customerId} className="border-b border-border/40 hover:bg-accent/40 transition-colors">
+                    <tr key={r.customerId ?? r.customerName} className="border-b border-border/40 hover:bg-accent/40 transition-colors">
                       <td className="py-3 px-4">
-                        <p className="font-medium text-sm">{r.customerName}</p>
-                        {r.customerEmail && <p className="text-xs text-muted-foreground">{r.customerEmail}</p>}
+                        <p className="font-medium text-sm">{r.customerName || 'Sundry Customer'}</p>
+                        {r.customerPhone && <p className="text-xs text-muted-foreground">{r.customerPhone}</p>}
+                        {r.customerId && (
+                          <a
+                            href={`/finance/customers?highlight=${r.customerId}`}
+                            className="text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            View Customer
+                          </a>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-right font-mono font-semibold" style={{ color: 'hsl(168 84% 26%)' }}>
                         ₦{fmt(r.outstanding)}

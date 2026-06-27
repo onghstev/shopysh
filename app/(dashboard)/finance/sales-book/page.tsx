@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import CustomerLookup from '@/components/finance/CustomerLookup';
 
 const fmt = (n: number) => n.toLocaleString('en-NG', { minimumFractionDigits: 2 });
 
@@ -35,13 +36,14 @@ function RecordSaleModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
     date: today,
-    customerName: '',
     reference: '',
     description: '',
     amount: '',
     vatAmount: '0',
     paymentMethod: 'INVOICE',
   });
+  const [customerId, setCustomerId] = useState('');
+  const [customerName, setCustomerName] = useState('');
   const [saving, setSaving] = useState(false);
 
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
@@ -60,6 +62,8 @@ function RecordSaleModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
           ...form,
           amount: parseFloat(form.amount),
           vatAmount: parseFloat(form.vatAmount) || 0,
+          customerId: customerId || undefined,
+          customerName: customerName || 'Sundry Customer',
         }),
       });
       const data = await res.json();
@@ -84,9 +88,13 @@ function RecordSaleModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
             <Label className="text-xs">Date *</Label>
             <Input type="date" value={form.date} onChange={e => set('date', e.target.value)} className="h-9 rounded-xl" />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Customer Name</Label>
-            <Input value={form.customerName} onChange={e => set('customerName', e.target.value)} placeholder="Optional" className="h-9 rounded-xl" />
+          <div className="space-y-1.5 col-span-2">
+            <Label className="text-xs">Customer</Label>
+            <CustomerLookup
+              value={customerId}
+              onChange={(id, name) => { setCustomerId(id); setCustomerName(name); }}
+              onClear={() => { setCustomerId(''); setCustomerName(''); }}
+            />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Invoice Reference</Label>
