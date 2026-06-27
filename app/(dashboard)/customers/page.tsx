@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Users, Plus, Loader2 } from 'lucide-react';
+import { Search, Users, Plus, Loader2, RefreshCw } from 'lucide-react';
 import { formatCurrency, formatRelativeTime } from '@/lib/format';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -23,25 +23,32 @@ export default function CustomersPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
 
-  const fetchCustomers = useCallback(async () => {
-    setLoading(true);
+  const fetchCustomers = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true); else setLoading(true);
     try {
       const params = new URLSearchParams({ page: page.toString() });
       if (search) params.set('search', search);
       const res = await fetch(`/api/customers?${params}`);
       if (res.ok) {
         const data = await res.json();
-        setCustomers(data?.customers ?? []);
-        setTotal(data?.total ?? 0);
+        // Only update if we actually got data back — never blank the list on a failed re-fetch
+        if (Array.isArray(data?.customers)) {
+          setCustomers(data.customers);
+          setTotal(data?.total ?? 0);
+        }
+      } else {
+        console.error('Failed to fetch customers:', res.status);
       }
-    } catch (e: any) { console.error(e); } finally { setLoading(false); }
+    } catch (e: any) { console.error('fetchCustomers error:', e); }
+    finally { setLoading(false); setRefreshing(false); }
   }, [page, search]);
 
-  useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
+  useEffect(() => { fetchCustomers(false); }, [fetchCustomers]);
 
   const handleAdd = async () => {
     if (!form.phone.trim()) { toast.error('Phone number is required'); return; }
@@ -56,7 +63,7 @@ export default function CustomersPage() {
         toast.success('Customer added');
         setShowAdd(false);
         setForm({ ...EMPTY_FORM });
-        fetchCustomers();
+        fetchCustomers(true);
       } else {
         const err = await res.json();
         toast.error(err?.error ?? 'Failed to add customer');
@@ -78,9 +85,12 @@ export default function CustomersPage() {
           <h1 className="font-display text-2xl font-bold tracking-tight">Customers</h1>
           <p className="text-muted-foreground text-sm mt-1">{total} customer{total !== 1 ? 's' : ''}</p>
         </div>
-        <Button onClick={() => setShowAdd(true)}>
-          <Plus className="w-4 h-4 mr-2" /> Add Customer
-        </Button>
+        <div className="flex items-center gap-2">
+          {refreshing && <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />}
+          <Button onClick={() => setShowAdd(true)}>
+            <Plus className="w-4 h-4 mr-2" /> Add Customer
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -91,7 +101,9 @@ export default function CustomersPage() {
           </div>
 
           {loading ? (
-            <div className="text-center py-12 text-muted-foreground">Loading...</div>
+            <div className="text-center py-12 text-muted-foreground flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading customers…
+            </div>
           ) : (customers?.length ?? 0) === 0 ? (
             <div className="text-center py-12">
               <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
