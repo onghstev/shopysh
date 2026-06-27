@@ -19,11 +19,18 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+interface NavItem {
+  href: string;
+  label: string;
+  icon: any;
+  children?: { href: string; label: string; icon: any }[];
+}
+
 interface NavGroup {
   key: string;
   label: string;
   external?: boolean;
-  items: { href: string; label: string; icon: any }[];
+  items: NavItem[];
 }
 
 const NAV_GROUPS: NavGroup[] = [
@@ -72,10 +79,14 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/finance/receivables',               label: 'Debtors / AR',        icon: UserCheck },
       { href: '/finance/payables',                  label: 'Creditors / AP',      icon: UserX },
       { href: '/finance/vendors',                   label: 'Vendors',             icon: Building2 },
-      { href: '/finance/reports',                   label: 'Reports',             icon: BarChart3 },
-      { href: '/finance/reports/trial-balance',     label: 'Trial Balance',       icon: Scale },
-      { href: '/finance/reports/income-statement',  label: 'Income Statement',    icon: PieChart },
-      { href: '/finance/reports/balance-sheet',     label: 'Balance Sheet',       icon: FileBarChart },
+      {
+        href: '/finance/reports', label: 'Reports', icon: BarChart3,
+        children: [
+          { href: '/finance/reports/trial-balance',    label: 'Trial Balance',    icon: Scale },
+          { href: '/finance/reports/income-statement', label: 'Income Statement', icon: PieChart },
+          { href: '/finance/reports/balance-sheet',    label: 'Balance Sheet',    icon: FileBarChart },
+        ],
+      },
     ],
   },
   {
@@ -132,7 +143,7 @@ export function DashboardShell({ children, session }: { children: React.ReactNod
   const displayName = user?.firstName ?? user?.name ?? 'User';
   const businessName = user?.tenantName ?? 'Business';
 
-  const NavLink = ({ item, external }: { item: { href: string; label: string; icon: any }; external?: boolean }) => {
+  const NavLink = ({ item, external, indent }: { item: { href: string; label: string; icon: any }; external?: boolean; indent?: boolean }) => {
     const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith?.(item.href));
     const linkProps = external ? { target: '_blank' as const, rel: 'noopener noreferrer' } : {};
     return (
@@ -140,7 +151,8 @@ export function DashboardShell({ children, session }: { children: React.ReactNod
         href={item.href}
         onClick={() => setSidebarOpen(false)}
         className={cn(
-          'group/link flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-200 relative',
+          'group/link flex items-center gap-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-200 relative',
+          indent ? 'px-3 pl-8' : 'px-3',
           isActive
             ? 'bg-white/[0.12] text-white shadow-[0_1px_3px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.08)]'
             : 'text-white/80 hover:bg-white/[0.08] hover:text-white'
@@ -157,6 +169,46 @@ export function DashboardShell({ children, session }: { children: React.ReactNod
         {item.label}
         {external && <ExternalLink className="w-3 h-3 ml-auto opacity-40" />}
       </Link>
+    );
+  };
+
+  const SubNavItem = ({ item }: { item: NavItem }) => {
+    const childActive = item.children?.some(c => pathname === c.href || pathname?.startsWith?.(c.href)) ?? false;
+    const parentActive = pathname === item.href;
+    const [open, setOpen] = useState(childActive || parentActive);
+
+    return (
+      <div>
+        <button
+          onClick={() => setOpen(o => !o)}
+          className={cn(
+            'w-full group/link flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-200 relative',
+            (parentActive || childActive)
+              ? 'bg-white/[0.12] text-white'
+              : 'text-white/80 hover:bg-white/[0.08] hover:text-white'
+          )}
+        >
+          {(parentActive || childActive) && (
+            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+          )}
+          <item.icon className={cn(
+            'w-[18px] h-[18px] shrink-0',
+            (parentActive || childActive) ? 'text-emerald-300' : 'text-white/60 group-hover/link:text-white'
+          )} />
+          <span className="flex-1 text-left">{item.label}</span>
+          {open
+            ? <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+            : <ChevronRight className="w-3.5 h-3.5 opacity-50" />
+          }
+        </button>
+        {open && (
+          <div className="mt-0.5 space-y-0.5 border-l border-white/10 ml-[22px]">
+            {item.children!.map(child => (
+              <NavLink key={child.href} item={child} indent />
+            ))}
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -190,7 +242,11 @@ export function DashboardShell({ children, session }: { children: React.ReactNod
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5 scrollbar-thin">
           {NAV_GROUPS.map((group) => {
             const isExpanded = expandedGroups[group.key] ?? false;
-            const hasActive = group.items.some((item) => pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith?.(item.href)));
+            const hasActive = group.items.some((item) =>
+              pathname === item.href ||
+              (item.href !== '/dashboard' && pathname?.startsWith?.(item.href)) ||
+              item.children?.some(c => pathname === c.href || pathname?.startsWith?.(c.href))
+            );
             return (
               <div key={group.key} className="mb-1">
                 <button
@@ -208,7 +264,13 @@ export function DashboardShell({ children, session }: { children: React.ReactNod
                 </button>
                 {isExpanded && (
                   <div className="space-y-0.5 mt-0.5">
-                    {group.items.map((item) => <NavLink key={item.href} item={item} external={group.external} />)}
+                    {group.items.map((item) =>
+                      item.children ? (
+                        <SubNavItem key={item.href} item={item} />
+                      ) : (
+                        <NavLink key={item.href} item={item} external={group.external} />
+                      )
+                    )}
                   </div>
                 )}
               </div>
