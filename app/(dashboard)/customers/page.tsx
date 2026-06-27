@@ -87,7 +87,7 @@ export default function CustomersPage() {
         <CardContent className="pt-6">
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Search by name, phone, email..." className="pl-10" value={search} onChange={(e: any) => { setSearch(e?.target?.value ?? ''); setPage(1); }} />
+            <Input placeholder="Search by ID, name, phone, or email…" className="pl-10" value={search} onChange={(e: any) => { setSearch(e?.target?.value ?? ''); setPage(1); }} />
           </div>
 
           {loading ? (
@@ -104,6 +104,7 @@ export default function CustomersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-28">Customer ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Segment</TableHead>
@@ -115,6 +116,9 @@ export default function CustomersPage() {
               <TableBody>
                 {(customers ?? []).map((c: any) => (
                   <TableRow key={c?.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => router.push(`/customers/${c.id}`)}>
+                    <TableCell>
+                      <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary">{c?.customerCode ?? '—'}</span>
+                    </TableCell>
                     <TableCell>
                       <p className="font-medium">{c?.name ?? 'Unknown'}</p>
                       <p className="text-xs text-muted-foreground">{c?.email ?? ''}</p>

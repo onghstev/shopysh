@@ -231,6 +231,7 @@ model ProductImage {
 model Customer {
   id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId            String    @map("tenant_id") @db.Uuid
+  customerCode        String?   @map("customer_code") @db.VarChar(20)
   phone               String    @db.VarChar(50)
   name                String?   @db.VarChar(255)
   email               String?   @db.VarChar(255)
@@ -262,6 +263,7 @@ model Customer {
   campaignMessages      CampaignMessage[]
   incomes               Income[]
 
+  @@unique([tenantId, customerCode], map: "idx_customers_code_tenant")
   @@unique([tenantId, phone], map: "idx_customers_phone_tenant")
   @@unique([tenantId, googleId], map: "idx_customers_google_tenant")
   @@index([tenantId, isBlocked, lastInteractionAt(sort: Desc)], map: "idx_customers_tenant_active")
@@ -620,7 +622,7 @@ model SubscriptionPlan {
   maxProducts              Int      @map("max_products")
   maxWhatsappAccounts      Int      @default(1) @map("max_whatsapp_accounts")
   maxUsers                 Int      @default(1) @map("max_users")
-  maxStorageGb             Int      @default(1) @map("max_storage_gb")
+  maxStorageMb             Int      @default(1024) @map("max_storage_mb")
   maxBroadcastsMonthly     Int      @default(0) @map("max_broadcasts_monthly")
   apiAccess                Boolean  @default(false) @map("api_access")
   customAiTraining         Boolean  @default(false) @map("custom_ai_training")

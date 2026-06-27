@@ -72,7 +72,8 @@ export default function VendorLookup({ value, onChange, onClear, placeholder = '
   }, []);
 
   const handleSelect = (v: Vendor) => {
-    setSelectedName(v.name);
+    const displayName = v.code ? `[${v.code}] ${v.name}` : v.name;
+    setSelectedName(displayName);
     setIsSundry(false);
     setOpen(false);
     setShowCreate(false);
@@ -180,9 +181,14 @@ export default function VendorLookup({ value, onChange, onClear, placeholder = '
                 >
                   <Building2 className="w-3.5 h-3.5 mt-0.5 shrink-0 text-muted-foreground" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{v.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      {v.code && (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">{v.code}</span>
+                      )}
+                      <p className="text-sm font-medium truncate">{v.name}</p>
+                    </div>
                     <p className="text-xs text-muted-foreground truncate">
-                      {v.code}{v.phone ? ` · ${v.phone}` : ''}{v.email ? ` · ${v.email}` : ''}
+                      {v.phone ? v.phone : ''}{v.email ? ` · ${v.email}` : ''}
                     </p>
                   </div>
                 </button>

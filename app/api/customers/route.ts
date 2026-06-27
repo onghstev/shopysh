@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthSession, unauthorized, badRequest, serverError, toNumber } from '@/lib/api-helpers';
+import { generateCustomerCode } from '@/lib/generate-code';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,6 +20,7 @@ export async function GET(request: NextRequest) {
     const where: any = { tenantId, deletedAt: null };
     if (search) {
       where.OR = [
+        { customerCode: { contains: search, mode: 'insensitive' } },
         { name: { contains: search, mode: 'insensitive' } },
         { phone: { contains: search } },
         { email: { contains: search, mode: 'insensitive' } },
@@ -58,9 +60,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     if (!body?.phone) return badRequest('Phone number is required');
 
+    const customerCode = await generateCustomerCode(session.user.tenantId);
     const customer = await prisma.customer.create({
       data: {
         tenantId: session.user.tenantId,
+        customerCode,
         phone: body.phone,
         name: body?.name ?? null,
         email: body?.email ?? null,

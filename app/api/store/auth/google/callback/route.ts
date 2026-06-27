@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { signCustomerToken } from '@/lib/customer-auth';
+import { generateCustomerCode } from '@/lib/generate-code';
 
 function getPublicBaseUrl(req: NextRequest): string {
   const forwardedHost = req.headers.get('x-forwarded-host') || req.headers.get('host');
@@ -103,9 +104,11 @@ export async function GET(req: NextRequest) {
         });
       } else {
         // Create new customer
+        const customerCode = await generateCustomerCode(tenantId);
         customer = await prisma.customer.create({
           data: {
             tenantId,
+            customerCode,
             phone: `g-${googleUser.id}`,  // Unique placeholder since Google doesn't provide phone
             name: googleUser.name || googleUser.given_name || '',
             email: googleUser.email,

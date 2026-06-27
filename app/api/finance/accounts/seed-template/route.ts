@@ -65,11 +65,17 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const template: string = body.template ?? 'nigerian';
+    const replace: boolean = body.replace === true;
 
-    // Check if accounts already exist
+    // If accounts exist and replace not confirmed, return a specific code so UI can prompt
     const existing = await prisma.glAccount.count({ where: { tenantId } });
-    if (existing > 0) {
-      return NextResponse.json({ error: 'Chart of Accounts already has entries. Cannot seed template.' }, { status: 409 });
+    if (existing > 0 && !replace) {
+      return NextResponse.json({ error: 'Chart of Accounts already has entries. Cannot seed template.', code: 'ACCOUNTS_EXIST', count: existing }, { status: 409 });
+    }
+
+    // Wipe existing accounts (cascade deletes journal lines referencing them)
+    if (existing > 0 && replace) {
+      await prisma.glAccount.deleteMany({ where: { tenantId } });
     }
 
     if (template === 'simple') {

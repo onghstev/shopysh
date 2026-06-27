@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { signCustomerToken } from '@/lib/customer-auth';
+import { generateCustomerCode } from '@/lib/generate-code';
 
 export async function POST(request: NextRequest, { params }: { params: { slug: string } }) {
   try {
@@ -42,9 +43,11 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
         data: { name, email: email || existing.email, passwordHash, acquisitionSource: existing.acquisitionSource || 'storefront' },
       });
     } else {
+      const customerCode = await generateCustomerCode(tenant.id);
       customer = await prisma.customer.create({
         data: {
           tenantId: tenant.id,
+          customerCode,
           phone,
           name,
           email: email || null,

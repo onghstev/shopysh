@@ -46,7 +46,7 @@ interface Plan {
   maxAiConversations: number;
   maxProducts: number;
   maxUsers: number;
-  maxStorageGb: number;
+  maxStorageMb: number;
   maxBroadcastsMonthly: number;
   apiAccess: boolean;
   customAiTraining: boolean;
@@ -541,7 +541,7 @@ function OnboardingPageInner() {
                           </div>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Database className="w-3.5 h-3.5" />
-                            <span>{plan.maxStorageGb}GB storage</span>
+                            <span>{plan.maxStorageMb} MB storage</span>
                           </div>
                           {plan.prioritySupport && (
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">

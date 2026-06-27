@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 
 interface Customer {
   id: string;
+  customerCode?: string;
   name?: string;
   phone: string;
   email?: string;
@@ -72,13 +73,15 @@ export default function CustomerLookup({ value, onChange, onClear, placeholder =
   }, []);
 
   const handleSelect = (c: Customer) => {
-    const name = c.name || c.phone;
-    setSelectedName(name);
+    const displayName = c.customerCode
+      ? `[${c.customerCode}] ${c.name || c.phone}`
+      : (c.name || c.phone);
+    setSelectedName(displayName);
     setIsSundry(false);
     setOpen(false);
     setShowCreate(false);
     setQuery('');
-    onChange(c.id, name);
+    onChange(c.id, c.name || c.phone);
   };
 
   const handleSundry = () => {
@@ -177,7 +180,12 @@ export default function CustomerLookup({ value, onChange, onClear, placeholder =
                 >
                   <UserCheck className="w-3.5 h-3.5 mt-0.5 shrink-0 text-muted-foreground" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{c.name || c.phone}</p>
+                    <div className="flex items-center gap-1.5">
+                      {c.customerCode && (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">{c.customerCode}</span>
+                      )}
+                      <p className="text-sm font-medium truncate">{c.name || c.phone}</p>
+                    </div>
                     <p className="text-xs text-muted-foreground truncate">
                       {c.phone}{c.email ? ` · ${c.email}` : ''}
                     </p>

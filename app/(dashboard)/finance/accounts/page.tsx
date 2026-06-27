@@ -36,15 +36,23 @@ const TEMPLATES = [
 function TemplateModal({ onClose, onSeeded }: { onClose: () => void; onSeeded: () => void }) {
   const [seeding, setSeeding] = useState<string | null>(null);
 
-  const seed = async (templateId: string) => {
+  const seed = async (templateId: string, replace = false) => {
     setSeeding(templateId);
     try {
       const res = await fetch('/api/finance/accounts/seed-template', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template: templateId }),
+        body: JSON.stringify({ template: templateId, replace }),
       });
       const data = await res.json();
+      if (res.status === 409 && data.code === 'ACCOUNTS_EXIST') {
+        setSeeding(null);
+        const confirmed = window.confirm(
+          `You already have ${data.count} account${data.count !== 1 ? 's' : ''} in your Chart of Accounts.\n\nApplying this template will DELETE all existing accounts and replace them with the template accounts.\n\nThis cannot be undone. Continue?`
+        );
+        if (confirmed) seed(templateId, true);
+        return;
+      }
       if (!res.ok) { toast.error(data.error); return; }
       toast.success(`${data.accountsCreated} accounts created from ${templateId} template`);
       onClose();

@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       name, description, priceNgnMonthly, priceNgnYearly, priceUsdMonthly, priceUsdYearly,
-      features, maxAiConversations, maxProducts, maxUsers, maxStorageGb,
+      features, maxAiConversations, maxProducts, maxUsers, maxStorageMb,
       maxBroadcastsMonthly, apiAccess, customAiTraining, prioritySupport, displayOrder, isActive,
     } = body;
 
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         maxAiConversations: maxAiConversations ?? 1000,
         maxProducts: maxProducts ?? 30,
         maxUsers: maxUsers ?? 1,
-        maxStorageGb: maxStorageGb ?? 1,
+        maxStorageMb: maxStorageMb ?? 1,
         maxBroadcastsMonthly: maxBroadcastsMonthly ?? 0,
         apiAccess: apiAccess ?? false,
         customAiTraining: customAiTraining ?? false,

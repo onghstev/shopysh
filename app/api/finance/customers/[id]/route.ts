@@ -15,6 +15,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     where: { id, tenantId, deletedAt: null },
     select: {
       id: true,
+      customerCode: true,
       name: true,
       phone: true,
       email: true,

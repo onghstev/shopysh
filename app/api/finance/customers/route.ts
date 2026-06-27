@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { prisma } from '@/lib/db';
+import { generateCustomerCode } from '@/lib/generate-code';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,7 @@ export async function GET(req: NextRequest) {
 
   if (search.trim()) {
     where.OR = [
+      { customerCode: { contains: search, mode: 'insensitive' } },
       { name: { contains: search, mode: 'insensitive' } },
       { phone: { contains: search, mode: 'insensitive' } },
       { email: { contains: search, mode: 'insensitive' } },
@@ -34,6 +36,7 @@ export async function GET(req: NextRequest) {
       where,
       select: {
         id: true,
+        customerCode: true,
         name: true,
         phone: true,
         email: true,
@@ -63,9 +66,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'name and phone are required' }, { status: 400 });
   }
 
+  const customerCode = await generateCustomerCode(tenantId);
   const customer = await prisma.customer.create({
     data: {
       tenantId,
+      customerCode,
       name,
       phone,
       email: email || null,

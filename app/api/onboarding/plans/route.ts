@@ -27,7 +27,7 @@ export async function GET() {
         maxAiConversations: true,
         maxProducts: true,
         maxUsers: true,
-        maxStorageGb: true,
+        maxStorageMb: true,
         maxBroadcastsMonthly: true,
         apiAccess: true,
         customAiTraining: true,

@@ -32,7 +32,7 @@ interface PlanInfo {
   maxAiConversations: number;
   maxProducts: number;
   maxUsers: number;
-  maxStorageGb: number;
+  maxStorageMb: number;
   maxBroadcastsMonthly: number;
   apiAccess: boolean;
   customAiTraining: boolean;
@@ -46,7 +46,7 @@ const emptyPlan: Omit<PlanInfo, 'id' | '_count'> = {
   name: '', description: '',
   priceNgnMonthly: 0, priceNgnYearly: 0, priceUsdMonthly: 0, priceUsdYearly: 0,
   features: {}, maxAiConversations: 1000, maxProducts: 30, maxUsers: 1,
-  maxStorageGb: 1, maxBroadcastsMonthly: 0,
+  maxStorageMb: 1024, maxBroadcastsMonthly: 0,
   apiAccess: false, customAiTraining: false, prioritySupport: false,
   isActive: true, displayOrder: 99,
 };
@@ -219,7 +219,7 @@ export default function AdminPage() {
       priceUsdMonthly: plan.priceUsdMonthly, priceUsdYearly: plan.priceUsdYearly,
       features: plan.features || {},
       maxAiConversations: plan.maxAiConversations, maxProducts: plan.maxProducts,
-      maxUsers: plan.maxUsers, maxStorageGb: plan.maxStorageGb,
+      maxUsers: plan.maxUsers, maxStorageMb: plan.maxStorageMb,
       maxBroadcastsMonthly: plan.maxBroadcastsMonthly,
       apiAccess: plan.apiAccess, customAiTraining: plan.customAiTraining,
       prioritySupport: plan.prioritySupport, isActive: plan.isActive, displayOrder: plan.displayOrder,
@@ -559,7 +559,7 @@ export default function AdminPage() {
                       <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground pt-1">
                         <span><strong>{plan.maxProducts}</strong> products</span>
                         <span><strong>{plan.maxUsers}</strong> users</span>
-                        <span><strong>{plan.maxStorageGb}</strong> GB storage</span>
+                        <span><strong>{plan.maxStorageMb}</strong> MB storage</span>
                         <span><strong>{plan.maxAiConversations}</strong> AI convos</span>
                         <span><strong>{plan.maxBroadcastsMonthly}</strong> broadcasts/mo</span>
                         {plan.apiAccess && <Badge variant="secondary" className="text-[10px]">API</Badge>}
@@ -769,8 +769,8 @@ export default function AdminPage() {
                   <Input type="number" value={planForm.maxUsers} onChange={e => updateForm('maxUsers', Number(e.target.value))} />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Storage (GB)</Label>
-                  <Input type="number" value={planForm.maxStorageGb} onChange={e => updateForm('maxStorageGb', Number(e.target.value))} />
+                  <Label className="text-xs">Storage (MB)</Label>
+                  <Input type="number" value={planForm.maxStorageMb} onChange={e => updateForm('maxStorageMb', Number(e.target.value))} />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">AI Conversations</Label>

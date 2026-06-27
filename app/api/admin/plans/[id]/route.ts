@@ -44,7 +44,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         ...(body.maxAiConversations != null && { maxAiConversations: body.maxAiConversations }),
         ...(body.maxProducts != null && { maxProducts: body.maxProducts }),
         ...(body.maxUsers != null && { maxUsers: body.maxUsers }),
-        ...(body.maxStorageGb != null && { maxStorageGb: body.maxStorageGb }),
+        ...(body.maxStorageMb != null && { maxStorageMb: body.maxStorageMb }),
         ...(body.maxBroadcastsMonthly != null && { maxBroadcastsMonthly: body.maxBroadcastsMonthly }),
         ...(body.apiAccess != null && { apiAccess: body.apiAccess }),
         ...(body.customAiTraining != null && { customAiTraining: body.customAiTraining }),
