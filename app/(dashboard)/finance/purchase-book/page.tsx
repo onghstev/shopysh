@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Download, RefreshCw, ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react';
+import { Download, RefreshCw, ChevronLeft, ChevronRight, ShoppingCart, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
 
 const fmt = (n: number) => n.toLocaleString('en-NG', { minimumFractionDigits: 2 });
 
@@ -29,12 +31,159 @@ function getTypeBadge(t: string) {
   return 'bg-muted text-muted-foreground';
 }
 
+function RecordPurchaseModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [form, setForm] = useState({
+    date: today,
+    vendorName: '',
+    reference: '',
+    description: '',
+    amount: '',
+    vatAmount: '0',
+    expenseAccountId: '',
+    paymentMethod: 'ON_CREDIT',
+  });
+  const [expenseAccounts, setExpenseAccounts] = useState<any[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/finance/accounts?type=EXPENSE')
+      .then(r => r.json())
+      .then(d => setExpenseAccounts(d.accounts ?? []))
+      .catch(() => {});
+  }, []);
+
+  const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleSubmit = async () => {
+    if (!form.date || !form.description || !form.amount || !form.expenseAccountId || !form.paymentMethod) {
+      toast.error('Date, description, amount, expense account, and payment method are required');
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch('/api/finance/purchase-book/record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          amount: parseFloat(form.amount),
+          vatAmount: parseFloat(form.vatAmount) || 0,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error); return; }
+      toast.success('Purchase recorded successfully');
+      onSaved();
+    } finally { setSaving(false); }
+  };
+
+  const total = (parseFloat(form.amount) || 0) + (parseFloat(form.vatAmount) || 0);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto">
+      <div className="bg-background rounded-2xl shadow-xl w-full max-w-lg my-6 p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="font-bold text-lg">Record Purchase</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Date *</Label>
+            <Input type="date" value={form.date} onChange={e => set('date', e.target.value)} className="h-9 rounded-xl" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Vendor Name</Label>
+            <Input value={form.vendorName} onChange={e => set('vendorName', e.target.value)} placeholder="Optional" className="h-9 rounded-xl" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Reference</Label>
+            <Input value={form.reference} onChange={e => set('reference', e.target.value)} placeholder="e.g. PO-001" className="h-9 rounded-xl" />
+          </div>
+          <div className="space-y-1.5 col-span-2">
+            <Label className="text-xs">Description *</Label>
+            <Input value={form.description} onChange={e => set('description', e.target.value)} placeholder="e.g. Purchase of office supplies" className="h-9 rounded-xl" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Amount (excl. VAT) *</Label>
+            <Input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0.00" min="0" className="h-9 rounded-xl" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">VAT Amount</Label>
+            <Input type="number" value={form.vatAmount} onChange={e => set('vatAmount', e.target.value)} placeholder="0.00" min="0" className="h-9 rounded-xl" />
+          </div>
+          <div className="space-y-1.5 col-span-2">
+            <Label className="text-xs">Expense Account *</Label>
+            <select
+              value={form.expenseAccountId}
+              onChange={e => set('expenseAccountId', e.target.value)}
+              className="h-9 w-full rounded-xl border border-input bg-background px-3 text-sm"
+            >
+              <option value="">— Select account —</option>
+              {expenseAccounts.map((a: any) => (
+                <option key={a.id} value={a.id}>{a.code} {a.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5 col-span-2">
+            <Label className="text-xs">Payment Method *</Label>
+            <div className="flex gap-2">
+              {[
+                { value: 'ON_CREDIT', label: 'On Credit (AP)' },
+                { value: 'CASH', label: 'Cash' },
+                { value: 'BANK', label: 'Bank Transfer' },
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => set('paymentMethod', opt.value)}
+                  className={`flex-1 py-2 rounded-xl border text-xs font-medium transition-colors ${
+                    form.paymentMethod === opt.value
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'border-input hover:bg-muted'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {total > 0 && (
+          <div className="rounded-xl bg-muted/40 p-3 text-sm">
+            <div className="flex justify-between text-muted-foreground">
+              <span>Subtotal</span><span>₦{fmt(parseFloat(form.amount) || 0)}</span>
+            </div>
+            {(parseFloat(form.vatAmount) || 0) > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>VAT Input</span><span>₦{fmt(parseFloat(form.vatAmount) || 0)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-bold pt-1 border-t border-border mt-1">
+              <span>Total CR</span><span>₦{fmt(total)}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 pt-1">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={saving}>
+            {saving ? 'Saving…' : 'Record Purchase'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PurchaseBookPage() {
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [totals, setTotals] = useState({ totalDebit: 0, totalCredit: 0 });
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [showRecord, setShowRecord] = useState(false);
   const limit = 50;
   const { from: defaultFrom, to: defaultTo } = getMonthRange();
   const [from, setFrom] = useState(defaultFrom);
@@ -78,6 +227,10 @@ export default function PurchaseBookPage() {
 
   return (
     <div className="space-y-5">
+      {showRecord && (
+        <RecordPurchaseModal onClose={() => setShowRecord(false)} onSaved={() => { setShowRecord(false); load(); }} />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -92,6 +245,7 @@ export default function PurchaseBookPage() {
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={load}><RefreshCw className="w-3.5 h-3.5 mr-1.5" />Refresh</Button>
           <Button variant="outline" size="sm" onClick={exportCsv}><Download className="w-3.5 h-3.5 mr-1.5" />Export CSV</Button>
+          <Button size="sm" onClick={() => setShowRecord(true)}><Plus className="w-3.5 h-3.5 mr-1.5" />Record Purchase</Button>
         </div>
       </div>
 
@@ -157,8 +311,6 @@ export default function PurchaseBookPage() {
               ) : (
                 entries.map(e => {
                   const apLine = e.lines?.find((l: any) => l.account?.systemTag === 'AP' && Number(l.credit) > 0);
-                  const expLine = e.lines?.find((l: any) => l.account?.accountType === 'EXPENSE' && Number(l.debit) > 0);
-                  const vatLine = e.lines?.find((l: any) => l.account?.systemTag === 'VAT_INPUT' && Number(l.debit) > 0);
 
                   return (
                     <tr key={e.id} className="border-b border-border/40 hover:bg-accent/40 transition-colors">

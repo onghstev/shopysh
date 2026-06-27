@@ -1,12 +1,99 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { Plus, Search, RefreshCw, ChevronRight, ChevronDown, Layers, Pencil, Trash2, X, Check } from 'lucide-react';
+import { Plus, Search, RefreshCw, ChevronRight, ChevronDown, Layers, Pencil, Trash2, X, Check, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+
+// ── Template chooser modal ──────────────────────────────────────────────────
+const TEMPLATES = [
+  {
+    id: 'nigerian',
+    name: 'Nigerian Standard',
+    description: '65 accounts — full Nigerian SME chart of accounts with COGS, VAT, WHT, PAYE and multi-level structure.',
+    accounts: 65,
+    color: 'hsl(168 84% 26%)',
+  },
+  {
+    id: 'simple',
+    name: 'Simple Business',
+    description: '25 accounts — lean setup for micro-businesses. Assets, liabilities, equity, revenue & expenses.',
+    accounts: 25,
+    color: 'hsl(40 78% 47%)',
+  },
+  {
+    id: 'retail',
+    name: 'Retail / Trading',
+    description: '65 accounts — inventory-focused Nigerian CoA suitable for retail or trading businesses.',
+    accounts: 65,
+    color: '#7c3aed',
+  },
+];
+
+function TemplateModal({ onClose, onSeeded }: { onClose: () => void; onSeeded: () => void }) {
+  const [seeding, setSeeding] = useState<string | null>(null);
+
+  const seed = async (templateId: string) => {
+    setSeeding(templateId);
+    try {
+      const res = await fetch('/api/finance/accounts/seed-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template: templateId }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error); return; }
+      toast.success(`${data.accountsCreated} accounts created from ${templateId} template`);
+      onClose();
+      onSeeded();
+    } finally { setSeeding(null); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-background rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-bold text-lg flex items-center gap-2">
+              <Wand2 className="w-5 h-5" style={{ color: 'hsl(168 84% 26%)' }} />
+              Choose a Chart of Accounts Template
+            </h2>
+            <p className="text-sm text-muted-foreground mt-0.5">Select a starting point — you can add or edit accounts afterwards.</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
+        </div>
+
+        <div className="space-y-3">
+          {TEMPLATES.map(t => (
+            <div key={t.id} className="border border-border/60 rounded-xl p-4 flex items-start gap-4 hover:border-primary/50 transition-colors">
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm">{t.name}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{t.description}</p>
+                <p className="text-xs font-mono mt-1" style={{ color: t.color }}>{t.accounts} accounts</p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => seed(t.id)}
+                disabled={seeding !== null}
+                className="shrink-0"
+              >
+                {seeding === t.id ? 'Seeding…' : 'Use This'}
+              </Button>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          This action seeds accounts once. If accounts already exist, the seed will be blocked.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 const TYPE_COLORS: Record<string, string> = {
   ASSET: 'bg-sky-100 text-sky-700',
@@ -73,6 +160,7 @@ export default function AccountsPage() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [showTemplate, setShowTemplate] = useState(false);
   const [editTarget, setEditTarget] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ code: '', name: '', accountType: 'ASSET', parentId: '', description: '', openingBalance: '0' });
@@ -141,6 +229,7 @@ export default function AccountsPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={load}><RefreshCw className="w-3.5 h-3.5 mr-1.5" />Refresh</Button>
+          <Button variant="outline" size="sm" onClick={() => setShowTemplate(true)}><Wand2 className="w-3.5 h-3.5 mr-1.5" />Choose Template</Button>
           <Button size="sm" onClick={openCreate}><Plus className="w-3.5 h-3.5 mr-1.5" />Add Account</Button>
         </div>
       </div>
@@ -188,7 +277,21 @@ export default function AccountsPage() {
               <tr>
                 <td colSpan={5} className="py-16 text-center">
                   <Layers className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">No accounts found</p>
+                  {accounts.length === 0 ? (
+                    <>
+                      <p className="text-sm text-muted-foreground mb-3">No accounts yet. Start with a template or add accounts manually.</p>
+                      <button
+                        onClick={() => setShowTemplate(true)}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white"
+                        style={{ background: 'hsl(168 84% 26%)' }}
+                      >
+                        <Wand2 className="w-3.5 h-3.5" />
+                        Choose a Template
+                      </button>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No accounts match your search</p>
+                  )}
                 </td>
               </tr>
             ) : (
@@ -203,6 +306,11 @@ export default function AccountsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Template Modal */}
+      {showTemplate && (
+        <TemplateModal onClose={() => setShowTemplate(false)} onSeeded={load} />
+      )}
 
       {/* Create/Edit Drawer */}
       {showForm && (

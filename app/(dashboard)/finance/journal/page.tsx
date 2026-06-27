@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Search, Filter, BookOpen, RefreshCw, X, Check, Trash2, RotateCcw, Send, ChevronLeft, ChevronRight as ChevRight } from 'lucide-react';
+import { Plus, Search, BookOpen, RefreshCw, X, Trash2, Send, ChevronLeft, ChevronRight as ChevRight, Upload, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +28,171 @@ const fmt = (n: number) =>
   new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 2 }).format(n);
 
 interface JLine { id?: string; accountId: string; accountName?: string; debit: string; credit: string; description: string; }
+
+const CSV_TEMPLATE = `date,description,account_code,debit,credit,reference\n2026-01-15,Sales to ABC Ltd,4100,0,50000,INV-001\n2026-01-15,Sales to ABC Ltd,1200,50000,0,INV-001\n`;
+
+function ImportModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const [rows, setRows] = useState<any[]>([]);
+  const [fileName, setFileName] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<{ created: number; errors: string[] } | null>(null);
+
+  const downloadTemplate = () => {
+    const url = URL.createObjectURL(new Blob([CSV_TEMPLATE], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = 'journal-import-template.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    setResult(null);
+
+    if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+      toast.info('Save your Excel file as CSV first, then import.');
+      setRows([]);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const allLines = text.split('\n').map(r => r.trim()).filter(Boolean);
+      if (allLines.length < 2) { toast.error('CSV must have a header row and at least one data row.'); return; }
+      const header = allLines[0].split(',').map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''));
+      const parsed = allLines.slice(1).map(line => {
+        const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+        const obj: any = {};
+        header.forEach((h, i) => { obj[h] = cols[i] ?? ''; });
+        return {
+          date: obj['date'] ?? '',
+          description: obj['description'] ?? '',
+          accountCode: obj['account_code'] ?? '',
+          debit: parseFloat(obj['debit']) || 0,
+          credit: parseFloat(obj['credit']) || 0,
+          reference: obj['reference'] ?? '',
+        };
+      });
+      setRows(parsed);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleSubmit = async () => {
+    if (!rows.length) { toast.error('No rows to import'); return; }
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/finance/journal/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows }),
+      });
+      const data = await res.json();
+      setResult(data);
+      if (data.created > 0) {
+        toast.success(`${data.created} journal entr${data.created === 1 ? 'y' : 'ies'} created`);
+        onSaved();
+      }
+      if (data.errors?.length) toast.error(`${data.errors.length} error(s) — see details below`);
+    } finally { setSubmitting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto">
+      <div className="bg-background rounded-2xl shadow-xl w-full max-w-2xl my-6 p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <h2 className="font-bold text-lg">Import Journal CSV</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
+        </div>
+
+        {/* Instructions */}
+        <div className="rounded-xl bg-muted/40 p-4 space-y-2 text-sm">
+          <p className="font-medium">CSV format: <span className="font-mono text-xs">date, description, account_code, debit, credit, reference</span></p>
+          <ul className="text-muted-foreground text-xs space-y-1 list-disc list-inside">
+            <li>Rows with the same date + description are grouped into one journal entry</li>
+            <li>Each group must balance (sum debits = sum credits)</li>
+            <li>Entries are created as <strong>DRAFT</strong> — post them from the journal list</li>
+          </ul>
+          <button onClick={downloadTemplate}
+            className="flex items-center gap-1.5 text-xs text-primary font-medium hover:underline mt-1">
+            <Download className="w-3.5 h-3.5" /> Download template CSV
+          </button>
+        </div>
+
+        {/* File input */}
+        <div className="space-y-1.5">
+          <Label className="text-xs">Select CSV file</Label>
+          <Input type="file" accept=".csv,.xlsx,.xls" onChange={handleFile} className="h-9 rounded-xl text-sm" />
+          {fileName && (
+            <p className="text-xs text-muted-foreground">Selected: {fileName}</p>
+          )}
+        </div>
+
+        {/* Preview */}
+        {rows.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">{rows.length} rows parsed — preview (first 5):</p>
+            <div className="rounded-xl border border-border overflow-hidden">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-muted/40 border-b border-border">
+                    {['Date', 'Description', 'Account Code', 'Debit', 'Credit', 'Reference'].map(h => (
+                      <th key={h} className="text-left p-2 font-semibold text-muted-foreground">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.slice(0, 5).map((r, i) => (
+                    <tr key={i} className="border-b border-border/50">
+                      <td className="p-2">{r.date}</td>
+                      <td className="p-2 truncate max-w-[120px]">{r.description}</td>
+                      <td className="p-2 font-mono">{r.accountCode}</td>
+                      <td className="p-2 text-right">{r.debit > 0 ? r.debit.toFixed(2) : ''}</td>
+                      <td className="p-2 text-right">{r.credit > 0 ? r.credit.toFixed(2) : ''}</td>
+                      <td className="p-2">{r.reference}</td>
+                    </tr>
+                  ))}
+                  {rows.length > 5 && (
+                    <tr>
+                      <td colSpan={6} className="p-2 text-center text-muted-foreground">
+                        …and {rows.length - 5} more rows
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Result */}
+        {result && (
+          <div className="rounded-xl bg-muted/30 p-4 space-y-2 text-sm">
+            <p className="font-medium">{result.created} journal entr{result.created === 1 ? 'y' : 'ies'} created</p>
+            {result.errors?.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-destructive">{result.errors.length} error(s):</p>
+                <ul className="text-xs text-destructive space-y-0.5 list-disc list-inside">
+                  {result.errors.map((e, i) => <li key={i}>{e}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 pt-1">
+          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button onClick={handleSubmit} disabled={submitting || rows.length === 0}>
+            <Upload className="w-3.5 h-3.5 mr-1.5" />
+            {submitting ? 'Importing…' : `Import ${rows.length > 0 ? rows.length + ' rows' : ''}`}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function NewJournalModal({ accounts, onClose, onSaved }: { accounts: any[]; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState({ entryDate: new Date().toISOString().slice(0,10), description: '', entryType: 'GENERAL_JOURNAL', reference: '', notes: '' });
@@ -198,6 +363,7 @@ export default function JournalPage() {
   const [loading, setLoading] = useState(true);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [showNew, setShowNew] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState(searchParams.get('status') ?? '');
   const [search, setSearch] = useState('');
@@ -241,6 +407,9 @@ export default function JournalPage() {
       {showNew && (
         <NewJournalModal accounts={accounts} onClose={() => setShowNew(false)} onSaved={() => { setShowNew(false); load(); }} />
       )}
+      {showImport && (
+        <ImportModal onClose={() => setShowImport(false)} onSaved={() => { setShowImport(false); load(); }} />
+      )}
 
       <div className="flex items-center justify-between">
         <div>
@@ -249,6 +418,7 @@ export default function JournalPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={load}><RefreshCw className="w-3.5 h-3.5 mr-1.5" />Refresh</Button>
+          <Button variant="outline" size="sm" onClick={() => setShowImport(true)}><Upload className="w-3.5 h-3.5 mr-1.5" />Import CSV</Button>
           <Button size="sm" onClick={() => setShowNew(true)}><Plus className="w-3.5 h-3.5 mr-1.5" />New Journal</Button>
         </div>
       </div>
