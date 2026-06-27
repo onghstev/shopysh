@@ -5,7 +5,8 @@ import Link from 'next/link';
 import {
   TrendingUp, TrendingDown, Wallet, BookOpen, FileText, Users2,
   BarChart3, PieChart, Scale, Receipt, ChevronRight, RefreshCw,
-  ArrowUpRight, ArrowDownRight, Minus, Building2, Layers
+  ArrowUpRight, ArrowDownRight, Minus, Building2, Layers,
+  Landmark, CreditCard, UserCheck, UserX,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -47,14 +48,16 @@ function KpiCard({ label, value, sub, trend, icon: Icon, color }: {
 }
 
 const QUICK_LINKS = [
-  { href: '/finance/accounts',      label: 'Chart of Accounts', icon: Layers,       desc: 'Manage GL accounts'   },
-  { href: '/finance/journal',       label: 'Journal Entries',   icon: BookOpen,     desc: 'Create & post'        },
-  { href: '/finance/vendors',       label: 'Vendors',           icon: Building2,    desc: 'Supplier management'  },
-  { href: '/finance/income',        label: 'Income',            icon: TrendingUp,   desc: 'Record income'        },
-  { href: '/finance/expenses',      label: 'Expenses',          icon: TrendingDown, desc: 'Track expenses'       },
-  { href: '/finance/invoices',      label: 'Invoices',          icon: FileText,     desc: 'Customer invoices'    },
-  { href: '/finance/daily-banking', label: 'Daily Banking',     icon: Wallet,       desc: 'Cash & bank'          },
-  { href: '/finance/reports',       label: 'Reports',           icon: BarChart3,    desc: 'Statements'           },
+  { href: '/finance/accounts',       label: 'Chart of Accounts', icon: Layers,       desc: 'Manage GL accounts'    },
+  { href: '/finance/journal',        label: 'Journal Entries',   icon: BookOpen,     desc: 'Create & post'         },
+  { href: '/finance/sales-book',     label: 'Sales Book',        icon: TrendingUp,   desc: 'Sales transactions'    },
+  { href: '/finance/purchase-book',  label: 'Purchase Book',     icon: TrendingDown, desc: 'Purchase transactions' },
+  { href: '/finance/cash-book',      label: 'Cash Book',         icon: Landmark,     desc: 'Cash ledger'           },
+  { href: '/finance/bank-book',      label: 'Bank Book',         icon: CreditCard,   desc: 'Bank ledger'           },
+  { href: '/finance/receivables',    label: 'Debtors / AR',      icon: UserCheck,    desc: 'Customer aging'        },
+  { href: '/finance/payables',       label: 'Creditors / AP',    icon: UserX,        desc: 'Supplier aging'        },
+  { href: '/finance/vendors',        label: 'Vendors',           icon: Building2,    desc: 'Supplier management'   },
+  { href: '/finance/reports',        label: 'Reports',           icon: BarChart3,    desc: 'Financial statements'  },
 ];
 
 const STATUS_BADGE: Record<string, string> = {
@@ -187,7 +190,7 @@ export default function FinanceDashboardPage() {
       {/* Module grid */}
       <div>
         <h2 className="font-semibold text-sm mb-3 text-muted-foreground uppercase tracking-wider">Finance Modules</h2>
-        <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
+        <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-10 gap-3">
           {QUICK_LINKS.map(({ href, label, icon: Icon, desc }) => (
             <Link key={href} href={href}
               className="group flex flex-col items-center gap-2 p-3 rounded-2xl border border-border/50 bg-card hover:border-primary/40 hover:bg-primary/5 transition-all text-center shadow-sm">
