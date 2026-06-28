@@ -94,6 +94,8 @@ services:
       WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
       # Analytics (optional)
       NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
+    volumes:
+      - product_uploads:/app/public/uploads/products
     ports:
       - "127.0.0.1:3000:3000"
     healthcheck:
@@ -134,6 +136,7 @@ volumes:
   postgres_data:
   llm_models:
   certbot_data:
+  product_uploads:
 
 networks:
   shopysh-net:

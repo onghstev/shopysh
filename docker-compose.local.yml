@@ -73,6 +73,8 @@ services:
       AWS_FOLDER_PREFIX: ${AWS_FOLDER_PREFIX:-}
       WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
       NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
+    volumes:
+      - product_uploads:/app/public/uploads/products
     ports:
       - "127.0.0.1:3000:3000"
     healthcheck:
@@ -103,6 +105,7 @@ services:
       - shopysh-net
 volumes:
   postgres_data:
+  product_uploads:
   llm_models:
     external: true
     name: shopysh_llm_models

@@ -74,49 +74,21 @@ export default function ProductImageUploader({ productId, images, onImagesChange
   const uploadFile = async (file: File) => {
     setUploading(true);
     try {
-      // Step 1: Get presigned URL
-      const presignRes = await fetch(`/api/products/${productId}/images`, {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('altText', file.name.replace(/\.[^.]+$/, ''));
+
+      const res = await fetch(`/api/products/${productId}/images`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: file.name, contentType: file.type }),
+        body: fd,
       });
 
-      if (!presignRes.ok) {
-        const err = await presignRes.json().catch(() => ({}));
-        toast.error(err?.error ?? 'Failed to prepare upload');
-        return;
-      }
-
-      const { uploadUrl, cloud_storage_path } = await presignRes.json();
-
-      // Step 2: Upload directly to S3
-      const uploadRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type },
-        body: file,
-      });
-
-      if (!uploadRes.ok) {
-        toast.error('Failed to upload image to storage');
-        return;
-      }
-
-      // Step 3: Confirm upload in DB
-      const confirmRes = await fetch(`/api/products/${productId}/images`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cloud_storage_path,
-          altText: file.name.replace(/\.[^.]+$/, ''),
-        }),
-      });
-
-      if (confirmRes.ok) {
+      if (res.ok) {
         toast.success('Image uploaded');
         await refreshImages();
       } else {
-        const err = await confirmRes.json().catch(() => ({}));
-        toast.error(err?.error ?? 'Failed to save image');
+        const err = await res.json().catch(() => ({}));
+        toast.error(err?.error ?? 'Failed to upload image');
       }
     } catch (e: any) {
       console.error('Upload error:', e);

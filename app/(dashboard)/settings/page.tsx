@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Bot, CreditCard, Save, CheckCircle2, Loader2, Key, AlertTriangle, CheckCircle, Cpu, Wallet, Bell, Mail, XCircle, Send } from 'lucide-react';
+import { Building2, Bot, CreditCard, Save, CheckCircle2, Loader2, Key, AlertTriangle, CheckCircle, Cpu, Wallet, Bell, Mail, XCircle, Send, ExternalLink, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
 function EmailTestSection() {
@@ -279,6 +279,42 @@ export default function SettingsPage() {
               <CardDescription>Update your business information visible to customers</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
+              {/* Store URL */}
+              {profile?.subdomain && (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-muted-foreground mb-0.5">Your Store URL</p>
+                    <p className="text-sm font-mono font-medium text-primary truncate">
+                      {typeof window !== 'undefined' ? `${window.location.origin}/store/${profile.subdomain}` : `/store/${profile.subdomain}`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      title="Copy link"
+                      onClick={() => {
+                        const url = `${window.location.origin}/store/${profile.subdomain}`;
+                        navigator.clipboard.writeText(url).then(() => toast.success('Store URL copied'));
+                      }}
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      title="Open store"
+                      onClick={() => window.open(`/store/${profile.subdomain}`, '_blank')}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label className="text-sm font-medium">Business Name</Label><Input className="h-10" value={profile?.businessName ?? ''} onChange={(e: any) => upd(setProfile, 'businessName', e.target.value)} /></div>
                 <div className="space-y-2"><Label className="text-sm font-medium">Phone</Label><Input className="h-10" value={profile?.phone ?? ''} onChange={(e: any) => upd(setProfile, 'phone', e.target.value)} /></div>

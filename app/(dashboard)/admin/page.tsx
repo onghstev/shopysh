@@ -441,7 +441,9 @@ export default function AdminPage() {
                         <Badge variant="outline" className="text-[11px]">{t.plan}</Badge>
                       </div>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><Globe className="w-3 h-3" />{t.subdomain}</span>
+                        <a href={`/store/${t.subdomain}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-primary transition-colors" onClick={e => e.stopPropagation()}>
+                          <Globe className="w-3 h-3" />{t.subdomain}
+                        </a>
                         {t.email && <span>{t.email}</span>}
                         {t.industry && <span>{t.industry}</span>}
                         <span>Admin: {t.adminName} ({t.adminEmail})</span>

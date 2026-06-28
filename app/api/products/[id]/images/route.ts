@@ -3,9 +3,12 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthSession, unauthorized, notFound, serverError, badRequest } from '@/lib/api-helpers';
-import { generatePresignedUploadUrl, deleteFile, getFileUrl } from '@/lib/s3';
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
 
 const MAX_IMAGES = 4;
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 // GET - list product images
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -30,7 +33,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   }
 }
 
-// POST - get presigned upload URL for a new product image
+// POST - upload a product image (multipart/form-data)
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getAuthSession();
@@ -42,71 +45,38 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     });
     if (!product) return notFound('Product not found');
 
-    // Check max images limit
     const existingCount = await prisma.productImage.count({ where: { productId: params.id } });
     if (existingCount >= MAX_IMAGES) {
       return badRequest(`Maximum ${MAX_IMAGES} images allowed per product`);
     }
 
-    const body = await request.json();
-    const { fileName, contentType } = body;
+    const formData = await request.formData();
+    const file = formData.get('file') as File | null;
 
-    if (!fileName || !contentType) {
-      return badRequest('fileName and contentType are required');
-    }
+    if (!file) return badRequest('No file provided');
+    if (!ACCEPTED_TYPES.includes(file.type)) return badRequest('Only JPEG, PNG, WebP, and GIF files are allowed');
+    if (file.size > MAX_FILE_SIZE) return badRequest('File size must be under 5MB');
 
-    // Validate it's an image
-    if (!contentType.startsWith('image/')) {
-      return badRequest('Only image files are allowed');
-    }
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
 
-    // Product images are public (for storefront display)
-    const { uploadUrl, cloud_storage_path } = await generatePresignedUploadUrl(
-      `products/${params.id}/${fileName}`,
-      contentType,
-      true
-    );
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const safeName = `${params.id}-${Date.now()}.${ext}`;
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'products');
 
-    return NextResponse.json({ uploadUrl, cloud_storage_path });
-  } catch (error: any) {
-    return serverError(error);
-  }
-}
+    await mkdir(uploadDir, { recursive: true });
+    await writeFile(path.join(uploadDir, safeName), buffer);
 
-// PATCH - confirm upload and save image record to DB
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const session = await getAuthSession();
-    if (!session?.user?.tenantId) return unauthorized();
-
-    const product = await prisma.product.findFirst({
-      where: { id: params.id, tenantId: session.user.tenantId, deletedAt: null },
-      select: { id: true },
-    });
-    if (!product) return notFound('Product not found');
-
-    const existingCount = await prisma.productImage.count({ where: { productId: params.id } });
-    if (existingCount >= MAX_IMAGES) {
-      return badRequest(`Maximum ${MAX_IMAGES} images allowed per product`);
-    }
-
-    const body = await request.json();
-    const { cloud_storage_path, altText } = body;
-
-    if (!cloud_storage_path) {
-      return badRequest('cloud_storage_path is required');
-    }
-
-    // Build public URL for the image
-    const url = await getFileUrl(cloud_storage_path, 'image/jpeg', true);
+    const url = `/uploads/products/${safeName}`;
+    const altText = (formData.get('altText') as string | null) ?? file.name.replace(/\.[^.]+$/, '');
 
     const image = await prisma.productImage.create({
       data: {
         productId: params.id,
         url,
-        altText: altText || null,
+        altText,
         displayOrder: existingCount,
-        isPrimary: existingCount === 0, // First image is primary
+        isPrimary: existingCount === 0,
       },
     });
 
@@ -130,52 +100,42 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     const { searchParams } = new URL(request.url);
     const imageId = searchParams.get('imageId');
-
-    if (!imageId) {
-      return badRequest('imageId query parameter is required');
-    }
+    if (!imageId) return badRequest('imageId query parameter is required');
 
     const image = await prisma.productImage.findFirst({
       where: { id: imageId, productId: params.id },
     });
     if (!image) return notFound('Image not found');
 
-    // Try to delete from S3 (extract key from URL if possible)
-    try {
-      const urlObj = new URL(image.url);
-      const key = urlObj.pathname.slice(1); // remove leading /
-      if (key) await deleteFile(key);
-    } catch (e) {
-      console.error('[ProductImages] Failed to delete from storage:', e);
+    // Try to delete local file
+    if (image.url.startsWith('/uploads/')) {
+      try {
+        const { unlink } = await import('fs/promises');
+        await unlink(path.join(process.cwd(), 'public', image.url));
+      } catch {
+        // ignore — file may already be gone
+      }
     }
 
     await prisma.productImage.delete({ where: { id: imageId } });
 
-    // If deleted image was primary, set next one as primary
+    // If deleted image was primary, promote the next one
     if (image.isPrimary) {
-      const nextImage = await prisma.productImage.findFirst({
+      const next = await prisma.productImage.findFirst({
         where: { productId: params.id },
         orderBy: { displayOrder: 'asc' },
       });
-      if (nextImage) {
-        await prisma.productImage.update({
-          where: { id: nextImage.id },
-          data: { isPrimary: true },
-        });
-      }
+      if (next) await prisma.productImage.update({ where: { id: next.id }, data: { isPrimary: true } });
     }
 
-    // Reorder remaining images
+    // Reorder remaining
     const remaining = await prisma.productImage.findMany({
       where: { productId: params.id },
       orderBy: { displayOrder: 'asc' },
     });
     for (let i = 0; i < remaining.length; i++) {
       if (remaining[i].displayOrder !== i) {
-        await prisma.productImage.update({
-          where: { id: remaining[i].id },
-          data: { displayOrder: i },
-        });
+        await prisma.productImage.update({ where: { id: remaining[i].id }, data: { displayOrder: i } });
       }
     }
 
