@@ -77,7 +77,8 @@ COPY --from=builder /app/node_modules/resolve-pkg-maps ./node_modules/resolve-pk
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 
-RUN chown -R nextjs:nodejs /app
+RUN mkdir -p /app/public/uploads/products && \
+    chown -R nextjs:nodejs /app
 USER nextjs
 
 EXPOSE 3000

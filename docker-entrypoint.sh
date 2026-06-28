@@ -11,6 +11,9 @@ else
   echo "⚠️ Prisma CLI not found, skipping migrations"
 fi
 
+# Ensure uploads directory is writable (volume may be owned by root on first mount)
+mkdir -p /app/public/uploads/products 2>/dev/null || true
+
 # Verify server.js exists
 if [ ! -f server.js ]; then
   echo "❌ server.js not found! Contents of /app:"
