@@ -1,34 +1,52 @@
 import { Metadata } from 'next';
+import Image from 'next/image';
 
 export const metadata: Metadata = {
   title: 'User Guide | SHOPYSH',
   description: 'Complete user guide for SHOPYSH — AI-powered commerce platform for African SMEs',
 };
 
-const sections = [
+interface ContentItem {
+  heading: string;
+  text: string;
+  image?: string;
+  imageCaption?: string;
+}
+
+interface Section {
+  id: string;
+  title: string;
+  content: ContentItem[];
+}
+
+const S = '/guide/screenshots'; // base path shorthand
+
+const sections: Section[] = [
   {
     id: 'getting-started',
     title: '1. Getting Started',
     content: [
       {
-        heading: 'Creating Your Account',
-        text: `Visit the login page and choose your signup method. Option A — Standard: click "Create one free", enter your name, email, business name, and a strong password (minimum 8 characters). Option B — Google SSO: click "Continue with Google" to sign up instantly with your Google account. Option C — Secure Code: if you paid via cash or bank transfer, click "Sign up with secure code", enter the code provided by the Shopysh team, then create your account — your subscription plan is activated automatically, no payment step required. After registration you will be guided through the onboarding flow.`,
+        heading: 'The Login Page',
+        text: 'When you visit Shopysh you land on the login page. On the left side is a branded panel highlighting the platform\'s key features. On the right side is the sign-in form. You can sign in with email and password, or use "Continue with Google" for one-click access. New businesses without an account can click "Create one" or "Sign up with secure code" if they received an Access Code from the Shopysh team.',
+        image: `${S}/01-login.jpg`,
+        imageCaption: 'The Shopysh login page — email/password or Google SSO',
       },
       {
         heading: 'Onboarding Flow',
-        text: `After signing up you are taken through a short setup: (1) Business Info — enter your business name, industry, phone, email, and address. (2) Choose Plan — select Starter, Business, or Premium (monthly or yearly). If you used a secure code this step shows your pre-activated plan. (3) Payment Method — choose Pay Online (Paystack/Flutterwave) or Bank Transfer; skipped entirely when using a secure code. (4) Confirm — review your selections and complete setup. You are then redirected to your dashboard.`,
+        text: 'After signing up you are taken through a short setup: (1) Business Info — enter your business name, industry, phone, email, and address. (2) Choose Plan — select Starter, Business, or Premium (monthly or yearly). If you used a secure code this step shows your pre-activated plan. (3) Payment Method — choose Pay Online (Paystack/Flutterwave) or Bank Transfer; skipped entirely when using a secure code. (4) Confirm — review your selections and complete setup. You are then redirected to your dashboard.',
       },
       {
-        heading: 'Logging In',
-        text: `Use your email and password or click "Continue with Google". If you are a Super Admin you are redirected to the Admin Panel; all other users land on the main Dashboard.`,
+        heading: 'Your Dashboard',
+        text: 'After logging in you land on the main Dashboard. The top shows five summary cards: Total Orders, Today\'s Revenue, Monthly Revenue, Products count, and Customers count. Below is a 7-day Revenue Trend chart and recent orders. The left sidebar is your main navigation — collapsed into groups: MAIN (Dashboard, Products, Orders, Customers, Payments), MARKETING (Campaigns, Analytics), COMMUNICATION (AI Assistant, Conversations, Chat Widget), FINANCE, and RESOURCES (User Guide).',
+        image: `${S}/02-dashboard.jpg`,
+        imageCaption: 'Main dashboard — KPI cards, revenue chart, and sidebar navigation',
       },
       {
-        heading: 'Dashboard Overview',
-        text: `Your dashboard shows a real-time snapshot: total orders, today's revenue, monthly revenue, active products, and customer count. Below you'll find a 7-day revenue chart, recent orders, and low-stock alerts. Quick-action buttons let you jump to key tasks like adding a product or viewing orders.`,
-      },
-      {
-        heading: 'Your Store URL',
-        text: `Every Shopysh business gets a unique public storefront URL. To find yours, go to Settings → Business Profile. At the top of the profile card you will see a highlighted box showing your Store URL (e.g. https://www.shopysh.com/store/yourbusiness). Click the Copy button to copy it to your clipboard, or click the Open button to preview your live store in a new tab. Share this URL with your customers so they can browse and order online.`,
+        heading: 'Finding Your Store URL',
+        text: 'Every Shopysh business gets a unique public storefront. To find your store URL, go to Settings (bottom of the left sidebar) → open the Business Profile tab. At the very top of the profile card you will see a highlighted green box showing your full Store URL (e.g. https://www.shopysh.com/store/yourbusiness). Use the Copy button to copy it to the clipboard, or the Open button to preview your live store in a new tab.',
+        image: `${S}/29-settings.jpg`,
+        imageCaption: 'Settings → Business Profile showing your Store URL with copy and open buttons',
       },
     ],
   },
@@ -38,15 +56,15 @@ const sections = [
     content: [
       {
         heading: 'Public Storefront URL',
-        text: `Every Shopysh business gets a public storefront at shopysh.com/store/your-subdomain. This page is SEO-optimised — product names, descriptions, and categories are indexed by Google and AI search engines, making your products discoverable to people searching online.`,
+        text: 'Every Shopysh business gets a public storefront at shopysh.com/store/your-subdomain. This page is SEO-optimised — product names, descriptions, and categories are indexed by Google and AI search engines, making your products discoverable to people searching online.',
       },
       {
         heading: 'Storefront Features',
-        text: `The storefront displays your logo, store description, product catalog with categories, prices, and images. Customers can browse products, filter by category, and view individual product pages. Each product page shows the full description, price, stock availability, and category.`,
+        text: 'The storefront displays your logo, store description, product catalog with categories, prices, and images. Customers can browse products, filter by category, and view individual product pages. Each product page shows the full description, price, stock availability, and category.',
       },
       {
         heading: 'Customer Accounts on Storefront',
-        text: `Customers can create accounts on your storefront using phone/password or Google Sign-In. Once logged in they can view their order history and track order statuses. Customer logins on your storefront are separate from your business login.`,
+        text: 'Customers can create accounts on your storefront using phone/password or Google Sign-In. Once logged in they can view their order history and track order statuses. Customer logins on your storefront are separate from your business login. When a storefront customer\'s phone number matches an existing CRM customer record, the accounts are automatically merged — no duplicate is created.',
       },
     ],
   },
@@ -55,20 +73,24 @@ const sections = [
     title: '3. Products & Categories',
     content: [
       {
-        heading: 'Managing Products',
-        text: `Navigate to Products from the sidebar. You'll see a searchable, filterable list of all your products with stock status indicators. Click "Add Product" to create a new item — fill in the name, description, price, cost price, SKU, stock quantity, and assign a category. Every product can be toggled active/inactive and featured/unfeatured.`,
+        heading: 'Product List',
+        text: 'The Products page shows all items in your inventory. Each row displays the product name, SKU, price, stock quantity, category, and active/featured status. Use the Search bar to find products by name or SKU, and the Category filter to narrow the list. Click any product row to open its detail page.',
+        image: `${S}/03-products.jpg`,
+        imageCaption: 'Products list — searchable inventory with stock status indicators',
       },
       {
-        heading: 'Product Images',
-        text: `Each product can have up to 4 photos. Images are uploaded directly to your store — no external storage account is needed. To upload: open the product detail page, then click the dashed "Add Image" tile in the Product Images card. Select a JPEG, PNG, WebP, or GIF file (maximum 5 MB per image). The image uploads immediately. The first image uploaded is automatically set as the primary (main display) image, marked with a gold "Primary" badge. Hover over any image to reveal a star button (set as primary) or an X button (remove). The upload tile disappears once 4 images have been added.`,
+        heading: 'Adding a Product',
+        text: 'Click "Add Product" to open the product creation form. Fill in the Product Name (required), Description, Price, Cost Price, SKU, Stock Quantity, Low Stock Threshold (triggers an alert when stock drops to this level), and assign a Category. Toggle Active to make it visible on your storefront, and Featured to highlight it. Click Save Product when done.',
+        image: `${S}/04-product-new.jpg`,
+        imageCaption: 'Add Product form — name, pricing, stock, and category fields',
+      },
+      {
+        heading: 'Product Images — Up to 4 Photos',
+        text: 'Each product supports up to 4 images. After saving a product, the Product Images card appears on the detail page. Click the dashed "Add Image" tile to select a file. Accepted formats: JPEG, PNG, WebP, GIF (max 5 MB each). Images upload instantly and are saved directly to your store — no external cloud storage account needed. The first image uploaded becomes the primary display image, marked with a gold "Primary" badge. Hover over any image to reveal a star button (set as primary) or X button (remove). Once 4 images are uploaded the Add Image tile disappears.',
       },
       {
         heading: 'Categories',
-        text: `Go to Categories in the sidebar to create, edit, and delete product categories. Categories organise your catalog and appear as filter tabs on your storefront. You can add categories inline when creating a product by clicking the "+" button next to the category dropdown.`,
-      },
-      {
-        heading: 'Inventory Alerts',
-        text: `Each product has a "Low Stock Threshold" field. When stock drops to or below this number, the product appears in your dashboard alerts and notification bell, prompting you to restock.`,
+        text: 'Go to Categories in the sidebar to create, edit, and delete product categories. Categories organise your catalog and appear as filter tabs on your storefront. You can also create a new category on the fly when adding a product by clicking the "+" button next to the Category dropdown.',
       },
     ],
   },
@@ -77,46 +99,38 @@ const sections = [
     title: '4. Order Management',
     content: [
       {
-        heading: 'Viewing Orders',
-        text: `The Orders page shows all orders in a table with order number, customer name, status, payment status, total amount, and date. Use the search bar and status filter to narrow results. Click any order to view its full details.`,
+        heading: 'Orders List',
+        text: 'The Orders page shows all customer orders sorted by date. Each row displays the order number, customer name, fulfilment status, payment status, total amount, and date. Use the Search bar and Status filter (All, Pending, Processing, Shipped, Delivered, Cancelled) to narrow results. Click any order row to open its full detail.',
+        image: `${S}/05-orders.jpg`,
+        imageCaption: 'Orders list with status filters and search',
       },
       {
         heading: 'Order Lifecycle',
-        text: `Orders move through these stages: Pending → Confirmed → Processing → Ready for Pickup / Out for Delivery → Delivered → Completed. You can also Cancel or Refund orders. From the order detail page, use the status dropdown to advance an order. Each status change is timestamped.`,
+        text: 'Orders move through these stages: Pending → Confirmed → Processing → Ready for Pickup / Out for Delivery → Delivered → Completed. You can also Cancel or Refund orders. From the order detail page, use the Status dropdown to advance an order. Each status change is timestamped in the order timeline.',
       },
       {
         heading: 'Order Details',
-        text: `The detail page shows the complete order: line items with quantities and prices, customer contact information, delivery address, payment status, and a timeline of status changes.`,
+        text: 'The detail page shows the complete order: line items with quantities and prices, customer contact information and delivery address, payment status, and a full timeline of status changes with timestamps.',
       },
     ],
   },
   {
     id: 'customers',
-    title: '5. Customer Relationship Management',
+    title: '5. Customer Management',
     content: [
       {
-        heading: 'Customer IDs',
-        text: `Every customer is automatically assigned a unique Customer ID in the format CUST-0001, CUST-0002, and so on. This ID appears in the first column of the customer list and is especially useful when two customers share the same name. You can search for a customer using their Customer ID, name, phone number, or email address.`,
-      },
-      {
-        heading: 'Customer List',
-        text: `The Customers page displays all customers with their Customer ID, name, phone, segment, total orders, lifetime value, and last active date. Click any row to open the customer detail page.`,
+        heading: 'Customer List with Customer IDs',
+        text: 'The Customers page shows all your customers. The first column is the Customer ID — a unique auto-generated code in the format CUST-0001, CUST-0002, and so on. This ID makes it easy to identify specific customers even when two people share the same name. You can search by Customer ID, name, phone number, or email. Columns include Customer ID, Name, Phone, Segment badge, Orders count, Lifetime Value, and Last Active date.',
+        image: `${S}/06-customers.jpg`,
+        imageCaption: 'Customers list — unique CUST-XXXX IDs, segmentation, and lifetime value',
       },
       {
         heading: 'Adding a Customer',
-        text: `Click "Add Customer" and fill in the form. Phone number is the only required field — it is used as the unique identifier per tenant. Name, email, location, and segment (New / Regular / VIP) are optional. A Customer ID is assigned automatically. After saving, the customer list refreshes in the background while keeping existing records visible — they never disappear during a save or refresh.`,
-      },
-      {
-        heading: 'Customer Profiles',
-        text: `Each customer detail page shows contact information, business metrics (total orders, average order value, lifetime value), assigned segment, and an activity timeline of all interactions — orders, conversations, and changes.`,
-      },
-      {
-        heading: 'Storefront & Finance Customers Are Unified',
-        text: `If a customer registers on your public storefront using the same phone number you already have in your CRM, the records are merged — no duplicate is created. Finance customers (added via the Finance module) and storefront customers share the same list.`,
+        text: 'Click "Add Customer". Phone number is required (used as the unique identifier per tenant). Fill in Name, Email, Location, and Segment (New / Regular / VIP) as needed. Click Add Customer — a Customer ID is assigned automatically. The customer list refreshes in the background without clearing the existing records.',
       },
       {
         heading: 'AI-Powered Segmentation',
-        text: `The system automatically segments customers using RFM analysis (Recency, Frequency, Monetary value): VIP, Active, At Risk, New, or Dormant. This helps you identify your best customers, recover at-risk ones, and target the right group with campaigns. You can also add manual tags (e.g. "Wholesale", "Loyal") to any customer.`,
+        text: 'The system automatically segments customers using RFM analysis (Recency, Frequency, Monetary value): VIP, Active, At Risk, New, or Dormant. This helps you identify your best customers, recover at-risk ones, and target the right group with campaigns. You can manually override the segment at any time.',
       },
     ],
   },
@@ -126,15 +140,13 @@ const sections = [
     content: [
       {
         heading: 'Payment Dashboard',
-        text: `View all payment transactions with summary cards for total, successful, and pending payments. Filter by status and gateway (Paystack or Flutterwave).`,
+        text: 'The Payments page lists all payment transactions with summary cards at the top showing total collected, successful, and pending amounts. Each row shows the payment reference, customer, amount, gateway (Paystack or Flutterwave), status, and date. Filter by status (All, Completed, Pending, Failed, Refunded) or by payment method.',
+        image: `${S}/07-payments.jpg`,
+        imageCaption: 'Payments list with gateway, status, and amount tracking',
       },
       {
         heading: 'Payment Gateways',
-        text: `Shopysh supports Paystack and Flutterwave for online payments. Configure your API keys in Settings. The system handles payment initialisation, verification, and webhook processing automatically. A demo mode is available when API keys are not yet configured.`,
-      },
-      {
-        heading: 'Bank Transfer & Manual Payments',
-        text: `For customers paying via cash or bank transfer outside the automated system, you (the platform owner) can generate an Access Code from the admin panel and send it to the tenant. The tenant uses the code on the signup page to bypass payment and complete onboarding with their plan pre-activated.`,
+        text: 'Shopysh supports Paystack and Flutterwave for online payments. Configure your API keys in Settings → Payment Config. The system handles payment initialisation, verification, and webhook processing automatically.',
       },
     ],
   },
@@ -143,130 +155,170 @@ const sections = [
     title: '7. Finance Module',
     content: [
       {
-        heading: 'Overview',
-        text: `The Finance module is a full double-entry bookkeeping system built for African SMEs. It covers the General Ledger (GL), journal entries, cash and bank management, accounts receivable/payable, vendor management, and financial reporting. Access it by clicking "Finance" in the left sidebar. The Finance section has its own sub-navigation: Overview, Chart of Accounts, Journal Entries, Cash Book, Bank Book, Sales Book, Purchase Book, Debtors/AR, Creditors/AP, Customers, Vendors, Statements, and a Reports submenu containing Trial Balance, Income Statement, and Balance Sheet.`,
-      },
-      {
         heading: 'Finance Command Center (Overview)',
-        text: `The Finance dashboard shows six KPI cards: Revenue (YTD), Expenses (YTD), Net Profit (with margin %), Cash Balance, Receivables, and Payables. Below the cards is a 6-month Revenue vs Expenses bar chart and a list of the 4 most recent journal entries. A quick-access grid provides one-click shortcuts to every Finance sub-section. The bottom of the page shows counts for GL Accounts, Vendors, and Draft journal entries — each is a clickable link.`,
+        text: 'Click "Finance" in the sidebar to open the Finance module. The overview page shows six KPI cards at the top: Revenue (YTD), Expenses (YTD), Net Profit (with margin %), Cash Balance, Receivables, and Payables. Below is a 6-month Revenue vs Expenses bar chart on the left and a Recent Journals panel on the right. Scroll down to see the Finance Modules quick-access grid with clickable shortcuts to every sub-section.',
+        image: `${S}/08-finance-overview.jpg`,
+        imageCaption: 'Finance Command Center — 6 KPI cards, revenue chart, recent journals, and module shortcuts',
       },
       {
         heading: 'Chart of Accounts',
-        text: `The Chart of Accounts (CoA) is the master list of every account in your bookkeeping system. Accounts are organised in five types: ASSET (things you own), LIABILITY (things you owe), EQUITY (owner's capital), INCOME (revenue), and EXPENSE (costs). Accounts are displayed in a hierarchy — parent accounts at the top level with child accounts indented below. Each row shows the account code, name, type badge, and current balance. Use the Type filter buttons and Search bar to locate accounts quickly.`,
+        text: 'The Chart of Accounts (CoA) is the master list of all your bookkeeping accounts, organised by type: ASSET, LIABILITY, EQUITY, INCOME, EXPENSE. Each row shows the account Code, Name, Type badge, and current Balance. Accounts are displayed in a hierarchy — parent accounts at the top level with child accounts indented below. Use the Type filter buttons and Search bar to locate specific accounts quickly.',
+        image: `${S}/09-finance-accounts.jpg`,
+        imageCaption: 'Chart of Accounts — hierarchical account list with type badges and balances',
       },
       {
-        heading: 'Setting Up Your Chart of Accounts',
-        text: `New businesses should start with a template. Click "Choose Template" to see three pre-built options: Nigerian Standard (65 accounts, follows standard Nigerian accounting practice), Simple (25 accounts, for very small businesses), and Retail (65 accounts, optimised for product-based retail). Click "Use This" on your preferred template. If your CoA already has entries, a confirmation dialog asks whether to replace them — click OK to proceed or Cancel to keep your current accounts. Warning: replacing a CoA deletes all existing accounts and balances; only do this before recording real transactions. To add individual accounts manually, click "Add Account", fill in the Account Code, Type, Name, optional Parent Account, optional Opening Balance, and optional Description, then click Save. Note: Account Code and Type cannot be changed after saving.`,
+        heading: 'Setting Up Accounts with a Template',
+        text: 'New businesses should start with a pre-built template. Click "Choose Template" to open the template picker. Three options are available: Nigerian Standard (65 accounts, follows standard Nigerian accounting practice), Simple (25 accounts, for very small businesses), and Retail (65 accounts, optimised for retail). Click "Use This" on your chosen template. If your CoA already has entries, a confirmation dialog will ask if you want to replace them — click OK to proceed or Cancel to keep your current accounts.',
+        image: `${S}/10-finance-accounts-template.jpg`,
+        imageCaption: 'CoA Template picker — choose Nigerian Standard, Simple, or Retail',
       },
       {
         heading: 'Journal Entries',
-        text: `Journal entries are the foundation of double-entry accounting. Every financial event is recorded with at least one debit line and one equal credit line. The journal list shows Entry #, Date, Description, Type, Status badge (Draft = amber, Posted = green, Reversed = red), and total Debit amount. Use the Status filter and Search bar to find entries. Draft entries have not yet affected account balances and can be edited or deleted. Posted entries are final and locked — they affect balances and cannot be edited, only reversed. To create an entry: click "New Journal", fill in the Description, Date, Entry Type (14 types available including General Journal, Sales Invoice, Purchase Invoice, Expense, Payroll, etc.), optional Reference and Notes, then add at least two lines in the Lines table (Account, Description, Debit or Credit amount). The balance indicator at the bottom of the lines table must show equal Debit and Credit totals before you can post. Click "Save as Draft" to save without posting, or "Post Entry" to post immediately. To undo a posted entry, open it and click Reverse — the system creates a new entry with all debits and credits swapped.`,
+        text: 'Journal Entries are the foundation of double-entry bookkeeping. Every financial event is recorded here with at least one debit and one equal credit line. The list shows Entry #, Date, Description, Entry Type, Status badge (Draft = amber, Posted = green, Reversed = red), and Debit total. Use the Status filter chips (All / Draft / Posted / Reversed) and Search bar to find entries.',
+        image: `${S}/11-finance-journal.jpg`,
+        imageCaption: 'Journal Entries list with status badges — Draft, Posted, and Reversed entries',
+      },
+      {
+        heading: 'Creating a New Journal Entry',
+        text: 'Click "New Journal" to open the entry form. Fill in the Description (required), Date, Entry Type (14 types: General Journal, Sales Invoice, Purchase Invoice, Sales Receipt, Purchase Payment, Expense, Payroll, Depreciation, Opening Balance, Closing Entry, Bank Deposit, Bank Withdrawal, Credit Note, Debit Note), optional Reference and Notes. In the Lines table, add at least two lines — each line needs an Account, a Description, and either a Debit or Credit amount. Watch the balance indicator at the bottom: it must show equal Debit and Credit totals. Click "Save as Draft" to save without posting, or "Post Entry" to finalise.',
+        image: `${S}/12-finance-journal-new.jpg`,
+        imageCaption: 'New Journal Entry modal — lines table with debit/credit balance indicator',
       },
       {
         heading: 'Cash Book',
-        text: `The Cash Book records all physical cash transactions through your Cash on Hand account. At the top, four summary cards show Opening Balance, Total Receipts (green), Total Payments (red), and Closing Balance for the selected period. Use the From and To date pickers to change the period (defaults to the current calendar month). The transaction table shows Date, Entry #, Description, Receipts column (green), Payments column (red), and Running Balance. The first and last rows are the Opening and Closing Balance rows (highlighted). To record a transaction, click "Record Transaction", choose Receipt (money in) or Payment (money out), fill in the Date, Amount, Description, optional Customer/Vendor link, and the required Contra Account (the other side of the double-entry — e.g. select your Sales account for a cash sale). Click Save. The transaction is posted immediately.`,
+        text: 'The Cash Book records all physical cash transactions. Four summary cards at the top show the Opening Balance, Total Receipts (green), Total Payments (red), and Closing Balance for the selected period. The transaction table shows Date, Entry #, Description, Receipts column, Payments column, and Running Balance. Click "Record Transaction" to log a new cash receipt or payment — you\'ll need to choose a Contra Account (the other side of the entry, e.g. your Sales account for a cash sale).',
+        image: `${S}/13-finance-cash-book.jpg`,
+        imageCaption: 'Cash Book — running balance with receipt/payment columns and date range filter',
       },
       {
         heading: 'Bank Book',
-        text: `The Bank Book works identically to the Cash Book but records transactions through your bank account(s). If you have multiple bank accounts in your Chart of Accounts, use the Bank Account dropdown at the top to switch between them. All features — summary cards, date filters, transaction table, recording transactions, and CSV export — are the same as the Cash Book.`,
+        text: 'The Bank Book works identically to the Cash Book but records transactions through your bank account(s). If you have multiple bank accounts in your Chart of Accounts, a dropdown at the top lets you switch between them. All features — summary cards, date filters, transaction table, recording transactions, and CSV export — mirror the Cash Book.',
+        image: `${S}/14-finance-bank-book.jpg`,
+        imageCaption: 'Bank Book — same layout as Cash Book, filtered to bank account transactions',
       },
       {
         heading: 'Sales Book',
-        text: `The Sales Book is a chronological record of all sales transactions: invoices raised (credit sales), cash receipts collected, and credit notes issued. Three summary cards show Total AR/Debit, Total Sales/Credit, and entry count. Transaction type badges are colour-coded: Invoice (green), Receipt (blue), Credit Note (amber). To record a sale, click "Record Sale", fill in Date, optional Customer (the customer lookup shows the Customer ID badge [CUST-XXXX] beside the name), optional Invoice Reference, Description, Amount excl. VAT, optional VAT Amount, and select a Payment Method: Invoice/AR (credit sale), Cash, or Bank Transfer. A subtotal box confirms the total including VAT before you save.`,
+        text: 'The Sales Book is a chronological log of all sales: invoices raised (credit sales), cash receipts collected, and credit notes issued. Three summary cards show Total AR/Debit, Total Sales/Credit, and entry count. Transaction type badges are colour-coded — Invoice (green), Receipt (blue), Credit Note (amber). Use the From/To date pickers to filter the period.',
+        image: `${S}/15-finance-sales-book.jpg`,
+        imageCaption: 'Sales Book — invoices, receipts, and credit notes with type colour-coding',
+      },
+      {
+        heading: 'Recording a Sale',
+        text: 'Click "Record Sale" to open the sale form. Fill in Date, optional Customer (the lookup shows the Customer ID badge [CUST-XXXX] beside the name), optional Invoice Reference, Description (required), Amount excl. VAT, and optional VAT Amount. Then choose the Payment Method: Invoice/AR (credit sale — debits Accounts Receivable), Cash (debits Cash on Hand), or Bank Transfer (debits Bank Account). A subtotal box confirms the total including VAT.',
+        image: `${S}/16-finance-sales-book-modal.jpg`,
+        imageCaption: 'Record Sale form — customer lookup with CUST-XXXX badge and payment method selector',
       },
       {
         heading: 'Purchase Book',
-        text: `The Purchase Book records all purchases from suppliers: invoices received, payments made, and debit notes issued. Transaction type badges: Purchase Invoice (orange), Payment (blue), Debit Note (violet). To record a purchase, click "Record Purchase", fill in Date, optional Vendor (the vendor lookup shows the Vendor Code badge [VND-XXXX] beside the name), optional Reference (e.g. supplier's invoice number), Description, Amount excl. VAT, optional VAT Amount, required Expense Account (select the GL expense account this cost belongs to — only Expense-type accounts are listed), and Payment Method: On Credit/AP, Cash, or Bank Transfer.`,
+        text: 'The Purchase Book records supplier purchases: invoices received, payments made, and debit notes issued. Type badges: Purchase Invoice (orange), Payment (blue), Debit Note (violet). Scroll to the right to see full columns. Use the From/To date pickers to filter.',
+        image: `${S}/17-finance-purchase-book.jpg`,
+        imageCaption: 'Purchase Book — supplier invoices, payments, and debit notes',
       },
       {
-        heading: 'Receivables (Accounts Receivable / Debtors)',
-        text: `The Receivables page is your AR Aging Report — it shows who owes you money and how overdue each debt is. Five summary cards at the top break down the total outstanding by age: Total AR, Current (0–30 days), 31–60 Days (amber), 61–90 Days (orange), and 90+ Days (red). The table shows one row per customer with their outstanding balance split across the same age buckets. A Totals row sums each column. Click "Export CSV" to download the aging report.`,
+        heading: 'Recording a Purchase',
+        text: 'Click "Record Purchase". Fill in Date, optional Vendor (the lookup shows the Vendor Code badge [VND-XXXX] beside the name), optional Reference (e.g. supplier\'s invoice number), Description (required), Amount excl. VAT, optional VAT Amount, and the required Expense Account (only Expense-type GL accounts are listed). Choose the Payment Method: On Credit/AP (creates an AP liability), Cash, or Bank Transfer.',
+        image: `${S}/18-finance-purchase-book-modal.jpg`,
+        imageCaption: 'Record Purchase form — vendor lookup with VND-XXXX badge and expense account selector',
       },
       {
-        heading: 'Payables (Accounts Payable / Creditors)',
-        text: `The Payables page is your AP Aging Report — it shows what you owe to suppliers. The layout mirrors Receivables: five age-bucket summary cards, one row per vendor, a Totals row, and a CSV export. Age buckets are colour-coded the same way: orange for 31–90 days, red for 90+ days.`,
+        heading: 'Receivables — AR Aging Report',
+        text: 'The Receivables page shows all outstanding customer debts and how overdue they are. Five summary cards at the top break the total into age buckets: Total AR, Current (0–30 days), 31–60 Days (amber), 61–90 Days (orange), and 90+ Days (red). The table shows one row per customer with their balance split across the same buckets. A Totals row at the bottom sums everything. Click Export CSV to download.',
+        image: `${S}/19-finance-receivables.jpg`,
+        imageCaption: 'Receivables (AR Aging) — outstanding balances colour-coded by overdue days',
+      },
+      {
+        heading: 'Payables — AP Aging Report',
+        text: 'The Payables page shows what you owe to suppliers, using the same five-bucket aging structure as Receivables. One row per vendor, a Totals row at the bottom, and CSV export. Amounts overdue 31–90 days show in amber/orange; 90+ days in red.',
+        image: `${S}/20-finance-payables.jpg`,
+        imageCaption: 'Payables (AP Aging) — what you owe suppliers, colour-coded by overdue days',
       },
       {
         heading: 'Vendors & Suppliers',
-        text: `The Vendors page manages your suppliers. Each vendor is automatically assigned a unique Vendor Code in the format VND-0001, VND-0002, etc. Vendors are displayed as cards in a grid showing the vendor name, Vendor Code badge, email, phone, city, country, payment terms (days), and invoice count. To add a vendor, click "Add Vendor" and fill in: Vendor Name (required), Email, Phone, City, Country (defaults to Nigeria), Tax ID (TIN), Bank Name, Account Number, Payment Terms (days), Credit Limit, Address, and Notes. A Vendor Code is assigned automatically. Hover over a card to reveal Edit and Delete buttons.`,
+        text: 'The Vendors page manages your supplier contacts. Each vendor is auto-assigned a Vendor Code in the format VND-0001, VND-0002, etc. Vendors display as cards in a grid showing the name, Vendor Code badge, email, phone, city, country, payment terms, and invoice count. Hover over a card to reveal Edit and Delete buttons.',
+        image: `${S}/21-finance-vendors.jpg`,
+        imageCaption: 'Vendors grid — VND-XXXX codes, contact details, and payment terms per vendor',
+      },
+      {
+        heading: 'Adding a Vendor',
+        text: 'Click "Add Vendor". Fill in Vendor Name (required), Email, Phone, City, Country (defaults to Nigeria), Tax ID (TIN) for VAT compliance, Bank Name, Account Number, Payment Terms (days, e.g. 30 = Net 30), Credit Limit, Address, and Notes. A Vendor Code is assigned automatically on save.',
+        image: `${S}/22-finance-vendors-modal.jpg`,
+        imageCaption: 'Add Vendor form — all supplier details including bank info and payment terms',
       },
       {
         heading: 'Financial Statements',
-        text: `The Statements page gives a comprehensive Profit & Loss summary with flexible period selection. Toggle between Monthly (pick month + year), Yearly (pick year), or Custom (pick From and To dates), then click Generate. Four KPI cards show Total Income, Total Expenses, Net Profit/Loss, and Profit Margin. Additional metrics show Order Revenue, Cash Sales, and Bank Deposits. Two side-by-side cards show horizontal bar charts breaking down income and expenses by category. Below them is a full P&L statement table with Revenue section, Expenses section, and a bold Net Profit/(Loss) row at the bottom.`,
+        text: 'The Statements page provides a comprehensive P&L summary. Toggle between Monthly (pick month + year), Yearly, or Custom (pick From/To dates), then click Generate. Four KPI cards show Total Income, Total Expenses, Net Profit/Loss, and Profit Margin. Two side-by-side cards show income and expense breakdowns as horizontal bar charts by category. Below them is a full P&L statement table.',
+        image: `${S}/23-finance-statements.jpg`,
+        imageCaption: 'Financial Statements — period selector, KPI cards, and P&L breakdown charts',
       },
       {
-        heading: 'Reports — Accessing the Reports Submenu',
-        text: `In the Finance sidebar, click "Reports" to expand a submenu containing three report pages: Trial Balance, Income Statement, and Balance Sheet. The submenu auto-expands whenever you are on any of these report pages.`,
+        heading: 'Reports — Accessing the Submenu',
+        text: 'In the Finance sidebar, click "Reports" to expand a collapsible submenu containing three report pages: Trial Balance, Income Statement, and Balance Sheet. The submenu auto-expands whenever you are on any of these report pages, and a left-border line visually connects the child items.',
       },
       {
-        heading: 'Reports — Trial Balance',
-        text: `The Trial Balance verifies that your books are in balance (total debits must equal total credits across all accounts). Set a From and To date range (defaults to 1 January of the current year to today) and click Generate. A banner at the top confirms whether your books are balanced (green tick) or out of balance (red alert with the difference amount). The table shows every GL account with Code, Account Name (indented to show hierarchy), Type badge, Period Debit, Period Credit, DR Balance, and CR Balance columns. A Totals row sums all columns. Run the Trial Balance at the end of every month before preparing financial statements — if it is out of balance, locate and correct the discrepancy in Journal Entries before proceeding. Click "Export CSV" to download.`,
+        heading: 'Trial Balance',
+        text: 'The Trial Balance verifies that total debits equal total credits across all accounts. Set a From/To date range (defaults to 1 Jan of current year to today) and click Generate. A banner at the top shows whether your books are balanced (green tick) or out of balance (red alert with the difference). The table shows every GL account with Period Debit, Period Credit, DR Balance, and CR Balance columns. Run this at the end of every month before preparing financial statements.',
+        image: `${S}/24b-finance-trial-balance-result.jpg`,
+        imageCaption: 'Trial Balance report — balance confirmation banner and account-by-account breakdown',
       },
       {
-        heading: 'Reports — Income Statement',
-        text: `The Income Statement (Profit & Loss) summarises business performance over a period. Set From and To dates and click Generate. Four KPI cards show Total Revenue, Gross Profit (with gross margin %), Operating Expenses, and Net Profit (with net margin %). Cards are green when positive and red when negative. The full statement is presented in three sections: (1) Revenue — each income account and its total, with a TOTAL REVENUE row. (2) Cost of Sales — only appears if you have COGS accounts; shows a GROSS PROFIT line. (3) Operating Expenses — all expense accounts with a TOTAL OPERATING EXPENSES row. The final NET PROFIT/(LOSS) row appears in bold with a green or red background and the profit margin percentage. Click "Export CSV" to download.`,
+        heading: 'Income Statement (Profit & Loss)',
+        text: 'The Income Statement summarises business performance over a period. Set From/To dates and click Generate. Four KPI cards show Total Revenue, Gross Profit (with margin %), Operating Expenses, and Net Profit (green = profit, red = loss). The full statement is laid out in sections: Revenue, Cost of Sales (if applicable), Operating Expenses, and a bold Net Profit/(Loss) row at the bottom with the margin percentage.',
+        image: `${S}/25b-finance-income-statement-result.jpg`,
+        imageCaption: 'Income Statement — KPI cards plus full P&L layout with margin percentages',
       },
       {
-        heading: 'Reports — Balance Sheet',
-        text: `The Balance Sheet (Statement of Financial Position) shows what your business owns (assets) and owes (liabilities + equity) at a specific date. The fundamental equation must hold: Assets = Liabilities + Equity. Set the "As of Date" (defaults to today) and click Generate. A banner confirms whether the balance sheet balances (green) or is out of balance (red, with the difference). Three sections: (1) Assets (blue header) — all asset accounts and balances, TOTAL ASSETS at bottom. (2) Liabilities (red header) — all liability accounts, TOTAL LIABILITIES at bottom. (3) Equity (violet header) — equity accounts plus Current Year Net Income pulled from the Income Statement, TOTAL EQUITY at bottom. A final TOTAL LIABILITIES + EQUITY row must equal Total Assets. Click "Export CSV" to download.`,
-      },
-    ],
-  },
-  {
-    id: 'conversations',
-    title: '8. AI Assistant & Conversations',
-    content: [
-      {
-        heading: 'AI Sales Assistant',
-        text: `Your AI assistant responds to customer enquiries 24/7, takes orders, recommends products, and handles FAQs — in English and Nigerian Pidgin. It knows your full product catalog, current prices, and stock levels.`,
-      },
-      {
-        heading: 'Conversations Inbox',
-        text: `The Conversations page shows all customer chat interactions. Each conversation displays the customer name, last message, status (active/closed), and the intent detected by AI. Escalated conversations are flagged for your personal attention.`,
-      },
-      {
-        heading: 'Testing the AI',
-        text: `Go to AI Assistant in the sidebar to test how your AI responds before customers interact with it. Type messages to simulate customer inquiries about products, pricing, and orders.`,
-      },
-      {
-        heading: 'Chat Widget Setup',
-        text: `Go to Chat Widget in the sidebar to get your embeddable script. Copy the tag and paste it into your website. The widget connects customers directly to your AI — no API keys or complex setup needed. Powered by Shopysh.`,
-      },
-      {
-        heading: 'AI Configuration',
-        text: `In Settings → AI Configuration, customise your assistant's name, welcome message, and tone (friendly, professional, formal). Toggle auto-reply on or off. These settings shape how the AI represents your brand.`,
+        heading: 'Balance Sheet',
+        text: 'The Balance Sheet shows what your business owns (assets) and owes (liabilities + equity) at a specific date — the equation Assets = Liabilities + Equity must always hold. Set the "As of Date" and click Generate. A banner confirms whether the sheet balances. Three sections: Assets (blue), Liabilities (red), Equity (violet, including Current Year Net Income). The final TOTAL LIABILITIES + EQUITY row must equal Total Assets.',
+        image: `${S}/26b-finance-balance-sheet-result.jpg`,
+        imageCaption: 'Balance Sheet — Assets, Liabilities, and Equity sections with balance confirmation',
       },
     ],
   },
   {
     id: 'campaigns',
-    title: '9. Marketing Campaigns',
+    title: '8. Marketing Campaigns',
     content: [
       {
-        heading: 'Creating Campaigns',
-        text: `Navigate to Campaigns from the sidebar. Click "Create Campaign" to set up a broadcast. Enter a campaign name, message template, and optionally target a specific customer segment (VIP, Active, New, etc.). Campaigns start in "Draft" status.`,
+        heading: 'Campaigns List',
+        text: 'The Campaigns page shows all your marketing broadcasts. Each campaign card or row shows the name, channel (SMS or Email), target segment, status (Draft, Scheduled, Sent, Failed), and delivery statistics (sent count, delivered, failed). Click "Create Campaign" to start a new one.',
+        image: `${S}/27-campaigns.jpg`,
+        imageCaption: 'Campaigns list — SMS/email campaigns with delivery stats per broadcast',
       },
       {
-        heading: 'Sending Campaigns',
-        text: `From the campaigns list, click the send button on a draft campaign to dispatch it via SMS or Email. The system tracks delivery stats (sent, delivered, failed counts) for each campaign.`,
+        heading: 'Creating a Campaign',
+        text: 'Click "Create Campaign". Fill in a Campaign Name, select the Channel (SMS or Email), choose a Target Segment (All Customers, VIP, Active, At Risk, New, Dormant), write your Message or email content, and optionally schedule a send time. Click Save to create as a Draft, or Send to dispatch immediately.',
       },
       {
         heading: 'Segmented Targeting',
-        text: `Combine AI segmentation with campaigns to reach the right customers. For example: send a re-engagement offer to "At Risk" customers, or a loyalty reward to "VIP" customers only.`,
+        text: 'Combine AI segmentation with campaigns to reach the right customers. For example: send a re-engagement offer to "At Risk" customers, or a loyalty reward to "VIP" customers only. The segment customer count is shown as you select it so you know exactly how many people will receive the message.',
+      },
+    ],
+  },
+  {
+    id: 'ai-assistant',
+    title: '9. AI Assistant',
+    content: [
+      {
+        heading: 'AI Assistant Chat',
+        text: 'The AI Assistant answers questions about your business data and helps you draft content. Click "AI Assistant" in the sidebar. Type your question and press Enter or click Send. The assistant uses your actual business data to give accurate, contextual answers. All processing happens on your server using the local Qwen2.5 AI model — your data never leaves your server unless you configure an external API.',
+        image: `${S}/28-ai-assistant.jpg`,
+        imageCaption: 'AI Assistant — chat interface powered by local Qwen2.5 model',
+      },
+      {
+        heading: 'Example Queries',
+        text: 'Try asking: "What were my top 5 selling products last month?", "How much did I spend on expenses in Q1?", "Write a promotional message for my VIP customers", "Which customers haven\'t ordered in the last 60 days?", or "What is my current cash balance?" The AI has access to all your business data within your workspace.',
       },
     ],
   },
   {
     id: 'analytics',
-    title: '10. Analytics & Reports',
+    title: '10. Analytics',
     content: [
       {
         heading: 'Analytics Dashboard',
-        text: `The Analytics page provides a comprehensive view of your business: revenue trends, order volumes, customer growth, AI conversation metrics, and campaign performance. Filter by time period (7, 30, or 90 days). Charts visualise trends over time.`,
-      },
-      {
-        heading: 'Reports & Export',
-        text: `Go to Reports in the sidebar to download CSV exports. Available reports: Orders Report (with customer details and line items), Product Inventory (pricing and stock levels), Customer Database (contact info and lifetime value), and Payment Transactions. Apply a date range filter for time-bound exports.`,
+        text: 'The Analytics page provides a comprehensive view of business performance: revenue trends, order volumes, customer growth, AI conversation metrics, and campaign performance. Filter by time period (7, 30, or 90 days). Charts visualise trends over time. Use the Reports section to download CSV exports of Orders, Products, Customers, or Payments.',
+        image: `${S}/30-analytics.jpg`,
+        imageCaption: 'Analytics — revenue trends, order volumes, and customer growth charts',
       },
     ],
   },
@@ -275,12 +327,18 @@ const sections = [
     title: '11. Team Management',
     content: [
       {
-        heading: 'Adding Team Members',
-        text: `As an Admin, go to Team in the sidebar. Click "Add Member" to invite colleagues. Enter their name, email, a temporary password, and assign a role: Staff (view/manage daily tasks) or Manager (full access except billing).`,
+        heading: 'Team Members',
+        text: 'The Team page lists all users in your workspace with their name, email, role, and active status. You can add team members, change their roles, activate/deactivate accounts, or remove them.',
+        image: `${S}/31-team.jpg`,
+        imageCaption: 'Team management — member list with roles and status controls',
       },
       {
-        heading: 'Managing Roles',
-        text: `From the team list, use the action menu on any staff or manager to: promote/demote their role, activate/deactivate their account, or remove them. Admins cannot be modified by other admins for security reasons.`,
+        heading: 'Adding a Team Member',
+        text: 'Click "Add Member". Enter their name, email, a temporary password, and assign a role: Staff (manages daily tasks — products, orders, customers, payments) or Manager (full access except billing). The member can change their password after their first login.',
+      },
+      {
+        heading: 'Roles',
+        text: 'Three role levels exist: Owner (full access including billing and settings), Manager (full access except billing), Staff (products, orders, customers, and payments only). Owners cannot be modified by other users for security reasons.',
       },
     ],
   },
@@ -290,67 +348,51 @@ const sections = [
     content: [
       {
         heading: 'Business Profile & Store URL',
-        text: `Update your business name, email, phone, description, address, city, and country. At the top of the profile card you will see your Store URL in a highlighted box — use the Copy button to copy the link or the Open button to preview your live storefront. The default currency (Nigerian Naira NGN or US Dollar USD) is also set here and applies to all financial records, invoices, and reports.`,
+        text: 'Settings → Business Profile lets you update your business name, phone, email, website, description, address, city, country, and default currency. At the very top of the profile card is a highlighted box showing your Store URL. Use the Copy button to copy it, or Open to preview your live storefront. The default currency (NGN or USD) applies to all financial records, invoices, and reports.',
+        image: `${S}/29-settings.jpg`,
+        imageCaption: 'Settings — Business Profile tab with Store URL, business details, and currency selector',
       },
       {
         heading: 'AI Configuration',
-        text: `Customise your AI assistant's name, welcome message, personality/tone, and toggle auto-reply on or off.`,
+        text: 'Settings → AI Configuration lets you set the AI provider (Local Qwen2.5 or an external OpenAI-compatible API), configure an API key if using an external provider, choose the model, and customise the assistant\'s welcome message shown to store visitors.',
       },
       {
         heading: 'Billing & Subscription',
-        text: `View your current subscription plan (Starter, Business, or Premium), usage statistics for the current month, and available plans for upgrade. Plans differ in AI conversation limits, product limits, user seats, storage allowance (measured in MB), and advanced features like API access.`,
+        text: 'Settings → Billing shows your current plan (Starter, Business, or Premium), storage usage in MB, and usage stats for the current month. You can view available plans for upgrade here. Storage limits are shown in megabytes — for reference, 1,024 MB = 1 GB.',
       },
     ],
   },
   {
     id: 'admin',
-    title: '13. Platform Administration (Super Admin Only)',
+    title: '13. Admin Portal (Super Admin Only)',
     content: [
       {
-        heading: 'Admin Panel',
-        text: `Super Admin users see an "Admin Panel" link in the sidebar. The panel shows platform-wide statistics: total companies, users, revenue, and active tenant rates. Below is a searchable table of all registered businesses with the ability to activate or deactivate any account.`,
+        heading: 'Admin Portal Overview',
+        text: 'Super Admin users are redirected to the Admin Portal after login. The Overview tab shows platform-wide statistics: Total Companies, Active Companies, Total Users, Total Products, Total Orders, Total Customers, Platform Revenue, and Active Rate. Below the cards is a Recent Companies table listing the latest registered businesses with their plan, user count, product count, order count, status, and join date. The sidebar shows a PLATFORM group with the Admin Portal link.',
+        image: `${S}/33-admin-tenants.jpg`,
+        imageCaption: 'Admin Portal Overview — platform-wide stats and recently registered companies',
       },
       {
-        heading: 'Tenants & Store Links',
-        text: `The Tenants tab lists every business workspace on the platform. Each tenant row shows business name, email, subscription plan badge, status (Active/Inactive), user count, product count, and their subdomain. The subdomain is a clickable link — click it to open that tenant's live storefront in a new tab. Use the Search bar (name, email, or subdomain) and Status filter to find specific tenants.`,
+        heading: 'Companies Tab',
+        text: 'Click the "Companies" tab to see the full list of all business workspaces on the platform. Each row shows the business name, email, subscription plan badge, status (Active/Inactive), user count, product count, and subdomain. The subdomain is a clickable link — click it to open that tenant\'s live storefront in a new tab. Use the Search bar (by name, email, or subdomain) and the Status filter to find specific businesses.',
       },
       {
-        heading: 'Subscription Plans',
-        text: `The Plans tab lets you create and edit the subscription plans offered on the platform. Each plan card shows the plan name, monthly and yearly price, storage limit (in MB), and feature list. To edit: click Edit on the plan card, adjust the fields including the Storage (MB) limit, and click Save. Storage is measured in megabytes — for reference, 1,024 MB equals 1 GB.`,
+        heading: 'Plans Tab',
+        text: 'The Plans tab lets you create and edit subscription plans. Each plan card shows the name, price (monthly/yearly), storage limit in MB, and feature list. Click Edit to adjust plan details. Storage is always shown in megabytes — 1,024 MB = 1 GB.',
+        image: `${S}/34-admin-plans.jpg`,
+        imageCaption: 'Admin Plans tab — subscription tiers with MB storage limits and feature lists',
       },
       {
         heading: 'Access Codes',
-        text: `Go to Admin → Access Codes to generate secure onboarding codes for tenants who paid via cash or bank transfer. Click "Generate Code", select the subscription plan and billing cycle (monthly or yearly), optionally set an expiry period (days) and a note (e.g. the tenant's business name), then click Generate. The system produces a unique code in the format SHP-XXXX-XXXX-XXXX. Copy and share it with the tenant. Codes are single-use — once a tenant completes onboarding with the code it is automatically marked as used. The table shows all codes with their status (Active, Used, Expired) and a copy button for active codes.`,
-      },
-    ],
-  },
-  {
-    id: 'technical',
-    title: '14. Technical Reference',
-    content: [
-      {
-        heading: 'Architecture',
-        text: `Shopysh is a multi-tenant Next.js 14 application. Each business gets isolated data storage while sharing the same infrastructure. The platform uses server-side rendering for fast page loads, JWT-based authentication, and real-time notifications.`,
+        text: 'The Access Codes tab lets you generate single-use onboarding codes for tenants who paid by cash or bank transfer. Each code (format: SHP-XXXX-XXXX-XXXX) is tied to a specific plan and billing cycle. The table shows all codes with their status (Active, Used, or Expired) and a copy button for active ones.',
+        image: `${S}/35-admin-access-codes.jpg`,
+        imageCaption: 'Access Codes tab — list of all codes with Active, Used, and Expired statuses',
       },
       {
-        heading: 'Authentication Methods',
-        text: `Three signup/login paths: (1) Email + password with bcrypt hashing. (2) Google SSO via NextAuth (for business owner accounts) and a separate custom OAuth flow for storefront customers. (3) Secure Code — single-use access codes generated by the Super Admin for manual-payment tenants. Sessions use secure JWT tokens with 7-day expiry.`,
-      },
-      {
-        heading: 'API Endpoints',
-        text: `Key REST API routes: /api/products, /api/orders, /api/customers, /api/payments, /api/campaigns, /api/analytics, /api/finance, /api/team, /api/reports/export, /api/settings/*, /api/admin/*, /api/admin/access-codes, /api/auth/verify-code, /api/store/[slug]/auth/*. All endpoints require authentication via session cookies. Admin endpoints require SUPER_ADMIN role.`,
-      },
-      {
-        heading: 'Payment Webhooks',
-        text: `Payment notifications arrive at /api/payments/webhook/paystack and /api/payments/webhook/flutterwave. Both verify webhook signatures — Paystack uses HMAC-SHA512, Flutterwave uses a shared hash.`,
-      },
-      {
-        heading: 'Storefront SEO',
-        text: `Each tenant storefront at /store/[subdomain] has server-rendered meta tags including the store name, description, and product data. This makes products indexable by Google and AI search engines without any additional setup by the tenant.`,
-      },
-      {
-        heading: 'Data Security',
-        text: `All data is stored in a secure PostgreSQL database with row-level tenant isolation. Sensitive fields (passwords, tokens) are hashed or encrypted. API routes enforce role-based access control. CSRF protection is built-in via NextAuth. Session cookies are HttpOnly and Secure in production.`,
+        heading: 'Generating an Access Code',
+        text: 'Click "Generate Code". Select the Plan, Billing Cycle (monthly or yearly), optional Expiry (number of days), and add a Note (e.g. the tenant\'s business name for your own reference). Click Generate. The code is created immediately and shown in the table. Copy it and share it with the tenant. Once they use it to complete onboarding the code is marked as Used.',
+        image: `${S}/36-admin-access-code-modal.jpg`,
+        imageCaption: 'Generate Access Code modal — plan selection, billing cycle, and optional expiry',
       },
     ],
   },
@@ -364,7 +406,9 @@ export default function GuidePage() {
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md" style={{ background: 'linear-gradient(135deg, hsl(168,84%,26%), hsl(172,72%,20%))' }}>
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
             </div>
             <div>
               <h1 className="font-bold text-lg tracking-tight" style={{ color: 'hsl(168,84%,20%)' }}>SHOPYSH</h1>
@@ -386,7 +430,7 @@ export default function GuidePage() {
           </div>
           <h2 className="text-2xl font-bold mb-2">Shopysh User Guide</h2>
           <p className="text-white/80 text-sm max-w-2xl leading-relaxed">
-            Everything you need to run your business with Shopysh — from your first login to advanced AI configuration, marketing campaigns, and platform administration.
+            Everything you need to run your business with Shopysh — step-by-step instructions with screenshots of every screen.
           </p>
         </div>
 
@@ -403,15 +447,35 @@ export default function GuidePage() {
         </div>
 
         {/* Sections */}
-        <div className="space-y-12">
+        <div className="space-y-16">
           {sections.map(section => (
             <section key={section.id} id={section.id} className="scroll-mt-24">
-              <h2 className="font-bold text-xl mb-6 border-b pb-3" style={{ color: 'hsl(168,84%,22%)' }}>{section.title}</h2>
-              <div className="space-y-5">
+              <h2 className="font-bold text-xl mb-8 border-b pb-3" style={{ color: 'hsl(168,84%,22%)' }}>{section.title}</h2>
+              <div className="space-y-10">
                 {section.content.map((item, i) => (
-                  <div key={i} className="pl-4 border-l-2 rounded-sm" style={{ borderColor: 'hsl(40,78%,47%)' }}>
-                    <h3 className="font-semibold text-base mb-1.5">{item.heading}</h3>
-                    <p className="text-gray-600 leading-relaxed text-sm">{item.text}</p>
+                  <div key={i}>
+                    <div className="pl-4 border-l-2 mb-4" style={{ borderColor: 'hsl(40,78%,47%)' }}>
+                      <h3 className="font-semibold text-base mb-1.5">{item.heading}</h3>
+                      <p className="text-gray-600 leading-relaxed text-sm">{item.text}</p>
+                    </div>
+                    {item.image && (
+                      <div className="ml-4 rounded-xl overflow-hidden border border-gray-200 shadow-md">
+                        <div className="relative w-full" style={{ aspectRatio: '1440/820' }}>
+                          <Image
+                            src={item.image}
+                            alt={item.imageCaption ?? item.heading}
+                            fill
+                            className="object-cover object-top"
+                            sizes="(max-width: 768px) 100vw, 900px"
+                          />
+                        </div>
+                        {item.imageCaption && (
+                          <p className="text-xs text-gray-500 bg-gray-50 px-4 py-2 border-t border-gray-200 text-center">
+                            {item.imageCaption}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
