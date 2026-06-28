@@ -275,7 +275,6 @@ export default async function ProductPage({ params }: Props) {
                 slug={store.subdomain}
                 storeId={store.id}
                 storeName={store.name}
-                formatPrice={formatPrice}
               />
 
               {/* Contact Store */}

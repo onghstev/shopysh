@@ -3,6 +3,11 @@
 import { useState, useEffect } from 'react';
 import { ShoppingCart, Loader2, CheckCircle, X, Minus, Plus } from 'lucide-react';
 
+function formatPrice(amount: number, currency: string) {
+  const symbols: Record<string, string> = { NGN: '₦', USD: '$', GHS: 'GH₵', KES: 'KSh' };
+  return `${symbols[currency] ?? currency + ' '}${amount.toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+}
+
 interface OrderFormProps {
   product: {
     id: string;
@@ -14,10 +19,9 @@ interface OrderFormProps {
   slug: string;
   storeId: string;
   storeName: string;
-  formatPrice: (amount: number, currency: string) => string;
 }
 
-export default function StorefrontOrderForm({ product, slug, storeId, storeName, formatPrice }: OrderFormProps) {
+export default function StorefrontOrderForm({ product, slug, storeId, storeName }: OrderFormProps) {
   const [showForm, setShowForm] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [form, setForm] = useState({ name: '', phone: '', email: '', address: '', notes: '' });
