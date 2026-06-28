@@ -58,15 +58,15 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     if (!ACCEPTED_TYPES.includes(file.type)) return badRequest('Only JPEG, PNG, WebP, and GIF files are allowed');
     if (file.size > MAX_FILE_SIZE) return badRequest('File size must be under 5MB');
 
-    // Check storage quota
-    const [usedBytes, limitMb] = await Promise.all([
+    // Check storage quota (DB records + files on disk)
+    const [{ totalBytes }, limitMb] = await Promise.all([
       getTenantStorageBytes(session.user.tenantId),
       getTenantStorageLimitMb(session.user.tenantId),
     ]);
     const limitBytes = limitMb * 1024 * 1024;
-    if (usedBytes + file.size > limitBytes) {
-      const usedMb = bytesToMb(usedBytes).toFixed(1);
-      return badRequest(`Storage limit reached. Using ${usedMb} MB of ${limitMb} MB. Delete some images to free space.`);
+    if (totalBytes + file.size > limitBytes) {
+      const usedMb = bytesToMb(totalBytes).toFixed(1);
+      return badRequest(`Storage limit reached. Using ${usedMb} MB of ${limitMb} MB. Upgrade your plan or delete data to free space.`);
     }
 
     const bytes = await file.arrayBuffer();

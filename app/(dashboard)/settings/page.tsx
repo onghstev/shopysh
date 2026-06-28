@@ -121,7 +121,7 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<any>({});
   const [aiConfig, setAiConfig] = useState<any>({});
   const [billing, setBilling] = useState<any>({});
-  const [storageInfo, setStorageInfo] = useState<{ usedMb: number; limitMb: number; percentUsed: number } | null>(null);
+  const [storageInfo, setStorageInfo] = useState<{ usedMb: number; limitMb: number; percentUsed: number; breakdown?: { database: string; files: string; total: string } } | null>(null);
   const [saving, setSaving] = useState(false);
   const [llmConfig, setLlmConfig] = useState<any>({});
   const [llmSaving, setLlmSaving] = useState(false);
@@ -562,9 +562,13 @@ export default function SettingsPage() {
                     style={{ width: `${storageInfo?.percentUsed ?? 0}%` }}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {storageInfo ? `${storageInfo.percentUsed}% used — upload up to 4 images per product (max 5 MB each)` : 'Loading storage info…'}
-                </p>
+                {storageInfo?.breakdown && (
+                  <div className="flex gap-4 text-xs text-muted-foreground">
+                    <span>Database: <span className="font-medium text-foreground">{storageInfo.breakdown.database}</span></span>
+                    <span>Files: <span className="font-medium text-foreground">{storageInfo.breakdown.files}</span></span>
+                  </div>
+                )}
+                {!storageInfo && <p className="text-xs text-muted-foreground">Loading storage info…</p>}
               </div>
             </CardContent>
           </Card>
