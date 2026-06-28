@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Bot, CreditCard, Save, CheckCircle2, Loader2, Key, AlertTriangle, CheckCircle, Cpu, Wallet, Bell, Mail, XCircle, Send, ExternalLink, Copy } from 'lucide-react';
+import { Building2, Bot, CreditCard, Save, CheckCircle2, Loader2, Key, AlertTriangle, CheckCircle, Cpu, Wallet, Bell, Mail, XCircle, Send, ExternalLink, Copy, HardDrive } from 'lucide-react';
 import { toast } from 'sonner';
 
 function EmailTestSection() {
@@ -121,6 +121,7 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<any>({});
   const [aiConfig, setAiConfig] = useState<any>({});
   const [billing, setBilling] = useState<any>({});
+  const [storageInfo, setStorageInfo] = useState<{ usedMb: number; limitMb: number; percentUsed: number } | null>(null);
   const [saving, setSaving] = useState(false);
   const [llmConfig, setLlmConfig] = useState<any>({});
   const [llmSaving, setLlmSaving] = useState(false);
@@ -139,6 +140,9 @@ export default function SettingsPage() {
   }, []);
   const fetchBilling = useCallback(async () => {
     try { const r = await fetch('/api/settings/billing'); if (r.ok) { const d = await r.json(); setBilling(d ?? {}); } } catch (e: any) { console.error(e); }
+  }, []);
+  const fetchStorage = useCallback(async () => {
+    try { const r = await fetch('/api/settings/storage'); if (r.ok) { const d = await r.json(); setStorageInfo(d); } } catch (e: any) { console.error(e); }
   }, []);
   const fetchLlm = useCallback(async () => {
     try { const r = await fetch('/api/settings/llm'); if (r.ok) { const d = await r.json(); setLlmConfig(d ?? {}); } } catch (e: any) { console.error(e); }
@@ -190,7 +194,7 @@ export default function SettingsPage() {
     } catch (e: any) { toast.error(e.message || 'Failed to save SMS settings'); } finally { setSmsSaving(false); }
   };
 
-  useEffect(() => { fetchProfile(); fetchAi(); fetchBilling(); fetchPaymentConfig(); fetchSmsConfig(); }, [fetchProfile, fetchAi, fetchBilling, fetchPaymentConfig, fetchSmsConfig]);
+  useEffect(() => { fetchProfile(); fetchAi(); fetchBilling(); fetchStorage(); fetchPaymentConfig(); fetchSmsConfig(); }, [fetchProfile, fetchAi, fetchBilling, fetchStorage, fetchPaymentConfig, fetchSmsConfig]);
   useEffect(() => { if (isSuperAdmin) fetchLlm(); }, [isSuperAdmin, fetchLlm]);
 
   const saveProfile = async () => {
@@ -523,7 +527,7 @@ export default function SettingsPage() {
 
           <Card className="shadow-sm border-border/50">
             <CardHeader><CardTitle className="text-lg">Usage This Month</CardTitle></CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
                 {[
                   { label: 'Products', value: `${usage?.products ?? 0} / ${usage?.maxProducts ?? '∞'}`, color: 'text-orange-600' },
@@ -534,6 +538,33 @@ export default function SettingsPage() {
                     <p className="text-xs text-muted-foreground mt-1 font-medium">{item.label}</p>
                   </div>
                 ))}
+              </div>
+
+              {/* Storage usage */}
+              <div className="rounded-xl border border-border/60 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <HardDrive className="w-4 h-4 text-muted-foreground" />
+                    Product Image Storage
+                  </div>
+                  <span className="text-sm font-mono text-muted-foreground">
+                    {storageInfo
+                      ? `${storageInfo.usedMb < 1 ? (storageInfo.usedMb * 1024).toFixed(1) + ' KB' : storageInfo.usedMb.toFixed(1) + ' MB'} / ${storageInfo.limitMb >= 1024 ? (storageInfo.limitMb / 1024).toFixed(0) + ' GB' : storageInfo.limitMb + ' MB'}`
+                      : '— / —'}
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-500 ${
+                      (storageInfo?.percentUsed ?? 0) >= 90 ? 'bg-destructive' :
+                      (storageInfo?.percentUsed ?? 0) >= 70 ? 'bg-amber-500' : 'bg-primary'
+                    }`}
+                    style={{ width: `${storageInfo?.percentUsed ?? 0}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {storageInfo ? `${storageInfo.percentUsed}% used — upload up to 4 images per product (max 5 MB each)` : 'Loading storage info…'}
+                </p>
               </div>
             </CardContent>
           </Card>

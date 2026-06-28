@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { getAuthSession, unauthorized, notFound, serverError, badRequest } from '@/lib/api-helpers';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
+import { getTenantStorageBytes, getTenantStorageLimitMb, bytesToMb } from '@/lib/storage';
 
 const MAX_IMAGES = 4;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -56,6 +57,17 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     if (!file) return badRequest('No file provided');
     if (!ACCEPTED_TYPES.includes(file.type)) return badRequest('Only JPEG, PNG, WebP, and GIF files are allowed');
     if (file.size > MAX_FILE_SIZE) return badRequest('File size must be under 5MB');
+
+    // Check storage quota
+    const [usedBytes, limitMb] = await Promise.all([
+      getTenantStorageBytes(session.user.tenantId),
+      getTenantStorageLimitMb(session.user.tenantId),
+    ]);
+    const limitBytes = limitMb * 1024 * 1024;
+    if (usedBytes + file.size > limitBytes) {
+      const usedMb = bytesToMb(usedBytes).toFixed(1);
+      return badRequest(`Storage limit reached. Using ${usedMb} MB of ${limitMb} MB. Delete some images to free space.`);
+    }
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
