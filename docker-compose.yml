@@ -65,6 +65,7 @@ services:
       llm:
         condition: service_healthy
     environment:
+      HOSTNAME: "0.0.0.0"
       DATABASE_URL: postgresql://shopysh:${DB_PASSWORD:-changeme_in_production}@db:5432/shopysh?schema=public
       NEXTAUTH_URL: https://${DOMAIN:-www.shopysh.com}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
