@@ -2,6 +2,10 @@ export const dynamic = 'force-dynamic';
 
 import { Metadata } from 'next';
 import { prisma } from '@/lib/db';
+import {
+  buildStoreMetadata, buildStoreSchema, buildOrganizationSchema,
+  buildBreadcrumbSchema, buildFaqSchema, buildWebSiteSchema, storeUrl,
+} from '@/lib/seo';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -69,22 +73,7 @@ function formatPrice(amount: number, currency: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = await getStoreData(params.slug);
   if (!data) return { title: 'Store Not Found' };
-  const { store, products } = data;
-  const desc = store.description
-    ? `${store.description} — Browse ${products.length} products from ${store.name}${store.city ? ` in ${store.city}` : ''}${store.country ? `, ${store.country}` : ''}.`
-    : `Shop ${products.length} products from ${store.name}${store.industry ? `, a ${store.industry} business` : ''}${store.city ? ` in ${store.city}` : ''}${store.country ? `, ${store.country}` : ''}. Quality products at great prices.`;
-  return {
-    title: `${store.name} | Shop Online — ${store.industry ?? 'Products'}${store.city ? ` in ${store.city}` : ''}`,
-    description: desc.slice(0, 160),
-    openGraph: {
-      title: `${store.name} — Online Store`,
-      description: desc.slice(0, 200),
-      type: 'website',
-      ...(store.logoUrl ? { images: [{ url: store.logoUrl, alt: store.name }] } : {}),
-    },
-    twitter: { card: 'summary_large_image', title: `${store.name} — Online Store`, description: desc.slice(0, 200) },
-    alternates: { canonical: `/store/${store.subdomain}` },
-  };
+  return buildStoreMetadata(data.store, data.products, data.categories);
 }
 
 export default async function StorePage({ params, searchParams }: Props) {
@@ -104,32 +93,56 @@ export default async function StorePage({ params, searchParams }: Props) {
   const featuredProducts = filteredProducts.filter((p: any) => p.isFeatured);
   const regularProducts = filteredProducts.filter((p: any) => !p.isFeatured);
 
-  const jsonLd = {
-    '@context': 'https://schema.org', '@type': 'Store', name: store.name,
-    description: store.description || `${store.name} online store`,
-    ...(store.logoUrl ? { image: store.logoUrl } : {}),
-    ...(store.phone ? { telephone: store.phone } : {}),
-    ...(store.email ? { email: store.email } : {}),
-    ...(store.website ? { url: store.website } : {}),
-    ...(store.address || store.city || store.country ? { address: { '@type': 'PostalAddress', ...(store.address ? { streetAddress: store.address } : {}), ...(store.city ? { addressLocality: store.city } : {}), ...(store.state ? { addressRegion: store.state } : {}), ...(store.country ? { addressCountry: store.country } : {}) } } : {}),
-    hasOfferCatalog: { '@type': 'OfferCatalog', name: `${store.name} Products`, numberOfItems: products.length, itemListElement: products.slice(0, 20).map((p: any, i: number) => ({ '@type': 'ListItem', position: i + 1, item: { '@type': 'Product', name: p.name, ...(p.description ? { description: p.description.slice(0, 200) } : {}), ...(p.image ? { image: p.image } : {}), offers: { '@type': 'Offer', price: p.price, priceCurrency: p.currency, availability: p.stockQuantity > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock' } } })) },
-  };
+  // Normalize products shape to match ProductInfo interface
+  const productInfos = products.map((p: any) => ({
+    id: p.id, name: p.name, description: p.description, price: Number(p.price),
+    currency: p.currency, stockQuantity: p.stockQuantity, isFeatured: p.isFeatured,
+    images: p.image ? [{ url: p.image as string, altText: p.imageAlt as string | null }] : ([] as Array<{ url: string; altText?: string | null }>),
+    category: p.category,
+  }));
 
-  const faqJsonLd = {
-    '@context': 'https://schema.org', '@type': 'FAQPage',
-    mainEntity: [
-      { '@type': 'Question', name: `What products does ${store.name} sell?`, acceptedAnswer: { '@type': 'Answer', text: categories.length > 0 ? `${store.name} sells products in the following categories: ${categories.map((c: any) => c.name).join(', ')}. They offer ${products.length} products in total.` : `${store.name} offers ${products.length} products${store.industry ? ` in the ${store.industry} industry` : ''}.` } },
-      { '@type': 'Question', name: `Where is ${store.name} located?`, acceptedAnswer: { '@type': 'Answer', text: store.city || store.country ? `${store.name} is located${store.address ? ` at ${store.address}` : ''}${store.city ? ` in ${store.city}` : ''}${store.state ? `, ${store.state}` : ''}${store.country ? `, ${store.country}` : ''}.` : `${store.name} operates online. Contact them for location details.` } },
-      { '@type': 'Question', name: `How can I contact ${store.name}?`, acceptedAnswer: { '@type': 'Answer', text: [store.phone ? `Phone: ${store.phone}` : null, store.email ? `Email: ${store.email}` : null, store.website ? `Website: ${store.website}` : null].filter(Boolean).join('. ') || `Visit their online store to get in touch.` } },
-      ...(products.length > 0 ? [{ '@type': 'Question', name: `What is the price range at ${store.name}?`, acceptedAnswer: { '@type': 'Answer', text: (() => { const prices = products.map((p: any) => p.price).sort((a: number, b: number) => a - b); return `Prices at ${store.name} range from ${formatPrice(prices[0], store.currency)} to ${formatPrice(prices[prices.length - 1], store.currency)} (${store.currency}).`; })() } }] : []),
-    ],
-  };
+  const storeJsonLd    = buildStoreSchema(store, productInfos, categories);
+  const orgJsonLd      = buildOrganizationSchema(store);
+  const websiteJsonLd  = buildWebSiteSchema({ name: store.name, url: storeUrl(store.subdomain) });
 
-  const breadcrumbJsonLd = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Stores', item: '/store' }, { '@type': 'ListItem', position: 2, name: store.name }] };
+  const prices = products.map((p: any) => p.price).sort((a: number, b: number) => a - b);
+  const faqJsonLd = buildFaqSchema([
+    {
+      question: `What products does ${store.name} sell?`,
+      answer: categories.length > 0
+        ? `${store.name} sells products in the following categories: ${categories.map((c: any) => c.name).join(', ')}. They offer ${products.length} products in total.`
+        : `${store.name} offers ${products.length} products${store.industry ? ` in the ${store.industry} industry` : ''}.`,
+    },
+    {
+      question: `Where is ${store.name} located?`,
+      answer: store.city || store.country
+        ? `${store.name} is located${store.address ? ` at ${store.address}` : ''}${store.city ? ` in ${store.city}` : ''}${store.state ? `, ${store.state}` : ''}${store.country ? `, ${store.country}` : ''}.`
+        : `${store.name} operates online. Contact them for location details.`,
+    },
+    {
+      question: `How can I contact ${store.name}?`,
+      answer: [
+        store.phone ? `Phone: ${store.phone}` : null,
+        store.email ? `Email: ${store.email}` : null,
+        store.website ? `Website: ${store.website}` : null,
+      ].filter(Boolean).join('. ') || 'Visit their online store to get in touch.',
+    },
+    ...(prices.length > 0 ? [{
+      question: `What is the price range at ${store.name}?`,
+      answer: `Prices at ${store.name} range from ${formatPrice(prices[0], store.currency)} to ${formatPrice(prices[prices.length - 1], store.currency)} (${store.currency}).`,
+    }] : []),
+  ]);
+
+  const breadcrumbJsonLd = buildBreadcrumbSchema([
+    { name: 'Stores', url: '/store' },
+    { name: store.name, url: `/store/${store.subdomain}` },
+  ]);
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 

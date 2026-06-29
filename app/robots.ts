@@ -28,10 +28,13 @@ export default function robots(): MetadataRoute.Robots {
       {
         // Allow AI crawlers explicitly for AEO/GEO
         userAgent: ['GPTBot', 'ChatGPT-User', 'Google-Extended', 'PerplexityBot', 'ClaudeBot'],
-        allow: [
-          '/store/',
-          '/pitch',
-        ],
+        allow: ['/store/', '/pitch', '/guide'],
+        disallow: ['/api/', '/dashboard/', '/admin/'],
+      },
+      {
+        // Block feed endpoints from general crawlers (Google Merchant Center fetches directly)
+        userAgent: '*',
+        disallow: ['/feeds/'],
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,

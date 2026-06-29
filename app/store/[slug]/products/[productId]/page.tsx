@@ -3,6 +3,10 @@ export const dynamic = 'force-dynamic';
 import { Metadata } from 'next';
 import { prisma } from '@/lib/db';
 import { notFound } from 'next/navigation';
+import {
+  buildProductMetadata, buildProductSchema, buildOrganizationSchema,
+  buildBreadcrumbSchema, buildFaqSchema, storeUrl, categoryUrl,
+} from '@/lib/seo';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, Package, Tag, MapPin, Check, X, ChevronRight, Phone, Mail, Star, User, ShoppingBag } from 'lucide-react';
@@ -77,16 +81,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = await getProductData(params.slug, params.productId);
   if (!data) return { title: 'Product Not Found' };
   const { store, product } = data;
-  const desc = product.description
-    ? `${product.description.slice(0, 120)} — ${formatPrice(product.price, product.currency)} at ${store.name}.`
-    : `Buy ${product.name} for ${formatPrice(product.price, product.currency)} at ${store.name}${store.city ? ` in ${store.city}` : ''}.`;
-  return {
-    title: `${product.name} | ${formatPrice(product.price, product.currency)} — ${store.name}`,
-    description: desc.slice(0, 160),
-    openGraph: { title: `${product.name} — ${store.name}`, description: desc.slice(0, 200), type: 'website', images: product.images.length > 0 ? [{ url: product.images[0].url, alt: product.name }] : [] },
-    twitter: { card: 'summary_large_image', title: `${product.name} — ${store.name}`, description: desc.slice(0, 200), images: product.images.length > 0 ? [product.images[0].url] : [] },
-    alternates: { canonical: `/store/${store.subdomain}/products/${product.id}` },
+  const productInfo = {
+    ...product,
+    currency: product.currency || store.currency,
+    images: product.images.map((i: any) => ({ url: i.url, altText: i.alt })),
   };
+  return buildProductMetadata(productInfo, store);
 }
 
 export default async function ProductPage({ params }: Props) {
@@ -95,40 +95,46 @@ export default async function ProductPage({ params }: Props) {
   const { store, product, relatedProducts } = data;
   const displayCurrency = product.currency || store.currency;
 
-  const productJsonLd = {
-    '@context': 'https://schema.org', '@type': 'Product', name: product.name,
-    ...(product.description ? { description: product.description } : {}),
-    ...(product.images.length > 0 ? { image: product.images.map((i: any) => i.url) } : {}),
-    ...(product.sku ? { sku: product.sku } : {}),
-    brand: { '@type': 'Brand', name: store.name },
-    offers: { '@type': 'Offer', price: product.price, priceCurrency: displayCurrency, availability: product.stockQuantity > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock', seller: { '@type': 'Organization', name: store.name, ...(store.logoUrl ? { logo: store.logoUrl } : {}) } },
-    ...(product.category ? { category: product.category.name } : {}),
+  const productInfo = {
+    ...product,
+    currency: displayCurrency,
+    images: product.images.map((i: any) => ({ url: i.url, altText: i.alt })),
   };
 
-  const breadcrumbJsonLd = {
-    '@context': 'https://schema.org', '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Stores', item: '/store' },
-      { '@type': 'ListItem', position: 2, name: store.name, item: `/store/${store.subdomain}` },
-      ...(product.category ? [{ '@type': 'ListItem', position: 3, name: product.category.name, item: `/store/${store.subdomain}?category=${product.category.id}` }] : []),
-      { '@type': 'ListItem', position: product.category ? 4 : 3, name: product.name },
-    ],
-  };
+  const productJsonLd    = buildProductSchema(productInfo, store);
+  const orgJsonLd        = buildOrganizationSchema(store);
 
-  const faqJsonLd = {
-    '@context': 'https://schema.org', '@type': 'FAQPage',
-    mainEntity: [
-      { '@type': 'Question', name: `How much does ${product.name} cost?`, acceptedAnswer: { '@type': 'Answer', text: `${product.name} is priced at ${formatPrice(product.price, displayCurrency)} at ${store.name}. ${product.stockQuantity > 0 ? 'It is currently in stock.' : 'It is currently out of stock.'}` } },
-      { '@type': 'Question', name: `Is ${product.name} available?`, acceptedAnswer: { '@type': 'Answer', text: product.stockQuantity > 0 ? `Yes, ${product.name} is in stock at ${store.name} with ${product.stockQuantity} unit${product.stockQuantity > 1 ? 's' : ''} available.` : `${product.name} is currently out of stock at ${store.name}. Please check back later.` } },
-      { '@type': 'Question', name: `Where can I buy ${product.name}?`, acceptedAnswer: { '@type': 'Answer', text: `${product.name} is available from ${store.name}${store.city ? ` in ${store.city}` : ''}${store.country ? `, ${store.country}` : ''}. ${store.phone ? `Contact them at ${store.phone}` : store.email ? `Email them at ${store.email}` : 'Visit their online store'} for purchase inquiries.` } },
-    ],
-  };
+  const breadcrumbItems = [
+    { name: 'Stores', url: '/store' },
+    { name: store.name, url: `/store/${store.subdomain}` },
+    ...(product.category ? [{ name: product.category.name, url: categoryUrl(store.subdomain, product.category.id) }] : []),
+    { name: product.name },
+  ];
+  const breadcrumbJsonLd = buildBreadcrumbSchema(breadcrumbItems);
+
+  const faqJsonLd = buildFaqSchema([
+    {
+      question: `How much does ${product.name} cost?`,
+      answer: `${product.name} is priced at ${formatPrice(product.price, displayCurrency)} at ${store.name}. ${product.stockQuantity > 0 ? 'It is currently in stock.' : 'It is currently out of stock.'}`,
+    },
+    {
+      question: `Is ${product.name} available?`,
+      answer: product.stockQuantity > 0
+        ? `Yes, ${product.name} is in stock at ${store.name} with ${product.stockQuantity} unit${product.stockQuantity > 1 ? 's' : ''} available.`
+        : `${product.name} is currently out of stock at ${store.name}. Please check back later.`,
+    },
+    {
+      question: `Where can I buy ${product.name}?`,
+      answer: `${product.name} is available from ${store.name}${store.city ? ` in ${store.city}` : ''}${store.country ? `, ${store.country}` : ''}. ${store.phone ? `Contact them at ${store.phone}` : store.email ? `Email them at ${store.email}` : 'Visit their online store'} for purchase inquiries.`,
+    },
+  ]);
 
   const primaryImage = product.images.find((i: any) => i.isPrimary) ?? product.images[0];
 
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
 
