@@ -24,7 +24,7 @@ function formatPrice(amount: number, currency: string): string {
 export function buildProductMetadata(product: ProductInfo, store: StoreInfo): Metadata {
   const currency = product.currency || store.currency;
   const priceStr = formatPrice(product.price, currency);
-  const canonical = productUrl(store.subdomain, product.id);
+  const canonical = productUrl(store.subdomain, product.slug ?? product.id);
   const locationStr = store.city ? ` in ${store.city}` : '';
   const countryStr  = store.country && store.country !== 'NG' ? `, ${store.country}` : '';
 

@@ -27,6 +27,7 @@ export interface StoreInfo {
 
 export interface ProductInfo {
   id: string;
+  slug?: string | null;
   name: string;
   description?: string | null;
   sku?: string | null;
@@ -176,7 +177,7 @@ export function buildStoreSchema(
 // ── 4. Product ────────────────────────────────────────────────────────────────
 
 export function buildProductSchema(product: ProductInfo, store: StoreInfo) {
-  const url  = productUrl(store.subdomain, product.id);
+  const url  = productUrl(store.subdomain, product.slug ?? product.id);
   const meta = product.metadata ?? {};
 
   // Absolute image URLs
@@ -270,11 +271,11 @@ export function buildItemListSchema(
     itemListElement: products.slice(0, 50).map((p, i) => ({
       '@type': 'ListItem',
       position: i + 1,
-      url: productUrl(store.subdomain, p.id),
+      url: productUrl(store.subdomain, p.slug ?? p.id),
       item: {
         '@type': 'Product',
         name: p.name,
-        url: productUrl(store.subdomain, p.id),
+        url: productUrl(store.subdomain, p.slug ?? p.id),
         ...defined({
           description: p.description?.slice(0, 200),
           image: p.images?.[0] ? absoluteUrl(p.images[0].url) : undefined,

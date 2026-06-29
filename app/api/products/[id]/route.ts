@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthSession, unauthorized, notFound, serverError, toNumber } from '@/lib/api-helpers';
+import { generateProductSlug } from '@/lib/products';
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -36,7 +37,12 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     const body = await request.json();
     const data: any = {};
-    if (body?.name !== undefined) data.name = body.name;
+    if (body?.name !== undefined) {
+      data.name = body.name;
+      // Regenerate slug when the name changes so the URL stays descriptive.
+      // Old UUID URLs will still 301-redirect to the new slug automatically.
+      data.slug = await generateProductSlug(body.name, existing.tenantId, params.id);
+    }
     if (body?.description !== undefined) data.description = body.description;
     if (body?.sku !== undefined) data.sku = body.sku;
     if (body?.price !== undefined) data.price = parseFloat(body.price);

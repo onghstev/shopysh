@@ -21,7 +21,7 @@ export async function GET() {
         tenant: { isActive: true, deletedAt: null },
       },
       select: {
-        id: true, name: true, description: true, sku: true,
+        id: true, slug: true, name: true, description: true, sku: true,
         price: true, currency: true, stockQuantity: true,
         isFeatured: true, metadata: true, createdAt: true, updatedAt: true,
         images: { orderBy: { displayOrder: 'asc' } },
@@ -58,6 +58,7 @@ export async function GET() {
       };
       const product = {
         id:            p.id,
+        slug:          p.slug,
         name:          p.name,
         description:   p.description,
         sku:           p.sku,

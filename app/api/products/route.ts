@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthSession, unauthorized, badRequest, serverError, toNumber } from '@/lib/api-helpers';
 import { checkPlanLimit } from '@/lib/plan-limits';
+import { generateProductSlug } from '@/lib/products';
 
 export async function GET(request: NextRequest) {
   try {
@@ -78,10 +79,13 @@ export async function POST(request: NextRequest) {
     const limit = await checkPlanLimit(tenantId, 'products');
     if (!limit.allowed) return NextResponse.json({ error: limit.message }, { status: 403 });
 
+    const slug = await generateProductSlug(name, tenantId);
+
     const product = await prisma.product.create({
       data: {
         tenantId,
         name,
+        slug,
         description: description ?? null,
         sku: sku ?? null,
         price: parseFloat(price),

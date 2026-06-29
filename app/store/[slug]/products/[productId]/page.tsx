@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { Metadata } from 'next';
 import { prisma } from '@/lib/db';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import {
   buildProductMetadata, buildProductSchema, buildOrganizationSchema,
   buildBreadcrumbSchema, buildFaqSchema, storeUrl, categoryUrl,
@@ -25,9 +25,11 @@ function formatPrice(amount: number, currency: string) {
   return `${getCurrencySymbol(currency)}${amount.toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 
-async function getProductData(slug: string, productId: string) {
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function getProductData(storeSlug: string, productIdOrSlug: string) {
   const tenant = await prisma.tenant.findUnique({
-    where: { subdomain: slug },
+    where: { subdomain: storeSlug },
     select: {
       id: true, name: true, subdomain: true, industry: true, logoUrl: true,
       primaryColor: true, defaultCurrency: true, phone: true, email: true,
@@ -36,8 +38,14 @@ async function getProductData(slug: string, productId: string) {
   });
   if (!tenant || !tenant.isActive) return null;
 
+  // Support both legacy UUID URLs and new slug URLs in one route.
+  const isUuid = UUID_RE.test(productIdOrSlug);
+  const where = isUuid
+    ? { id: productIdOrSlug,   tenantId: tenant.id, isActive: true, deletedAt: null }
+    : { slug: productIdOrSlug, tenantId: tenant.id, isActive: true, deletedAt: null };
+
   const product = await prisma.product.findFirst({
-    where: { id: productId, tenantId: tenant.id, isActive: true, deletedAt: null },
+    where,
     include: {
       images: { orderBy: { displayOrder: 'asc' } },
       category: { select: { id: true, name: true, icon: true, description: true } },
@@ -55,6 +63,7 @@ async function getProductData(slug: string, productId: string) {
 
   const settings = (tenant.settings as any) ?? {};
   return {
+    isUuid,
     store: {
       id: tenant.id, name: tenant.name, subdomain: tenant.subdomain, industry: tenant.industry,
       logoUrl: tenant.logoUrl, primaryColor: tenant.primaryColor ?? '#10b981',
@@ -63,7 +72,7 @@ async function getProductData(slug: string, productId: string) {
       city: settings.city ?? '', state: settings.state ?? '', country: settings.country ?? '',
     },
     product: {
-      id: product.id, name: product.name, description: product.description,
+      id: product.id, slug: product.slug, name: product.name, description: product.description,
       price: Number(product.price), currency: product.currency, sku: product.sku,
       stockQuantity: product.stockQuantity, isFeatured: product.isFeatured,
       category: product.category,
@@ -80,7 +89,10 @@ async function getProductData(slug: string, productId: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = await getProductData(params.slug, params.productId);
   if (!data) return { title: 'Product Not Found' };
-  const { store, product } = data;
+  const { store, product, isUuid } = data;
+  // If this is a UUID URL and a slug exists, the page component will redirect.
+  // Return minimal metadata here so Next.js doesn't spend time on the full build.
+  if (isUuid && product.slug) return { title: product.name };
   const productInfo = {
     ...product,
     currency: product.currency || store.currency,
@@ -92,7 +104,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProductPage({ params }: Props) {
   const data = await getProductData(params.slug, params.productId);
   if (!data) notFound();
-  const { store, product, relatedProducts } = data;
+  const { store, product, relatedProducts, isUuid } = data;
+
+  // 308 permanent redirect: UUID URL → slug URL.
+  // Search engines will update their index; browsers and bots follow automatically.
+  if (isUuid && product.slug) {
+    permanentRedirect(`/store/${params.slug}/products/${product.slug}`);
+  }
+
   const displayCurrency = product.currency || store.currency;
 
   const productInfo = {

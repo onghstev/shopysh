@@ -101,6 +101,7 @@ async function buildProductsSitemap(page: number): Promise<MetadataRoute.Sitemap
     where: { isActive: true, deletedAt: null, tenant: { isActive: true, deletedAt: null } },
     select: {
       id: true,
+      slug: true,
       updatedAt: true,
       images: { orderBy: { displayOrder: 'asc' }, take: 1, select: { url: true } },
       tenant: { select: { subdomain: true } },
@@ -111,7 +112,7 @@ async function buildProductsSitemap(page: number): Promise<MetadataRoute.Sitemap
   });
 
   return products.map((p) => ({
-    url: productUrl(p.tenant.subdomain, p.id),
+    url: productUrl(p.tenant.subdomain, p.slug ?? p.id),
     lastModified: p.updatedAt,
     changeFrequency: 'weekly' as const,
     priority: 0.7,

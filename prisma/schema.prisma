@@ -192,6 +192,7 @@ model Product {
   dimensions          Json?
   isActive            Boolean   @default(true) @map("is_active")
   isFeatured          Boolean   @default(false) @map("is_featured")
+  slug                String?   @db.VarChar(120)
   metadata            Json      @default("{}")
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
@@ -202,6 +203,7 @@ model Product {
   images       ProductImage[]
   orderItems   OrderItem[]
 
+  @@unique([tenantId, slug], map: "idx_products_tenant_slug")
   @@index([tenantId, isActive, createdAt(sort: Desc)], map: "idx_products_tenant_active")
   @@index([tenantId, categoryId], map: "idx_products_category")
   @@index([tenantId, isFeatured], map: "idx_products_featured")
