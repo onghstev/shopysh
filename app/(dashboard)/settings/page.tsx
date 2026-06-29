@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Bot, CreditCard, Save, CheckCircle2, Loader2, Key, AlertTriangle, CheckCircle, Cpu, Wallet, Bell, Mail, XCircle, Send, ExternalLink, Copy, HardDrive } from 'lucide-react';
+import { Building2, Bot, CreditCard, Save, CheckCircle2, Loader2, Key, AlertTriangle, CheckCircle, Cpu, Wallet, Bell, Mail, XCircle, Send, ExternalLink, Copy, HardDrive, ShoppingCart, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 
 function EmailTestSection() {
@@ -611,6 +611,114 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           )}
+          {/* SEO & Google Shopping Feeds */}
+          <Card className="shadow-sm border-border/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <ShoppingCart className="w-5 h-5 text-primary" /> Google Shopping &amp; SEO Feeds
+              </CardTitle>
+              <CardDescription>
+                Your products are automatically submitted to Google Shopping via Shopysh's shared merchant feed.
+                No setup required — new products appear on Google Shopping within 24 hours of being published.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+
+              {/* Global feed — read-only info */}
+              <div className="p-4 rounded-lg border border-border/60 bg-muted/30 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-primary" />
+                  <h4 className="text-sm font-semibold">Shopysh Marketplace Feed (active)</h4>
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
+                    <CheckCircle className="w-3 h-3" /> Live
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  All your active products are included in the Shopysh Google Merchant Center feed.
+                  When customers click your product on Google Shopping they land directly on your store page.
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-xs bg-background border border-border/60 rounded px-3 py-2 text-muted-foreground truncate select-all">
+                    {typeof window !== 'undefined' ? `${window.location.origin}/feeds/google-merchant` : 'https://www.shopysh.com/feeds/google-merchant'}
+                  </code>
+                  <button
+                    onClick={() => {
+                      const url = `${window.location.origin}/feeds/google-merchant`;
+                      navigator.clipboard.writeText(url);
+                      toast.success('Feed URL copied');
+                    }}
+                    className="shrink-0 p-2 rounded-lg border border-border/60 hover:bg-muted transition"
+                    title="Copy URL"
+                  >
+                    <Copy className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                  <a
+                    href="/feeds/google-merchant"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 p-2 rounded-lg border border-border/60 hover:bg-muted transition"
+                    title="Preview feed"
+                  >
+                    <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                  </a>
+                </div>
+              </div>
+
+              {/* Per-merchant feed */}
+              {profile?.subdomain && (
+                <div className="p-4 rounded-lg border border-border/60 bg-muted/30 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart className="w-4 h-4 text-muted-foreground" />
+                    <h4 className="text-sm font-semibold">Your Store Feed (advanced)</h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    If you want your own Google Merchant Center account with your store name on Google Shopping,
+                    submit this URL to your own GMC account at{' '}
+                    <a href="https://merchants.google.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+                      merchants.google.com
+                    </a>.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-xs bg-background border border-border/60 rounded px-3 py-2 text-muted-foreground truncate select-all">
+                      {typeof window !== 'undefined'
+                        ? `${window.location.origin}/feeds/${profile.subdomain}`
+                        : `/feeds/${profile.subdomain}`}
+                    </code>
+                    <button
+                      onClick={() => {
+                        const url = `${window.location.origin}/feeds/${profile.subdomain}`;
+                        navigator.clipboard.writeText(url);
+                        toast.success('Feed URL copied');
+                      }}
+                      className="shrink-0 p-2 rounded-lg border border-border/60 hover:bg-muted transition"
+                      title="Copy URL"
+                    >
+                      <Copy className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                    <a
+                      href={`/feeds/${profile.subdomain}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 p-2 rounded-lg border border-border/60 hover:bg-muted transition"
+                      title="Preview feed"
+                    >
+                      <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>
+                  Products must be <strong>active</strong> and have a <strong>price</strong> and at least one <strong>image</strong> to appear on Google Shopping.
+                  Google re-fetches the feed every 24 hours.
+                </span>
+              </div>
+
+            </CardContent>
+          </Card>
+
         </TabsContent>
         {/* Notifications Tab */}
         <TabsContent value="notifications" className="mt-6">
