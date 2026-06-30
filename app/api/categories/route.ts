@@ -4,32 +4,41 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthSession, unauthorized, badRequest, serverError } from '@/lib/api-helpers';
 
+/** Return IDs of all tenants that have at least one SUPER_ADMIN user. */
+async function getSuperAdminTenantIds(): Promise<string[]> {
+  const rows = await prisma.user.findMany({
+    where: { role: 'SUPER_ADMIN' },
+    select: { tenantId: true },
+    distinct: ['tenantId'],
+  });
+  return rows.map((r) => r.tenantId).filter((id): id is string => !!id);
+}
+
+/**
+ * GET /api/categories
+ * Returns only platform-wide categories owned by SUPER_ADMIN tenants.
+ * All users (merchants and admins) see the same shared list.
+ */
 export async function GET() {
   try {
     const session = await getAuthSession();
     if (!session?.user?.tenantId) return unauthorized();
 
-    // Include the current tenant's categories plus platform-wide categories
-    // created by any SUPER_ADMIN tenant, so merchants can assign them to products.
-    const superAdminUsers = await prisma.user.findMany({
-      where: { role: 'SUPER_ADMIN' },
-      select: { tenantId: true },
-      distinct: ['tenantId'],
-    });
-    const superAdminTenantIds = superAdminUsers
-      .map((u) => u.tenantId)
-      .filter((id): id is string => !!id && id !== session.user.tenantId);
+    const superAdminTenantIds = await getSuperAdminTenantIds();
+
+    // If caller is Super Admin, also include their own tenant even if no
+    // other Super Admin exists yet (bootstrap scenario).
+    const tenantIds = Array.from(
+      new Set([...superAdminTenantIds, ...(session.user.role === 'SUPER_ADMIN' ? [session.user.tenantId] : [])]),
+    );
 
     const categories = await prisma.productCategory.findMany({
       where: {
         isActive: true,
-        OR: [
-          { tenantId: session.user.tenantId },
-          ...(superAdminTenantIds.length > 0 ? [{ tenantId: { in: superAdminTenantIds } }] : []),
-        ],
+        ...(tenantIds.length > 0 ? { tenantId: { in: tenantIds } } : { tenantId: session.user.tenantId }),
       },
       include: { children: true, _count: { select: { products: true } } },
-      orderBy: { displayOrder: 'asc' },
+      orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
     });
 
     return NextResponse.json({ categories: categories ?? [] });
@@ -38,6 +47,10 @@ export async function GET() {
   }
 }
 
+/**
+ * POST /api/categories — SUPER_ADMIN only.
+ * Creates a platform-wide category under the admin's tenant.
+ */
 export async function POST(request: NextRequest) {
   try {
     const session = await getAuthSession();

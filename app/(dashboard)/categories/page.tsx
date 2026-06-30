@@ -170,7 +170,11 @@ export default function CategoriesPage() {
             <FolderTree className="w-5 h-5 text-primary" />
             Product Categories
           </CardTitle>
-          <CardDescription>Organize your products into categories for better management</CardDescription>
+          <CardDescription>
+            {isSuperAdmin
+              ? 'Platform-wide categories available to all merchants. Products across all stores are counted.'
+              : 'Platform-wide categories defined by Shopysh. Select one when creating or editing a product.'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
