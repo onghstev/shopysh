@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,8 +17,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   FolderOpen, Plus, Trash2, Edit2, Package, Loader2, FolderTree, AlertTriangle,
+  Search, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
+
+const PAGE_SIZE = 10;
 
 interface Category {
   id: string;
@@ -35,8 +38,12 @@ interface Category {
 export default function CategoriesPage() {
   const { data: session } = useSession();
   const isSuperAdmin = session?.user?.role === 'SUPER_ADMIN';
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
@@ -59,15 +66,24 @@ export default function CategoriesPage() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+  useEffect(() => { fetchCategories(); }, [fetchCategories]);
+
+  // Reset to page 1 whenever search changes
+  useEffect(() => { setPage(1); }, [search]);
+
+  const filtered = useMemo(() =>
+    categories.filter((c) =>
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      (c.description ?? '').toLowerCase().includes(search.toLowerCase())
+    ),
+    [categories, search],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleCreate = async () => {
-    if (!form.name.trim()) {
-      toast.error('Category name is required');
-      return;
-    }
+    if (!form.name.trim()) { toast.error('Category name is required'); return; }
     setSaving(true);
     try {
       const res = await fetch('/api/categories', {
@@ -84,18 +100,11 @@ export default function CategoriesPage() {
         const err = await res.json();
         toast.error(err?.error ?? 'Failed to create category');
       }
-    } catch {
-      toast.error('Error creating category');
-    } finally {
-      setSaving(false);
-    }
+    } catch { toast.error('Error creating category'); } finally { setSaving(false); }
   };
 
   const handleEdit = async () => {
-    if (!editTarget || !form.name.trim()) {
-      toast.error('Category name is required');
-      return;
-    }
+    if (!editTarget || !form.name.trim()) { toast.error('Category name is required'); return; }
     setSaving(true);
     try {
       const res = await fetch(`/api/categories/${editTarget.id}`, {
@@ -113,11 +122,7 @@ export default function CategoriesPage() {
         const err = await res.json();
         toast.error(err?.error ?? 'Failed to update category');
       }
-    } catch {
-      toast.error('Error updating category');
-    } finally {
-      setSaving(false);
-    }
+    } catch { toast.error('Error updating category'); } finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
@@ -133,11 +138,7 @@ export default function CategoriesPage() {
         const err = await res.json();
         toast.error(err?.error ?? 'Failed to delete category');
       }
-    } catch {
-      toast.error('Error deleting category');
-    } finally {
-      setDeleting(false);
-    }
+    } catch { toast.error('Error deleting category'); } finally { setDeleting(false); }
   };
 
   const openEdit = (cat: Category) => {
@@ -153,7 +154,7 @@ export default function CategoriesPage() {
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">Categories</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {categories.length} categor{categories.length !== 1 ? 'ies' : 'y'}
+            {filtered.length} of {categories.length} categor{categories.length !== 1 ? 'ies' : 'y'}
           </p>
         </div>
         {isSuperAdmin && (
@@ -165,16 +166,30 @@ export default function CategoriesPage() {
 
       {/* Category List */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <FolderTree className="w-5 h-5 text-primary" />
-            Product Categories
-          </CardTitle>
-          <CardDescription>
-            {isSuperAdmin
-              ? 'Platform-wide categories available to all merchants. Products across all stores are counted.'
-              : 'Platform-wide categories defined by Shopysh. Select one when creating or editing a product.'}
-          </CardDescription>
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FolderTree className="w-5 h-5 text-primary" />
+                Product Categories
+              </CardTitle>
+              <CardDescription className="mt-1">
+                {isSuperAdmin
+                  ? 'Platform-wide categories available to all merchants. Products across all stores are counted.'
+                  : 'Platform-wide categories defined by Shopysh. Select one when creating or editing a product.'}
+              </CardDescription>
+            </div>
+            {/* Search */}
+            <div className="relative w-full sm:w-64 shrink-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search categories..."
+                className="pl-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -194,50 +209,96 @@ export default function CategoriesPage() {
                 </Button>
               )}
             </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12">
+              <Search className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground font-medium">No categories match &ldquo;{search}&rdquo;</p>
+              <Button variant="ghost" className="mt-3" onClick={() => setSearch('')}>Clear search</Button>
+            </div>
           ) : (
-            <div className="divide-y">
-              {categories.map((cat) => (
-                <div key={cat.id} className="flex items-center justify-between py-4 group hover:bg-muted/30 -mx-4 px-4 rounded-lg transition-colors">
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <FolderOpen className="w-5 h-5 text-primary" />
+            <>
+              <div className="divide-y">
+                {paginated.map((cat) => (
+                  <div key={cat.id} className="flex items-center justify-between py-4 group hover:bg-muted/30 -mx-4 px-4 rounded-lg transition-colors">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <FolderOpen className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{cat.name}</p>
+                        {cat.description && (
+                          <p className="text-sm text-muted-foreground truncate max-w-md">{cat.description}</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{cat.name}</p>
-                      {cat.description && (
-                        <p className="text-sm text-muted-foreground truncate max-w-md">{cat.description}</p>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <Badge variant="secondary" className="text-xs font-mono">
+                        <Package className="w-3 h-3 mr-1" />
+                        {cat._count.products} product{cat._count.products !== 1 ? 's' : ''}
+                      </Badge>
+                      {isSuperAdmin && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => openEdit(cat)}
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                            onClick={() => setDeleteTarget(cat)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <Badge variant="secondary" className="text-xs font-mono">
-                      <Package className="w-3 h-3 mr-1" />
-                      {cat._count.products} product{cat._count.products !== 1 ? 's' : ''}
-                    </Badge>
-                    {isSuperAdmin && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => openEdit(cat)}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
-                          onClick={() => setDeleteTarget(cat)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </>
-                    )}
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4 mt-2 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setPage((p) => p - 1)}
+                      disabled={page <= 1}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                      <Button
+                        key={p}
+                        variant={p === page ? 'default' : 'outline'}
+                        size="icon"
+                        className="w-8 h-8 text-sm"
+                        onClick={() => setPage(p)}
+                      >
+                        {p}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setPage((p) => p + 1)}
+                      disabled={page >= totalPages}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -247,7 +308,7 @@ export default function CategoriesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create Category</DialogTitle>
-            <DialogDescription>Add a new product category</DialogDescription>
+            <DialogDescription>Add a new platform-wide product category</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
@@ -324,7 +385,7 @@ export default function CategoriesPage() {
               Are you sure you want to delete <strong>&ldquo;{deleteTarget?.name}&rdquo;</strong>?
               {(deleteTarget?._count?.products ?? 0) > 0 && (
                 <span className="block mt-2 text-destructive font-medium">
-                  This category has {deleteTarget?._count.products} product{(deleteTarget?._count?.products ?? 0) > 1 ? 's' : ''}. You must reassign them before deleting.
+                  This category has {deleteTarget?._count.products} product{(deleteTarget?._count?.products ?? 0) > 1 ? 's' : ''} across the platform. Reassign them before deleting.
                 </span>
               )}
             </AlertDialogDescription>
