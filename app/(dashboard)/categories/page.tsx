@@ -16,12 +16,15 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
   FolderOpen, Plus, Trash2, Edit2, Package, Loader2, FolderTree, AlertTriangle,
   Search, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [5, 10, 15, 20];
 
 interface Category {
   id: string;
@@ -43,6 +46,7 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -68,8 +72,8 @@ export default function CategoriesPage() {
 
   useEffect(() => { fetchCategories(); }, [fetchCategories]);
 
-  // Reset to page 1 whenever search changes
-  useEffect(() => { setPage(1); }, [search]);
+  // Reset to page 1 whenever search or page size changes
+  useEffect(() => { setPage(1); }, [search, pageSize]);
 
   const filtered = useMemo(() =>
     categories.filter((c) =>
@@ -79,8 +83,8 @@ export default function CategoriesPage() {
     [categories, search],
   );
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const handleCreate = async () => {
     if (!form.name.trim()) { toast.error('Category name is required'); return; }
@@ -179,15 +183,27 @@ export default function CategoriesPage() {
                   : 'Platform-wide categories defined by Shopysh. Select one when creating or editing a product.'}
               </CardDescription>
             </div>
-            {/* Search */}
-            <div className="relative w-full sm:w-64 shrink-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search categories..."
-                className="pl-9"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+            {/* Search + per-page */}
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:w-56">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search categories..."
+                  className="pl-9"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+                <SelectTrigger className="w-20 shrink-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((n) => (
+                    <SelectItem key={n} value={String(n)}>{n} / page</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardHeader>
@@ -265,7 +281,7 @@ export default function CategoriesPage() {
               {totalPages > 1 && (
                 <div className="flex items-center justify-between pt-4 mt-2 border-t">
                   <p className="text-sm text-muted-foreground">
-                    Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+                    Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}
                   </p>
                   <div className="flex items-center gap-1">
                     <Button
