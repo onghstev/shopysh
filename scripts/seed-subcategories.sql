@@ -3,6 +3,8 @@
 -- Run inside the db container:
 --   cat /tmp/seed_subcategories.sql | docker exec -i shopysh-db-1 psql -U shopysh -d shopysh
 
+SET search_path TO public;
+
 DO $$
 DECLARE
   t_id TEXT := 'a6f03f3f-a95c-4e56-8624-fc665e3187a1';
@@ -296,4 +298,4 @@ BEGIN
 
 END $$;
 
-SELECT RAISE NOTICE 'Done — sub-categories seeded.';
+SELECT 'Done — sub-categories seeded.' AS result;
