@@ -285,8 +285,8 @@ export default function NewProductPage() {
 
       {/* AI Moderation Warning Dialog */}
       <Dialog open={showWarning} onOpenChange={(open) => { if (!open) setShowWarning(false); }}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               {riskCfg && <riskCfg.Icon className="w-5 h-5" />}
               Google Shopping Content Review
@@ -296,11 +296,17 @@ export default function NewProductPage() {
             </DialogDescription>
           </DialogHeader>
           {modResult && riskCfg && (
-            <div className="space-y-4">
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium ${riskCfg.cls}`}>
-                <riskCfg.Icon className="w-4 h-4 shrink-0" />
-                <span>{riskCfg.label} — Score {modResult.riskScore}/100</span>
+            <div className="overflow-y-auto flex-1 space-y-4 pr-1">
+              {/* Risk score badge */}
+              <div className={`flex items-center justify-between px-3 py-2 rounded-md border text-sm font-medium ${riskCfg.cls}`}>
+                <div className="flex items-center gap-2">
+                  <riskCfg.Icon className="w-4 h-4 shrink-0" />
+                  <span>{riskCfg.label}</span>
+                </div>
+                <span className="font-mono text-base">{modResult.riskScore}/100</span>
               </div>
+
+              {/* Flags */}
               {modResult.flags.length > 0 && (
                 <div>
                   <p className="text-sm font-medium mb-1">Issues detected:</p>
@@ -311,10 +317,13 @@ export default function NewProductPage() {
                   </div>
                 </div>
               )}
+
+              {/* AI explanation */}
               <div className="bg-muted/40 rounded-md p-3 text-sm text-muted-foreground">
                 {modResult.flagDetails}
               </div>
-              {/* Policy violations */}
+
+              {/* Policy violations with guidance */}
               {(modResult.violations ?? []).length > 0 && (
                 <div className="space-y-1.5">
                   <p className="text-sm font-medium">Policy violations:</p>
@@ -327,6 +336,7 @@ export default function NewProductPage() {
                 </div>
               )}
 
+              {/* AI rewrite suggestion */}
               {modResult.suggestion && (
                 <div>
                   <p className="text-sm font-medium mb-1">AI-suggested revision:</p>
@@ -335,6 +345,8 @@ export default function NewProductPage() {
                   </div>
                 </div>
               )}
+
+              {/* GMC exclusion warning */}
               {modResult.riskLevel === 'high' && (
                 <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700">
                   <ShieldX className="w-4 h-4 shrink-0 mt-0.5" />
@@ -343,7 +355,7 @@ export default function NewProductPage() {
               )}
             </div>
           )}
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex-col sm:flex-row gap-2 shrink-0 pt-4 border-t mt-2">
             <Button variant="outline" onClick={() => setShowWarning(false)} className="sm:mr-auto">
               Edit Description
             </Button>
