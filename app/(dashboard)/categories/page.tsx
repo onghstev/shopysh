@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,8 @@ interface Category {
 }
 
 export default function CategoriesPage() {
+  const { data: session } = useSession();
+  const isSuperAdmin = session?.user?.role === 'SUPER_ADMIN';
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -153,9 +156,11 @@ export default function CategoriesPage() {
             {categories.length} categor{categories.length !== 1 ? 'ies' : 'y'}
           </p>
         </div>
-        <Button onClick={() => { setForm({ name: '', description: '' }); setShowCreate(true); }}>
-          <Plus className="w-4 h-4 mr-2" />New Category
-        </Button>
+        {isSuperAdmin && (
+          <Button onClick={() => { setForm({ name: '', description: '' }); setShowCreate(true); }}>
+            <Plus className="w-4 h-4 mr-2" />New Category
+          </Button>
+        )}
       </div>
 
       {/* Category List */}
@@ -176,10 +181,14 @@ export default function CategoriesPage() {
             <div className="text-center py-12">
               <FolderOpen className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground font-medium">No categories yet</p>
-              <p className="text-sm text-muted-foreground mt-1">Create your first category to organize products</p>
-              <Button className="mt-4" onClick={() => { setForm({ name: '', description: '' }); setShowCreate(true); }}>
-                <Plus className="w-4 h-4 mr-2" />Create Category
-              </Button>
+              <p className="text-sm text-muted-foreground mt-1">
+                {isSuperAdmin ? 'Create your first category to organize products' : 'No categories have been set up yet'}
+              </p>
+              {isSuperAdmin && (
+                <Button className="mt-4" onClick={() => { setForm({ name: '', description: '' }); setShowCreate(true); }}>
+                  <Plus className="w-4 h-4 mr-2" />Create Category
+                </Button>
+              )}
             </div>
           ) : (
             <div className="divide-y">
@@ -201,22 +210,26 @@ export default function CategoriesPage() {
                       <Package className="w-3 h-3 mr-1" />
                       {cat._count.products} product{cat._count.products !== 1 ? 's' : ''}
                     </Badge>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => openEdit(cat)}
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
-                      onClick={() => setDeleteTarget(cat)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    {isSuperAdmin && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => openEdit(cat)}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                          onClick={() => setDeleteTarget(cat)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}

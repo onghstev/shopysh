@@ -8,6 +8,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   try {
     const session = await getAuthSession();
     if (!session?.user?.tenantId) return unauthorized();
+    if (session.user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Only platform admins can edit categories' }, { status: 403 });
+    }
 
     const body = await req.json();
     const data: any = {};
@@ -32,6 +35,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   try {
     const session = await getAuthSession();
     if (!session?.user?.tenantId) return unauthorized();
+    if (session.user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Only platform admins can delete categories' }, { status: 403 });
+    }
 
     // Check if category has products
     const productCount = await prisma.product.count({

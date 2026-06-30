@@ -14,6 +14,7 @@ import { ArrowLeft, Loader2, Plus, ImagePlus, AlertTriangle, ShieldX, ShieldChec
 import ProductImageUploader from '@/components/product-image-uploader';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import type { ModerationResult } from '@/lib/ai-moderation';
 
 const RISK_CONFIG = {
@@ -24,6 +25,8 @@ const RISK_CONFIG = {
 
 export default function NewProductPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const isSuperAdmin = session?.user?.role === 'SUPER_ADMIN';
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [catDialogOpen, setCatDialogOpen] = useState(false);
@@ -168,9 +171,11 @@ export default function NewProductPage() {
                       {(categories ?? []).map((c: any) => <SelectItem key={c?.id} value={c?.id ?? ''}>{c?.name ?? '-'}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={() => setCatDialogOpen(true)} title="Create new category">
-                    <Plus className="w-4 h-4" />
-                  </Button>
+                  {isSuperAdmin && (
+                    <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={() => setCatDialogOpen(true)} title="Create new category">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

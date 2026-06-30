@@ -25,6 +25,9 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.tenantId) return unauthorized();
+    if (session.user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Only platform admins can create categories' }, { status: 403 });
+    }
 
     const body = await request.json();
     if (!body?.name) return badRequest('Category name is required');
