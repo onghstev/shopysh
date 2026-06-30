@@ -10,6 +10,7 @@ DECLARE
   t_id TEXT := 'a6f03f3f-a95c-4e56-8624-fc665e3187a1';
   p_id TEXT;
 BEGIN
+  PERFORM set_config('search_path', 'public', true);
 
   -- ── Food & Beverages ──────────────────────────────────────────────────────
   SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Food & Beverages' AND "parentId" IS NULL;
