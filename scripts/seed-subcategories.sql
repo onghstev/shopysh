@@ -13,9 +13,9 @@ BEGIN
   PERFORM set_config('search_path', 'public', true);
 
   -- ── Food & Beverages ──────────────────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Food & Beverages' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Food & Beverages' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Fresh Produce','Fruits, vegetables, tubers and raw farm produce',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Grains & Staples','Rice, beans, maize, millet, oats and other dry staples',2,p_id,true,NOW(),NOW()),
@@ -29,9 +29,9 @@ BEGIN
   END IF;
 
   -- ── Fashion & Clothing ────────────────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Fashion & Clothing' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Fashion & Clothing' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Men''s Clothing','Men''s shirts, trousers, suits, casual wear and formal attire',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Women''s Clothing','Women''s dresses, blouses, skirts, office wear and casual outfits',2,p_id,true,NOW(),NOW()),
@@ -44,9 +44,9 @@ BEGIN
   END IF;
 
   -- ── Health & Wellness ─────────────────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Health & Wellness' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Health & Wellness' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Vitamins & Supplements','Multivitamins, iron, omega-3 and nutritional supplements',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Herbal & Natural Remedies','Moringa, bitter leaf, garlic, aloe vera and traditional herbal products',2,p_id,true,NOW(),NOW()),
@@ -58,9 +58,9 @@ BEGIN
   END IF;
 
   -- ── Beauty & Personal Care ────────────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Beauty & Personal Care' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Beauty & Personal Care' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Skincare','Moisturisers, serums, sunscreen, toners and face washes',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Haircare','Shampoos, conditioners, hair oils, wigs, weaves and hair extensions',2,p_id,true,NOW(),NOW()),
@@ -73,9 +73,9 @@ BEGIN
   END IF;
 
   -- ── Phones & Tablets ─────────────────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Phones & Tablets' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Phones & Tablets' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Smartphones','Android and iOS phones for all budgets',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Tablets & iPads','Android tablets, iPads and e-readers',2,p_id,true,NOW(),NOW()),
@@ -87,9 +87,9 @@ BEGIN
   END IF;
 
   -- ── Electronics & Gadgets ─────────────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Electronics & Gadgets' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Electronics & Gadgets' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'TVs & Displays','LED, OLED and smart TVs across all screen sizes',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Audio & Speakers','Bluetooth speakers, soundbars, home theatre systems and headphones',2,p_id,true,NOW(),NOW()),
@@ -101,9 +101,9 @@ BEGIN
   END IF;
 
   -- ── Computers & Accessories ───────────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Computers & Accessories' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Computers & Accessories' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Laptops','Windows, macOS and Chromebook laptops for home, office and students',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Desktop Computers','All-in-one and tower desktop PCs',2,p_id,true,NOW(),NOW()),
@@ -116,9 +116,9 @@ BEGIN
   END IF;
 
   -- ── Home & Living ─────────────────────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Home & Living' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Home & Living' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Furniture','Sofas, beds, tables, chairs and wardrobes',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Bedding & Mattresses','Mattresses, pillows, bed sheets, duvets and duvet covers',2,p_id,true,NOW(),NOW()),
@@ -131,9 +131,9 @@ BEGIN
   END IF;
 
   -- ── Cleaning & Household Supplies ─────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Cleaning & Household Supplies' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Cleaning & Household Supplies' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Detergents & Soaps','Laundry detergents, dishwashing liquids and bar soaps',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Disinfectants & Sanitisers','Floor cleaners, bleach, disinfectant sprays and hand sanitisers',2,p_id,true,NOW(),NOW()),
@@ -145,9 +145,9 @@ BEGIN
   END IF;
 
   -- ── Agriculture & Farm Produce ────────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Agriculture & Farm Produce' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Agriculture & Farm Produce' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Seeds & Seedlings','Vegetable seeds, fruit tree seedlings and planting materials',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Fertilisers & Soil','NPK fertilisers, organic compost, topsoil and soil amendments',2,p_id,true,NOW(),NOW()),
@@ -159,9 +159,9 @@ BEGIN
   END IF;
 
   -- ── Baby & Kids ───────────────────────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Baby & Kids' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Baby & Kids' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Baby Food & Formula','Infant formula, baby cereals, purees and weaning foods',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Diapers & Wipes','Disposable and cloth diapers, baby wipes and changing accessories',2,p_id,true,NOW(),NOW()),
@@ -173,9 +173,9 @@ BEGIN
   END IF;
 
   -- ── Sports & Fitness ──────────────────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Sports & Fitness' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Sports & Fitness' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Gym Equipment','Weights, barbells, benches, treadmills and home gym sets',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Sportswear','Jerseys, tracksuits, shorts, sport shoes and compression wear',2,p_id,true,NOW(),NOW()),
@@ -187,9 +187,9 @@ BEGIN
   END IF;
 
   -- ── Automotive & Vehicle Parts ────────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Automotive & Vehicle Parts' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Automotive & Vehicle Parts' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Engine & Transmission','Engine oil, filters, spark plugs and transmission parts',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Tyres & Wheels','Car tyres, rims, wheel covers and tyre accessories',2,p_id,true,NOW(),NOW()),
@@ -202,9 +202,9 @@ BEGIN
   END IF;
 
   -- ── Building & Construction ───────────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Building & Construction' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Building & Construction' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Cement & Concrete','Cement bags, sand, gravel, concrete blocks and building aggregates',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Roofing & Ceilings','Roofing sheets, tiles, false ceiling boards and gutters',2,p_id,true,NOW(),NOW()),
@@ -218,9 +218,9 @@ BEGIN
   END IF;
 
   -- ── Jewelry & Accessories ─────────────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Jewelry & Accessories' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Jewelry & Accessories' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Necklaces & Pendants','Gold, silver, beaded and fashion necklaces',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Rings','Engagement rings, wedding bands and fashion rings',2,p_id,true,NOW(),NOW()),
@@ -232,9 +232,9 @@ BEGIN
   END IF;
 
   -- ── Books & Stationery ────────────────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Books & Stationery' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Books & Stationery' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Textbooks & Academic','University textbooks, academic journals and study guides',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Novels & Fiction','African literature, bestsellers, romance and thriller novels',2,p_id,true,NOW(),NOW()),
@@ -245,9 +245,9 @@ BEGIN
   END IF;
 
   -- ── Arts & Crafts ─────────────────────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Arts & Crafts' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Arts & Crafts' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Paintings & Prints','Original artworks, canvas prints, watercolours and oil paintings',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Sculptures & Carvings','Wood carvings, bronze sculptures and decorative objects',2,p_id,true,NOW(),NOW()),
@@ -258,9 +258,9 @@ BEGIN
   END IF;
 
   -- ── Traditional & Cultural Items ──────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Traditional & Cultural Items' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Traditional & Cultural Items' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'African Fabrics','Ankara, kente, adire, aso-oke and traditional African prints',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Cultural Artifacts','Masks, tribal art, heritage objects and cultural memorabilia',2,p_id,true,NOW(),NOW()),
@@ -271,9 +271,9 @@ BEGIN
   END IF;
 
   -- ── Industrial & Business Supplies ────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Industrial & Business Supplies' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Industrial & Business Supplies' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Office Furniture','Desks, office chairs, filing cabinets and workstations',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Printing & Signage','Printers, toners, banners, business cards and branding materials',2,p_id,true,NOW(),NOW()),
@@ -285,9 +285,9 @@ BEGIN
   END IF;
 
   -- ── Gifts & Novelties ─────────────────────────────────────────────────────
-  SELECT id INTO p_id FROM "ProductCategory" WHERE "tenantId"=t_id AND name='Gifts & Novelties' AND "parentId" IS NULL;
+  SELECT id INTO p_id FROM public."ProductCategory" WHERE "tenantId"=t_id AND name='Gifts & Novelties' AND "parentId" IS NULL;
   IF p_id IS NOT NULL THEN
-    INSERT INTO "ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
+    INSERT INTO public."ProductCategory"("id","tenantId","name","description","displayOrder","parentId","isActive","createdAt","updatedAt")
     VALUES
       (gen_random_uuid(),t_id,'Gift Sets & Hampers','Curated gift boxes, hampers for birthdays, weddings and celebrations',1,p_id,true,NOW(),NOW()),
       (gen_random_uuid(),t_id,'Seasonal Gifts','Christmas, Valentine, Eid, New Year and seasonal gift items',2,p_id,true,NOW(),NOW()),
