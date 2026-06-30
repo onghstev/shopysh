@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ArrowLeft, Loader2, Plus, ImagePlus, AlertTriangle, ShieldX, ShieldCheck } from 'lucide-react';
@@ -168,7 +168,18 @@ export default function NewProductPage() {
                   <Select value={form.categoryId} onValueChange={(v: string) => update('categoryId', v)}>
                     <SelectTrigger className="flex-1"><SelectValue placeholder="Select category" /></SelectTrigger>
                     <SelectContent>
-                      {(categories ?? []).map((c: any) => <SelectItem key={c?.id} value={c?.id ?? ''}>{c?.name ?? '-'}</SelectItem>)}
+                      {(categories ?? []).map((parent: any) =>
+                        parent.children?.length > 0 ? (
+                          <SelectGroup key={parent.id}>
+                            <SelectLabel>{parent.name}</SelectLabel>
+                            {parent.children.map((child: any) => (
+                              <SelectItem key={child.id} value={child.id}>{child.name}</SelectItem>
+                            ))}
+                          </SelectGroup>
+                        ) : (
+                          <SelectItem key={parent.id} value={parent.id}>{parent.name}</SelectItem>
+                        )
+                      )}
                     </SelectContent>
                   </Select>
                   {isSuperAdmin && (

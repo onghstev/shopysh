@@ -4,7 +4,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthSession, unauthorized, badRequest, serverError } from '@/lib/api-helpers';
 
-/** Return IDs of all tenants that have at least one SUPER_ADMIN user. */
 async function getSuperAdminTenantIds(): Promise<string[]> {
   const rows = await prisma.user.findMany({
     where: { role: 'SUPER_ADMIN' },
@@ -16,8 +15,8 @@ async function getSuperAdminTenantIds(): Promise<string[]> {
 
 /**
  * GET /api/categories
- * Returns only platform-wide categories owned by SUPER_ADMIN tenants.
- * All users (merchants and admins) see the same shared list.
+ * Returns top-level categories with their sub-categories nested inside `children`.
+ * Each item includes a `_count.products` for its own direct products.
  */
 export async function GET() {
   try {
@@ -26,20 +25,25 @@ export async function GET() {
 
     const isSuperAdmin = session.user.role === 'SUPER_ADMIN';
 
-    // Super Admin sees ALL categories across every tenant (so they can manage
-    // categories previously created by merchants before central management).
-    // Merchants see only categories owned by Super Admin tenants.
-    let whereClause: any = { isActive: true };
+    let tenantFilter: any = {};
     if (!isSuperAdmin) {
       const superAdminTenantIds = await getSuperAdminTenantIds();
       if (superAdminTenantIds.length > 0) {
-        whereClause.tenantId = { in: superAdminTenantIds };
+        tenantFilter = { tenantId: { in: superAdminTenantIds } };
       }
     }
 
+    // Return only top-level categories; sub-categories come via `children`
     const categories = await prisma.productCategory.findMany({
-      where: whereClause,
-      include: { children: true, _count: { select: { products: true } } },
+      where: { ...tenantFilter, isActive: true, parentId: null },
+      include: {
+        children: {
+          where: { isActive: true },
+          include: { _count: { select: { products: true } } },
+          orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
+        },
+        _count: { select: { products: true } },
+      },
       orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
     });
 
@@ -51,7 +55,7 @@ export async function GET() {
 
 /**
  * POST /api/categories — SUPER_ADMIN only.
- * Creates a platform-wide category under the admin's tenant.
+ * Pass `parentId` to create a sub-category.
  */
 export async function POST(request: NextRequest) {
   try {
