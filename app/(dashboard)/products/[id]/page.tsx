@@ -119,6 +119,14 @@ export default function ProductEditPage() {
     await doSave(modResult, true);
   };
 
+  const handleApplySuggestion = () => {
+    if (modResult?.suggestion) {
+      update('description', modResult.suggestion);
+      setShowWarning(false);
+      toast.success('Suggested description applied — review and save when ready');
+    }
+  };
+
   const update = (key: string, value: any) => setForm((prev: any) => ({ ...(prev ?? {}), [key]: value }));
 
   const riskCfg = modResult ? RISK_CONFIG[modResult.riskLevel] : null;
@@ -230,9 +238,22 @@ export default function ProductEditPage() {
               <div className="bg-muted/40 rounded-md p-3 text-sm text-muted-foreground">
                 {modResult.flagDetails}
               </div>
+              {/* Policy violations */}
+              {(modResult.violations ?? []).length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-sm font-medium">Policy violations:</p>
+                  {modResult.violations.map((v) => (
+                    <div key={v.ruleId} className="rounded-md border bg-muted/30 p-2.5 text-xs space-y-0.5">
+                      <p className="font-medium">{v.title}</p>
+                      <p className="text-muted-foreground">{v.guidance}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {modResult.suggestion && (
                 <div>
-                  <p className="text-sm font-medium mb-1">Suggested revision:</p>
+                  <p className="text-sm font-medium mb-1">AI-suggested revision:</p>
                   <div className="bg-green-50 border border-green-200 rounded-md p-3 text-sm text-green-800">
                     {modResult.suggestion}
                   </div>
@@ -246,10 +267,15 @@ export default function ProductEditPage() {
               )}
             </div>
           )}
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setShowWarning(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setShowWarning(false)} className="sm:mr-auto">
               Edit Description
             </Button>
+            {modResult?.suggestion && (
+              <Button variant="secondary" onClick={handleApplySuggestion}>
+                Apply Suggestion
+              </Button>
+            )}
             <Button
               variant={modResult?.riskLevel === 'high' ? 'destructive' : 'default'}
               onClick={handleSaveAnyway}

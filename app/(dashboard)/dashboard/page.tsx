@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, ShoppingCart, Users, TrendingUp, AlertTriangle, DollarSign, ArrowUpRight, Sparkles, Shield, ArrowRight } from 'lucide-react';
+import { Package, ShoppingCart, Users, TrendingUp, AlertTriangle, DollarSign, ArrowUpRight, Sparkles, Shield, ArrowRight, CheckCircle2, XCircle, ShieldAlert } from 'lucide-react';
 import { formatCurrency, formatDateTime, ORDER_STATUS_COLORS } from '@/lib/format';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -131,7 +131,7 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-3 gap-6">
         {/* Recent Orders */}
         <Card className="shadow-sm border-border/50">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -161,6 +161,85 @@ export default function DashboardPage() {
                     </div>
                   </Link>
                 ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Google Shopping Status */}
+        <Card className="shadow-sm border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950 flex items-center justify-center">
+                <ShieldAlert className="w-3.5 h-3.5 text-blue-600" />
+              </div>
+              Google Shopping Status
+            </CardTitle>
+            <Link href="/products" className="text-xs text-primary hover:underline font-medium flex items-center gap-1">
+              View products <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {/* Status summary pills */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200/60 px-3 py-2">
+                <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Eligible</p>
+                  <p className="text-lg font-bold font-mono text-green-700">{stats?.gmcStatusCounts?.approved ?? 0}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 px-3 py-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Flagged</p>
+                  <p className="text-lg font-bold font-mono text-amber-700">{stats?.gmcStatusCounts?.flagged ?? 0}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200/60 px-3 py-2">
+                <XCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Excluded</p>
+                  <p className="text-lg font-bold font-mono text-red-700">{stats?.gmcStatusCounts?.rejected ?? 0}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg bg-muted/60 border border-border px-3 py-2">
+                <Shield className="w-4 h-4 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Not reviewed</p>
+                  <p className="text-lg font-bold font-mono text-muted-foreground">{stats?.gmcStatusCounts?.unchecked ?? 0}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Actionable flagged items */}
+            {(stats?.flaggedProducts?.length ?? 0) > 0 ? (
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Needs attention</p>
+                {(stats?.flaggedProducts ?? []).map((p: any) => (
+                  <Link key={p.id} href={`/products/${p.id}`} className="flex items-center justify-between p-2.5 rounded-lg hover:bg-muted/50 transition-colors group border border-transparent hover:border-border">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {p.gmcStatus === 'rejected'
+                        ? <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                        : <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                      <p className="text-sm truncate group-hover:text-primary transition-colors">{p.name}</p>
+                    </div>
+                    <div className="flex gap-1 shrink-0 ml-2">
+                      {(p.flags ?? []).slice(0, 2).map((f: string) => (
+                        <span key={f} className="text-[10px] bg-muted px-1.5 py-0.5 rounded border">{f.replace(/_/g, ' ')}</span>
+                      ))}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (stats?.gmcStatusCounts?.unchecked ?? 0) === (stats?.totalProducts ?? 0) ? (
+              <p className="text-xs text-muted-foreground text-center py-2">
+                Edit your products to run AI content review
+              </p>
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-green-700 py-1">
+                <CheckCircle2 className="w-4 h-4" />
+                All reviewed products are Google Shopping eligible
               </div>
             )}
           </CardContent>

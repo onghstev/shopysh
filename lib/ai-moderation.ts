@@ -5,6 +5,7 @@
  */
 
 import { chatCompletionText } from './llm';
+import { applyPolicyRules, type PolicyViolation } from './policy-engine';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -25,11 +26,13 @@ export type ModerationFlag =
 
 export interface ModerationResult {
   riskLevel: RiskLevel;
-  riskScore: number;          // 0–100
+  riskScore: number;             // 0–100
   flags: ModerationFlag[];
-  flagDetails: string;        // human-readable explanation
-  suggestion: string | null;  // rewritten description, or null if clean
-  reviewedAt: string;         // ISO timestamp
+  flagDetails: string;           // human-readable explanation
+  suggestion: string | null;     // rewritten description, or null if clean
+  reviewedAt: string;            // ISO timestamp
+  violations: PolicyViolation[]; // structured policy rule violations
+  isGmcEligible: boolean;        // false = excluded from Google Shopping
 }
 
 /** What gets stored in product.metadata */
@@ -99,7 +102,7 @@ export async function moderateProduct(
   // Skip moderation if there's nothing substantive to check
   const text = [name, description].filter(Boolean).join('\n').trim();
   if (text.length < 5) {
-    return { riskLevel: 'low', riskScore: 0, flags: [], flagDetails: 'No content to review', suggestion: null, reviewedAt };
+    return { riskLevel: 'low', riskScore: 0, flags: [], flagDetails: 'No content to review', suggestion: null, reviewedAt, violations: [], isGmcEligible: true };
   }
 
   try {
@@ -119,14 +122,18 @@ export async function moderateProduct(
     if (!jsonMatch) throw new Error('No JSON in LLM response');
 
     const parsed = JSON.parse(jsonMatch[0]);
+    const flags = validateFlags(parsed.flags);
+    const { violations, isGmcEligible } = applyPolicyRules(flags);
 
     return {
       riskLevel:   validateRiskLevel(parsed.riskLevel),
       riskScore:   clampScore(parsed.riskScore),
-      flags:       validateFlags(parsed.flags),
+      flags,
       flagDetails: String(parsed.flagDetails ?? 'No issues found'),
       suggestion:  parsed.suggestion ? String(parsed.suggestion) : null,
       reviewedAt,
+      violations,
+      isGmcEligible,
     };
   } catch (err) {
     console.error('[AI Moderation] Failed:', err);
@@ -138,6 +145,8 @@ export async function moderateProduct(
       flagDetails: 'Moderation service unavailable — review manually',
       suggestion: null,
       reviewedAt,
+      violations: [],
+      isGmcEligible: true,
     };
   }
 }

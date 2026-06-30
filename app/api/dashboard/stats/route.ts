@@ -15,7 +15,7 @@ export async function GET() {
     const weekStart = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const [totalProducts, totalCustomers, totalOrders, todayOrders, monthOrders, recentOrders, lowStockProducts, weeklyRevenue] = await Promise.all([
+    const [totalProducts, totalCustomers, totalOrders, todayOrders, monthOrders, recentOrders, lowStockProducts, weeklyRevenue, gmcProducts] = await Promise.all([
       prisma.product.count({ where: { tenantId, deletedAt: null, isActive: true } }),
       prisma.customer.count({ where: { tenantId, deletedAt: null } }),
       prisma.order.count({ where: { tenantId } }),
@@ -36,6 +36,11 @@ export async function GET() {
         where: { tenantId, createdAt: { gte: weekStart }, status: { notIn: ['CANCELLED', 'REFUNDED'] } },
         select: { totalAmount: true, createdAt: true },
       }),
+      // Fetch active products with their GMC metadata for status breakdown
+      prisma.product.findMany({
+        where: { tenantId, deletedAt: null, isActive: true },
+        select: { id: true, name: true, metadata: true },
+      }),
     ]);
 
     const todayRevenue = todayOrders
@@ -55,6 +60,27 @@ export async function GET() {
         .filter((o: any) => o?.createdAt?.toISOString?.()?.slice?.(0, 10) === dayStr)
         .reduce((sum: number, o: any) => sum + toNumber(o?.totalAmount), 0);
       dailyRevenue.push({ date: dayStr, revenue: dayRevenue });
+    }
+
+    // GMC status breakdown
+    const gmcStatusCounts = { approved: 0, flagged: 0, rejected: 0, unchecked: 0 };
+    const flaggedProducts: Array<{ id: string; name: string; gmcStatus: string; flags: string[] }> = [];
+    for (const p of gmcProducts ?? []) {
+      const meta = p.metadata as Record<string, any> | null;
+      const status: string = meta?.gmcStatus ?? 'unchecked';
+      if (status in gmcStatusCounts) {
+        gmcStatusCounts[status as keyof typeof gmcStatusCounts]++;
+      } else {
+        gmcStatusCounts.unchecked++;
+      }
+      if (status === 'flagged' || status === 'rejected') {
+        flaggedProducts.push({
+          id: p.id,
+          name: p.name,
+          gmcStatus: status,
+          flags: Array.isArray(meta?.gmcFlags) ? meta.gmcFlags : [],
+        });
+      }
     }
 
     // Top selling products
@@ -86,6 +112,8 @@ export async function GET() {
         price: toNumber(p?.price),
       })),
       dailyRevenue,
+      gmcStatusCounts,
+      flaggedProducts: flaggedProducts.slice(0, 10),
       topProducts: (topProducts ?? []).map((tp: any) => ({
         productId: tp?.productId,
         productName: tp?.productName,
