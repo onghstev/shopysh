@@ -24,19 +24,21 @@ export async function GET() {
     const session = await getAuthSession();
     if (!session?.user?.tenantId) return unauthorized();
 
-    const superAdminTenantIds = await getSuperAdminTenantIds();
+    const isSuperAdmin = session.user.role === 'SUPER_ADMIN';
 
-    // If caller is Super Admin, also include their own tenant even if no
-    // other Super Admin exists yet (bootstrap scenario).
-    const tenantIds = Array.from(
-      new Set([...superAdminTenantIds, ...(session.user.role === 'SUPER_ADMIN' ? [session.user.tenantId] : [])]),
-    );
+    // Super Admin sees ALL categories across every tenant (so they can manage
+    // categories previously created by merchants before central management).
+    // Merchants see only categories owned by Super Admin tenants.
+    let whereClause: any = { isActive: true };
+    if (!isSuperAdmin) {
+      const superAdminTenantIds = await getSuperAdminTenantIds();
+      if (superAdminTenantIds.length > 0) {
+        whereClause.tenantId = { in: superAdminTenantIds };
+      }
+    }
 
     const categories = await prisma.productCategory.findMany({
-      where: {
-        isActive: true,
-        ...(tenantIds.length > 0 ? { tenantId: { in: tenantIds } } : { tenantId: session.user.tenantId }),
-      },
+      where: whereClause,
       include: { children: true, _count: { select: { products: true } } },
       orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
     });
