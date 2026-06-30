@@ -9,8 +9,25 @@ export async function GET() {
     const session = await getAuthSession();
     if (!session?.user?.tenantId) return unauthorized();
 
+    // Include the current tenant's categories plus platform-wide categories
+    // created by any SUPER_ADMIN tenant, so merchants can assign them to products.
+    const superAdminUsers = await prisma.user.findMany({
+      where: { role: 'SUPER_ADMIN' },
+      select: { tenantId: true },
+      distinct: ['tenantId'],
+    });
+    const superAdminTenantIds = superAdminUsers
+      .map((u) => u.tenantId)
+      .filter((id): id is string => !!id && id !== session.user.tenantId);
+
     const categories = await prisma.productCategory.findMany({
-      where: { tenantId: session.user.tenantId, isActive: true },
+      where: {
+        isActive: true,
+        OR: [
+          { tenantId: session.user.tenantId },
+          ...(superAdminTenantIds.length > 0 ? [{ tenantId: { in: superAdminTenantIds } }] : []),
+        ],
+      },
       include: { children: true, _count: { select: { products: true } } },
       orderBy: { displayOrder: 'asc' },
     });
