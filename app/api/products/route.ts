@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { getAuthSession, unauthorized, badRequest, serverError, toNumber } from '@/lib/api-helpers';
 import { checkPlanLimit } from '@/lib/plan-limits';
 import { generateProductSlug } from '@/lib/products';
+import { gmcStatusFromRisk } from '@/lib/ai-moderation';
 
 export async function GET(request: NextRequest) {
   try {
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
     const tenantId = session.user.tenantId;
 
     const body = await request.json();
-    const { name, description, sku, price, costPrice, currency, stockQuantity, lowStockThreshold, categoryId, trackInventory, isFeatured } = body ?? {};
+    const { name, description, sku, price, costPrice, currency, stockQuantity, lowStockThreshold, categoryId, trackInventory, isFeatured, gmcModeration } = body ?? {};
 
     if (!name || price === undefined) return badRequest('Name and price are required');
 
@@ -80,6 +81,17 @@ export async function POST(request: NextRequest) {
     if (!limit.allowed) return NextResponse.json({ error: limit.message }, { status: 403 });
 
     const slug = await generateProductSlug(name, tenantId);
+
+    // Build metadata with GMC moderation result if the client provided one
+    const metadata: Record<string, any> = {};
+    if (gmcModeration) {
+      metadata.gmcStatus      = gmcStatusFromRisk(gmcModeration.riskLevel, gmcModeration.savedAnyway ?? false);
+      metadata.gmcRiskScore   = gmcModeration.riskScore;
+      metadata.gmcFlags       = gmcModeration.flags;
+      metadata.gmcFlagDetails = gmcModeration.flagDetails;
+      metadata.gmcSuggestion  = gmcModeration.suggestion;
+      metadata.gmcReviewedAt  = gmcModeration.reviewedAt;
+    }
 
     const product = await prisma.product.create({
       data: {
@@ -96,6 +108,7 @@ export async function POST(request: NextRequest) {
         categoryId: categoryId ?? null,
         trackInventory: trackInventory ?? true,
         isFeatured: isFeatured ?? false,
+        ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
       },
       include: { category: true, images: true },
     });

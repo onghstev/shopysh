@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthSession, unauthorized, notFound, serverError, toNumber } from '@/lib/api-helpers';
 import { generateProductSlug } from '@/lib/products';
+import { gmcStatusFromRisk } from '@/lib/ai-moderation';
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -39,9 +40,22 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const data: any = {};
     if (body?.name !== undefined) {
       data.name = body.name;
-      // Regenerate slug when the name changes so the URL stays descriptive.
-      // Old UUID URLs will still 301-redirect to the new slug automatically.
       data.slug = await generateProductSlug(body.name, existing.tenantId, params.id);
+    }
+
+    // Persist GMC moderation result sent by the client
+    if (body?.gmcModeration) {
+      const gmc = body.gmcModeration;
+      const existingMeta = (existing.metadata as Record<string, any>) ?? {};
+      data.metadata = {
+        ...existingMeta,
+        gmcStatus:      gmcStatusFromRisk(gmc.riskLevel, gmc.savedAnyway ?? false),
+        gmcRiskScore:   gmc.riskScore,
+        gmcFlags:       gmc.flags,
+        gmcFlagDetails: gmc.flagDetails,
+        gmcSuggestion:  gmc.suggestion,
+        gmcReviewedAt:  gmc.reviewedAt,
+      };
     }
     if (body?.description !== undefined) data.description = body.description;
     if (body?.sku !== undefined) data.sku = body.sku;

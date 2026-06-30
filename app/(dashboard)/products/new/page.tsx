@@ -10,10 +10,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { ArrowLeft, Loader2, Plus, ImagePlus } from 'lucide-react';
+import { ArrowLeft, Loader2, Plus, ImagePlus, AlertTriangle, ShieldX, ShieldCheck } from 'lucide-react';
 import ProductImageUploader from '@/components/product-image-uploader';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import type { ModerationResult } from '@/lib/ai-moderation';
+
+const RISK_CONFIG = {
+  low:    { label: 'Low risk',    Icon: ShieldCheck,  cls: 'text-green-700 bg-green-50 border-green-200' },
+  medium: { label: 'Medium risk', Icon: AlertTriangle, cls: 'text-amber-700 bg-amber-50 border-amber-200' },
+  high:   { label: 'High risk',   Icon: ShieldX,      cls: 'text-red-700 bg-red-50 border-red-200' },
+} as const;
 
 export default function NewProductPage() {
   const router = useRouter();
@@ -25,6 +32,9 @@ export default function NewProductPage() {
   const [creatingCat, setCreatingCat] = useState(false);
   const [createdProductId, setCreatedProductId] = useState<string | null>(null);
   const [images, setImages] = useState<any[]>([]);
+  const [moderating, setModerating] = useState(false);
+  const [modResult, setModResult] = useState<ModerationResult | null>(null);
+  const [showWarning, setShowWarning] = useState(false);
   const [form, setForm] = useState({
     name: '', description: '', sku: '', price: '', costPrice: '', currency: 'NGN',
     stockQuantity: '0', lowStockThreshold: '10', categoryId: '', trackInventory: true, isFeatured: false,
@@ -61,9 +71,7 @@ export default function NewProductPage() {
     } catch { toast.error('Failed to create category'); } finally { setCreatingCat(false); }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.name || !form.price) { toast.error('Name and price are required'); return; }
+  const doSave = async (gmcModeration: ModerationResult | null, savedAnyway = false) => {
     setLoading(true);
     try {
       const res = await fetch('/api/products', {
@@ -76,20 +84,56 @@ export default function NewProductPage() {
           stockQuantity: parseInt(form.stockQuantity, 10) || 0,
           lowStockThreshold: parseInt(form.lowStockThreshold, 10) || 10,
           categoryId: form.categoryId || null,
+          ...(gmcModeration ? { gmcModeration: { ...gmcModeration, savedAnyway } } : {}),
         }),
       });
       if (res.ok) {
         const data = await res.json();
-        toast.success('Product created! You can now add images.');
+        if (gmcModeration?.riskLevel === 'high' && savedAnyway) {
+          toast.warning('Product saved — it will NOT appear on Google Shopping due to policy issues.');
+        } else {
+          toast.success('Product created! You can now add images.');
+        }
         setCreatedProductId(data?.product?.id);
       } else {
         const data = await res.json();
         toast.error(data?.error ?? 'Failed to create product');
       }
-    } catch (e: any) { toast.error('Failed'); } finally { setLoading(false); }
+    } catch { toast.error('Failed'); } finally { setLoading(false); }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name || !form.price) { toast.error('Name and price are required'); return; }
+    setModerating(true);
+    try {
+      const res = await fetch('/api/products/moderate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: form.name, description: form.description }),
+      });
+      const result: ModerationResult = res.ok ? await res.json() : { riskLevel: 'low', riskScore: 0, flags: [], flagDetails: '', suggestion: null, reviewedAt: new Date().toISOString() };
+      setModResult(result);
+      if (result.riskLevel === 'low') {
+        await doSave(result, false);
+      } else {
+        setShowWarning(true);
+      }
+    } catch {
+      await doSave(null, false);
+    } finally {
+      setModerating(false);
+    }
+  };
+
+  const handleSaveAnyway = async () => {
+    setShowWarning(false);
+    await doSave(modResult, true);
   };
 
   const update = (field: string, value: any) => setForm((p: any) => ({ ...(p ?? {}), [field]: value }));
+
+  const riskCfg = modResult ? RISK_CONFIG[modResult.riskLevel] : null;
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -183,9 +227,9 @@ export default function NewProductPage() {
 
         {!createdProductId && (
           <div className="flex gap-3">
-            <Button type="submit" disabled={loading}>
-              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Create Product
+            <Button type="submit" disabled={loading || moderating}>
+              {(loading || moderating) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {moderating ? 'Checking content…' : 'Create Product'}
             </Button>
             <Link href="/products"><Button variant="outline">Cancel</Button></Link>
           </div>
@@ -214,6 +258,69 @@ export default function NewProductPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* AI Moderation Warning Dialog */}
+      <Dialog open={showWarning} onOpenChange={(open) => { if (!open) setShowWarning(false); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {riskCfg && <riskCfg.Icon className="w-5 h-5" />}
+              Google Shopping Content Review
+            </DialogTitle>
+            <DialogDescription>
+              Our AI content moderator detected potential issues with this product listing.
+            </DialogDescription>
+          </DialogHeader>
+          {modResult && riskCfg && (
+            <div className="space-y-4">
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium ${riskCfg.cls}`}>
+                <riskCfg.Icon className="w-4 h-4 shrink-0" />
+                <span>{riskCfg.label} — Score {modResult.riskScore}/100</span>
+              </div>
+              {modResult.flags.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium mb-1">Issues detected:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {modResult.flags.map((f) => (
+                      <span key={f} className="text-xs bg-muted px-2 py-0.5 rounded-full border">{f.replace(/_/g, ' ')}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="bg-muted/40 rounded-md p-3 text-sm text-muted-foreground">
+                {modResult.flagDetails}
+              </div>
+              {modResult.suggestion && (
+                <div>
+                  <p className="text-sm font-medium mb-1">Suggested revision:</p>
+                  <div className="bg-green-50 border border-green-200 rounded-md p-3 text-sm text-green-800">
+                    {modResult.suggestion}
+                  </div>
+                </div>
+              )}
+              {modResult.riskLevel === 'high' && (
+                <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700">
+                  <ShieldX className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>If you save anyway, this product will be <strong>excluded from Google Shopping feeds</strong> until the description is revised.</span>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowWarning(false)}>
+              Edit Description
+            </Button>
+            <Button
+              variant={modResult?.riskLevel === 'high' ? 'destructive' : 'default'}
+              onClick={handleSaveAnyway}
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Save Anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Create Category Dialog */}
       <Dialog open={catDialogOpen} onOpenChange={setCatDialogOpen}>

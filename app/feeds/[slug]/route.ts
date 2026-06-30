@@ -51,7 +51,12 @@ export async function GET(
   };
 
   const rawProducts = await prisma.product.findMany({
-    where: { tenantId: tenant.id, isActive: true, deletedAt: null },
+    where: {
+      tenantId: tenant.id,
+      isActive: true,
+      deletedAt: null,
+      NOT: { metadata: { path: ['gmcStatus'], equals: 'rejected' } },
+    },
     select: {
       id: true, slug: true, name: true, description: true, sku: true,
       price: true, currency: true, stockQuantity: true,

@@ -19,6 +19,8 @@ export async function GET() {
         isActive: true,
         deletedAt: null,
         tenant: { isActive: true, deletedAt: null },
+        // Exclude products rejected by AI content moderation
+        NOT: { metadata: { path: ['gmcStatus'], equals: 'rejected' } },
       },
       select: {
         id: true, slug: true, name: true, description: true, sku: true,
