@@ -1,7 +1,30 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Loader2, CheckCircle, X, Minus, Plus } from 'lucide-react';
+import { ShoppingCart, Loader2, CheckCircle, X, Minus, Plus, Truck, Building2, Smartphone } from 'lucide-react';
+
+const PAYMENT_OPTIONS = [
+  {
+    value: 'pay_on_delivery',
+    label: 'Pay on Delivery',
+    description: 'Cash when your order arrives',
+    Icon: Truck,
+  },
+  {
+    value: 'bank_transfer',
+    label: 'Bank Transfer',
+    description: 'Transfer to store bank account',
+    Icon: Building2,
+  },
+  {
+    value: 'mobile_money',
+    label: 'Mobile Money',
+    description: 'Opay, Palmpay, Kuda, etc.',
+    Icon: Smartphone,
+  },
+] as const;
+
+type PaymentMethod = typeof PAYMENT_OPTIONS[number]['value'];
 
 function formatPrice(amount: number, currency: string) {
   const symbols: Record<string, string> = { NGN: '₦', USD: '$', GHS: 'GH₵', KES: 'KSh' };
@@ -24,6 +47,7 @@ interface OrderFormProps {
 export default function StorefrontOrderForm({ product, slug, storeId, storeName }: OrderFormProps) {
   const [showForm, setShowForm] = useState(false);
   const [quantity, setQuantity] = useState(1);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pay_on_delivery');
   const [form, setForm] = useState({ name: '', phone: '', email: '', address: '', notes: '' });
   const [submitting, setSubmitting] = useState(false);
   const [orderResult, setOrderResult] = useState<any>(null);
@@ -64,6 +88,7 @@ export default function StorefrontOrderForm({ product, slug, storeId, storeName 
             email: form.email || undefined,
             address: form.address || undefined,
             notes: form.notes || undefined,
+            paymentMethod,
           },
         }),
       });
@@ -91,8 +116,11 @@ export default function StorefrontOrderForm({ product, slug, storeId, storeName 
           Order <strong>{orderResult.orderNumber}</strong> — {formatPrice(orderResult.totalAmount, orderResult.currency)}
         </p>
         <p className="text-xs text-muted-foreground">{orderResult.message}</p>
+        <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+          Payment: {PAYMENT_OPTIONS.find(o => o.value === paymentMethod)?.label ?? paymentMethod}
+        </p>
         <button
-          onClick={() => { setOrderResult(null); setShowForm(false); setForm({ name: '', phone: '', email: '', address: '', notes: '' }); setQuantity(1); }}
+          onClick={() => { setOrderResult(null); setShowForm(false); setForm({ name: '', phone: '', email: '', address: '', notes: '' }); setQuantity(1); setPaymentMethod('pay_on_delivery'); }}
           className="text-sm text-emerald-600 hover:underline mt-2"
         >
           Place another order
@@ -172,6 +200,40 @@ export default function StorefrontOrderForm({ product, slug, storeId, storeName 
                 rows={2}
                 value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
               />
+            </div>
+
+            {/* Payment method */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-2 block">Payment Method *</label>
+              <div className="grid gap-2">
+                {PAYMENT_OPTIONS.map(({ value, label, description, Icon }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setPaymentMethod(value)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all ${
+                      paymentMethod === value
+                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                        : 'border-border bg-white dark:bg-gray-900 hover:border-emerald-300'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      paymentMethod === value ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-muted-foreground'
+                    }`}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className={`text-sm font-semibold leading-tight ${paymentMethod === value ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground'}`}>{label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+                    </div>
+                    <div className={`ml-auto w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${
+                      paymentMethod === value ? 'border-emerald-500 bg-emerald-500' : 'border-border'
+                    }`}>
+                      {paymentMethod === value && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           <button
