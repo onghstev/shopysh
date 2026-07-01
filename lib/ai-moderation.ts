@@ -59,8 +59,14 @@ JSON schema:
   "riskScore": <integer 0-100>,
   "flags": [<array of applicable flag strings>],
   "flagDetails": "<one sentence explaining any issues, or 'No issues found'>",
-  "suggestion": "<revised description if issues exist, otherwise null>"
+  "suggestion": "<IMPORTANT: if issues exist, write a COMPLETE REPLACEMENT product description — ready to paste in as-is, with all policy-violating language removed and replaced with compliant wording. Do NOT write advice, instructions, or guidance. Write the actual description text the merchant should use. If no issues, return null>"
 }
+
+Example of WRONG suggestion (do not do this):
+  "suggestion": "Remove the health claims and focus on the authentic spice blend."
+
+Example of CORRECT suggestion (write the actual new description):
+  "suggestion": "Authentic Nigerian suya spice blend made from a traditional recipe. A bold, aromatic mix of groundnut, ginger, paprika and African spices — perfect for grilling meats, fish and vegetables. Sold in a 100g resealable pack."
 
 Available flag values (use only these exact strings):
 medical_claims, health_cures, weight_loss, sexual_enhancement, counterfeit,
