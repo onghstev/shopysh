@@ -44,9 +44,17 @@ export default function ReturnsPage() {
           <p className="text-gray-700 leading-relaxed mb-6">
             Shopysh is a multi-tenant eCommerce marketplace that enables independent merchants (&ldquo;Sellers&rdquo;) to offer products to customers. Unless otherwise stated, the contract of sale is between the Customer and the Seller. Shopysh provides the technology platform to facilitate transactions but is not the manufacturer, distributor, or owner of products listed by Sellers.
           </p>
-          <p className="text-gray-700 leading-relaxed mb-10">
+          <p className="text-gray-700 leading-relaxed mb-6">
             By placing an order on Shopysh, you agree to this Returns &amp; Refund Policy.
           </p>
+
+          {/* Prominent notice */}
+          <div className="mb-10 rounded-lg border-l-4 bg-amber-50 border-amber-400 px-5 py-4">
+            <p className="font-semibold text-amber-900 mb-1">⚠ Not All Products Are Eligible for Return</p>
+            <p className="text-amber-800 text-sm leading-relaxed">
+              Returns are only accepted for products that arrive <strong>damaged upon delivery</strong> or are <strong>defective due to a manufacturing fault</strong> at the time of delivery. Many product categories — including perishable goods, digital products, personalised items, and products marked &ldquo;Final Sale&rdquo; — cannot be returned under any circumstances. Please review <a href="#section-3" className="underline font-medium hover:text-amber-900">Section 3 (Non-Returnable Products)</a> before making a purchase.
+            </p>
+          </div>
 
           <Section id="1" title="1. Eligibility for Returns">
             <p>
