@@ -31,15 +31,15 @@ async function getStoreData(slug: string) {
     where: { tenantId: tenant.id, isActive: true, deletedAt: null },
     include: {
       images: { orderBy: { displayOrder: 'asc' }, take: 1 },
-      category: { select: { id: true, name: true, icon: true } },
+      category: { select: { id: true, name: true, icon: true, parentId: true } },
     },
     orderBy: [{ isFeatured: 'desc' }, { createdAt: 'desc' }],
   });
 
   const categories = await prisma.productCategory.findMany({
-    where: { tenantId: tenant.id, isActive: true },
-    select: { id: true, name: true, icon: true },
-    orderBy: { displayOrder: 'asc' },
+    where: { tenantId: tenant.id, isActive: true, parentId: null },
+    include: { children: { where: { isActive: true }, select: { id: true } } },
+    orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
   });
 
   const settings = (tenant.settings as any) ?? {};
@@ -84,8 +84,13 @@ export default async function StorePage({ params, searchParams }: Props) {
   const selectedCategory = searchParams.category;
   const searchQuery = searchParams.q?.toLowerCase();
 
+  // Build set of all category IDs that match the selected parent (parent itself + its children)
   let filteredProducts = products;
-  if (selectedCategory) filteredProducts = filteredProducts.filter((p: any) => p.category?.id === selectedCategory);
+  if (selectedCategory) {
+    const parent = categories.find((c: any) => c.id === selectedCategory);
+    const matchIds = new Set<string>([selectedCategory, ...(parent?.children?.map((ch: any) => ch.id) ?? [])]);
+    filteredProducts = filteredProducts.filter((p: any) => p.category && matchIds.has(p.category.id));
+  }
   if (searchQuery) filteredProducts = filteredProducts.filter((p: any) =>
     p.name.toLowerCase().includes(searchQuery) || p.description?.toLowerCase().includes(searchQuery)
   );
