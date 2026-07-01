@@ -13,7 +13,14 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
   try {
     const tenant = await prisma.tenant.findUnique({
       where: { subdomain: params.slug, isActive: true, deletedAt: null },
-      select: { id: true, name: true, defaultCurrency: true },
+      select: {
+        id: true, name: true, defaultCurrency: true, phone: true,
+        bankAccounts: {
+          where: { isActive: true },
+          select: { bankName: true, accountName: true, accountNumber: true, currency: true },
+          take: 3,
+        },
+      },
     });
     if (!tenant) {
       return NextResponse.json({ error: 'Store not found' }, { status: 404 });
@@ -130,12 +137,21 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
       },
     });
 
+    const paymentMethod = customerInfo.paymentMethod || 'bank_transfer';
+
     return NextResponse.json({
       success: true,
       orderNumber: order.orderNumber,
       totalAmount: subtotal,
       currency: order.currency,
-      message: 'Order placed successfully! The store will contact you to confirm.',
+      paymentMethod,
+      storePhone: tenant.phone ?? null,
+      bankAccounts: paymentMethod === 'bank_transfer' ? (tenant.bankAccounts ?? []) : [],
+      message: paymentMethod === 'pay_on_delivery'
+        ? 'Order placed! The store will contact you to confirm delivery.'
+        : paymentMethod === 'bank_transfer'
+          ? 'Order reserved! Please complete your bank transfer to confirm it.'
+          : 'Order reserved! Please send your mobile money payment to confirm it.',
     }, { status: 201 });
   } catch (error: any) {
     console.error('Storefront order error:', error);

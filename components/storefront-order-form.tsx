@@ -1,7 +1,29 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Loader2, CheckCircle, X, Minus, Plus, Truck, Building2, Smartphone } from 'lucide-react';
+import { ShoppingCart, Loader2, CheckCircle, X, Minus, Plus, Truck, Building2, Smartphone, Copy, Check } from 'lucide-react';
+
+function BankDetailCard({ acct }: { acct: { bankName: string; accountName: string; accountNumber: string } }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(acct.accountNumber);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-amber-200 p-3 space-y-1">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{acct.bankName}</p>
+      <p className="text-sm font-medium text-foreground">{acct.accountName}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-base font-bold font-mono text-foreground tracking-wider">{acct.accountNumber}</p>
+        <button onClick={copy} className="flex items-center gap-1 text-xs text-amber-700 hover:text-amber-900 font-medium transition-colors">
+          {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+          {copied ? 'Copied!' : 'Copy'}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const PAYMENT_OPTIONS = [
   {
@@ -108,21 +130,75 @@ export default function StorefrontOrderForm({ product, slug, storeId, storeName 
   if (product.stockQuantity <= 0) return null;
 
   if (orderResult) {
+    const isPOD = orderResult.paymentMethod === 'pay_on_delivery';
+    const isBankTransfer = orderResult.paymentMethod === 'bank_transfer';
+    const isMobileMoney = orderResult.paymentMethod === 'mobile_money';
+    const reset = () => { setOrderResult(null); setShowForm(false); setForm({ name: '', phone: '', email: '', address: '', notes: '' }); setQuantity(1); setPaymentMethod('pay_on_delivery'); };
+
     return (
-      <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl p-6 space-y-3 text-center">
-        <CheckCircle className="w-12 h-12 text-emerald-600 mx-auto" />
-        <h3 className="font-bold text-lg text-emerald-800 dark:text-emerald-300">Order Placed!</h3>
-        <p className="text-sm text-emerald-700 dark:text-emerald-400">
-          Order <strong>{orderResult.orderNumber}</strong> — {formatPrice(orderResult.totalAmount, orderResult.currency)}
-        </p>
-        <p className="text-xs text-muted-foreground">{orderResult.message}</p>
-        <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-          Payment: {PAYMENT_OPTIONS.find(o => o.value === paymentMethod)?.label ?? paymentMethod}
-        </p>
-        <button
-          onClick={() => { setOrderResult(null); setShowForm(false); setForm({ name: '', phone: '', email: '', address: '', notes: '' }); setQuantity(1); setPaymentMethod('pay_on_delivery'); }}
-          className="text-sm text-emerald-600 hover:underline mt-2"
-        >
+      <div className={`rounded-2xl p-6 space-y-4 ${isPOD ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-amber-50 dark:bg-amber-900/20'}`}>
+        {/* Header */}
+        <div className="flex items-start gap-3">
+          {isPOD
+            ? <CheckCircle className="w-8 h-8 text-emerald-600 shrink-0 mt-0.5" />
+            : <div className="w-8 h-8 rounded-full bg-amber-400 flex items-center justify-center shrink-0 mt-0.5 text-white font-bold text-sm">!</div>
+          }
+          <div>
+            <h3 className={`font-bold text-base ${isPOD ? 'text-emerald-800 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300'}`}>
+              {isPOD ? 'Order Confirmed!' : 'Order Reserved — Payment Required'}
+            </h3>
+            <p className={`text-sm mt-0.5 ${isPOD ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
+              Order <strong>{orderResult.orderNumber}</strong> · {formatPrice(orderResult.totalAmount, orderResult.currency)}
+            </p>
+          </div>
+        </div>
+
+        {/* Pay on Delivery — simple message */}
+        {isPOD && (
+          <p className="text-sm text-emerald-700 dark:text-emerald-400">{orderResult.message}</p>
+        )}
+
+        {/* Bank Transfer — show bank details */}
+        {isBankTransfer && (
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              Transfer <strong>{formatPrice(orderResult.totalAmount, orderResult.currency)}</strong> to:
+            </p>
+            {orderResult.bankAccounts?.length > 0 ? (
+              <div className="space-y-2">
+                {orderResult.bankAccounts.map((acct: any, i: number) => (
+                  <BankDetailCard key={i} acct={acct} />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-gray-900 rounded-xl border border-amber-200 p-3 text-sm text-amber-700">
+                The store will send you their bank account details via phone/WhatsApp.
+                {orderResult.storePhone && <p className="mt-1 font-medium">📞 {orderResult.storePhone}</p>}
+              </div>
+            )}
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              ⚠ Your order will only be processed after payment is confirmed by the store. Use your order number <strong>{orderResult.orderNumber}</strong> as the transfer reference.
+            </p>
+          </div>
+        )}
+
+        {/* Mobile Money */}
+        {isMobileMoney && (
+          <div className="space-y-3">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              Send <strong>{formatPrice(orderResult.totalAmount, orderResult.currency)}</strong> via mobile money:
+            </p>
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-amber-200 p-3 text-sm text-amber-700">
+              The store will send you their mobile money details via phone/WhatsApp.
+              {orderResult.storePhone && <p className="mt-1 font-medium">📞 {orderResult.storePhone}</p>}
+            </div>
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              ⚠ Your order will only be processed after payment is confirmed. Use <strong>{orderResult.orderNumber}</strong> as your payment reference.
+            </p>
+          </div>
+        )}
+
+        <button onClick={reset} className={`text-sm hover:underline ${isPOD ? 'text-emerald-600' : 'text-amber-700'}`}>
           Place another order
         </button>
       </div>
