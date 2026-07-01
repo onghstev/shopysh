@@ -11,6 +11,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, Package, Tag, MapPin, Check, X, ChevronRight, Phone, Mail, Star, User, ShoppingBag } from 'lucide-react';
 import StorefrontOrderForm from '@/components/storefront-order-form';
+import ProductImageGallery from '@/components/product-image-gallery';
 
 interface Props {
   params: { slug: string; productId: string };
@@ -148,8 +149,6 @@ export default async function ProductPage({ params }: Props) {
     },
   ]);
 
-  const primaryImage = product.images.find((i: any) => i.isPrimary) ?? product.images[0];
-
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
@@ -219,31 +218,11 @@ export default async function ProductPage({ params }: Props) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
 
             {/* Images */}
-            <div className="space-y-4">
-              <div className="relative aspect-square rounded-2xl overflow-hidden bg-secondary/50 shadow-md ring-1 ring-border/60">
-                {primaryImage ? (
-                  <Image src={primaryImage.url} alt={primaryImage.alt || product.name} fill className="object-cover" priority />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Package className="w-20 h-20 text-muted-foreground/10" />
-                  </div>
-                )}
-                {product.isFeatured && (
-                  <span className="absolute top-4 left-4 px-3 py-1.5 rounded-lg bg-gold text-gold-foreground text-xs font-bold flex items-center gap-1.5 shadow-md">
-                    <Star className="w-3.5 h-3.5" fill="currentColor" />Featured
-                  </span>
-                )}
-              </div>
-              {product.images.length > 1 && (
-                <div className="grid grid-cols-4 gap-3">
-                  {product.images.slice(0, 4).map((img: any, i: number) => (
-                    <div key={i} className="relative aspect-square rounded-xl overflow-hidden bg-secondary/50 border border-border/50 hover:border-primary/40 hover:ring-2 hover:ring-primary/20 transition-all cursor-pointer">
-                      <Image src={img.url} alt={img.alt || `${product.name} image ${i + 1}`} fill className="object-cover" />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <ProductImageGallery
+              images={product.images}
+              productName={product.name}
+              isFeatured={product.isFeatured}
+            />
 
             {/* Details */}
             <div className="space-y-6">
