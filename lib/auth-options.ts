@@ -89,10 +89,16 @@ export const authOptions: NextAuthOptions = {
             // Create tenant + user for Google SSO sign-up
             const firstName = (user as any).firstName ?? user.name?.split(' ')[0] ?? 'User';
             const lastName = (user as any).lastName ?? user.name?.split(' ').slice(1).join(' ') ?? '';
-            const subdomain = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 40) + '-' + Date.now().toString(36);
+            const businessName = `${firstName}'s Business`;
+            const baseSlug = businessName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 50);
+            let subdomain = baseSlug;
+            let counter = 2;
+            while (await prisma.tenant.findUnique({ where: { subdomain } })) {
+              subdomain = `${baseSlug}-${counter++}`;
+            }
             const result = await prisma.$transaction(async (tx: any) => {
               const tenant = await tx.tenant.create({
-                data: { name: `${firstName}'s Business`, subdomain, defaultCurrency: 'NGN', isActive: true, onboardingComplete: false, trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) },
+                data: { name: businessName, subdomain, defaultCurrency: 'NGN', isActive: true, onboardingComplete: false, trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) },
               });
               const newUser = await tx.user.create({
                 data: { tenantId: tenant.id, email, firstName, lastName, role: 'TENANT_ADMIN', isActive: true, emailVerified: true, image: user.image, name: user.name },
@@ -129,6 +135,7 @@ export const authOptions: NextAuthOptions = {
           token.lastName = dbUser.lastName;
           token.tenantName = dbUser.tenant?.name ?? '';
           token.tenantCurrency = dbUser.tenant?.defaultCurrency ?? 'NGN';
+          token.tenantSubdomain = dbUser.tenant?.subdomain ?? '';
         }
       }
       return token;
@@ -142,6 +149,7 @@ export const authOptions: NextAuthOptions = {
         session.user.lastName = token.lastName;
         session.user.tenantName = token.tenantName;
         session.user.tenantCurrency = token.tenantCurrency;
+        session.user.tenantSubdomain = token.tenantSubdomain;
       }
       return session;
     },

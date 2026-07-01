@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, ShoppingCart, Users, TrendingUp, AlertTriangle, DollarSign, ArrowUpRight, Sparkles, Shield, ArrowRight, CheckCircle2, XCircle, ShieldAlert } from 'lucide-react';
+import { Package, ShoppingCart, Users, TrendingUp, AlertTriangle, DollarSign, ArrowUpRight, Sparkles, Shield, ArrowRight, CheckCircle2, XCircle, ShieldAlert, Store, Copy, ExternalLink } from 'lucide-react';
 import { formatCurrency, formatDateTime, ORDER_STATUS_COLORS } from '@/lib/format';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -18,6 +18,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const currency = session?.user?.tenantCurrency ?? 'NGN';
   const displayName = session?.user?.firstName ?? session?.user?.name ?? 'there';
+  const [storeCopied, setStoreCopied] = useState(false);
+  const subdomain = (session?.user as any)?.tenantSubdomain ?? '';
+  const storeUrl = subdomain ? `https://${subdomain}.shopysh.com` : null;
 
   const fetchStats = useCallback(async () => {
     try {
@@ -93,6 +96,45 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Store Link Bar */}
+      {storeUrl && session?.user?.role !== 'SUPER_ADMIN' && (
+        <div className="rounded-xl border bg-card px-4 py-3 flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 text-primary shrink-0">
+            <Store className="w-4 h-4" />
+            <span className="text-sm font-semibold">Your Store</span>
+          </div>
+          <div className="flex-1 min-w-0 flex items-center gap-2 bg-muted rounded-lg px-3 py-1.5">
+            <span className="text-sm font-mono text-foreground truncate">{storeUrl}</span>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => {
+                navigator.clipboard.writeText(storeUrl);
+                setStoreCopied(true);
+                setTimeout(() => setStoreCopied(false), 2000);
+              }}
+            >
+              <Copy className="w-3.5 h-3.5" />
+              {storeCopied ? 'Copied!' : 'Copy Link'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              asChild
+            >
+              <a href={storeUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="w-3.5 h-3.5" />
+                Open Store
+              </a>
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">

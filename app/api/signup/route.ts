@@ -29,12 +29,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'An account with this email already exists' }, { status: 409 });
     }
 
-    const subdomain = businessName
+    const baseSlug = businessName
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '')
-      .slice(0, 50) + '-' + Date.now().toString(36);
+      .slice(0, 50);
+
+    // Ensure uniqueness with a clean counter rather than a timestamp
+    let subdomain = baseSlug;
+    let counter = 2;
+    while (await prisma.tenant.findUnique({ where: { subdomain } })) {
+      subdomain = `${baseSlug}-${counter++}`;
+    }
 
     const passwordHash = await bcrypt.hash(password, 10);
 
