@@ -35,6 +35,11 @@ async function getProductData(storeSlug: string, productIdOrSlug: string) {
       id: true, name: true, subdomain: true, industry: true, logoUrl: true,
       primaryColor: true, defaultCurrency: true, phone: true, email: true,
       address: true, settings: true, isActive: true,
+      bankAccounts: {
+        where: { isActive: true },
+        select: { bankName: true, accountName: true, accountNumber: true, currency: true },
+        take: 5,
+      },
     },
   });
   if (!tenant || !tenant.isActive) return null;
@@ -71,6 +76,7 @@ async function getProductData(storeSlug: string, productIdOrSlug: string) {
       currency: tenant.defaultCurrency, phone: tenant.phone, email: tenant.email,
       address: tenant.address, description: settings.description ?? '',
       city: settings.city ?? '', state: settings.state ?? '', country: settings.country ?? '',
+      bankAccounts: (tenant.bankAccounts ?? []) as { bankName: string; accountName: string; accountNumber: string; currency: string }[],
     },
     product: {
       id: product.id, slug: product.slug, name: product.name, description: product.description,
@@ -279,6 +285,8 @@ export default async function ProductPage({ params }: Props) {
                 slug={store.subdomain}
                 storeId={store.id}
                 storeName={store.name}
+                bankAccounts={store.bankAccounts}
+                storePhone={store.phone ?? null}
               />
 
               {/* Contact Store */}
