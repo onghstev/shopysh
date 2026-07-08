@@ -56,7 +56,7 @@ export default function FixedAssetsPage() {
   const [loading, setLoading]         = useState(true);
   const [search, setSearch]           = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [page, setPage]               = useState(1);
   const [total, setTotal]             = useState(0);
   const pageSize = 20;
@@ -84,8 +84,8 @@ export default function FixedAssetsPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-      if (statusFilter)   params.set('status', statusFilter);
-      if (categoryFilter) params.set('category', categoryFilter);
+      if (statusFilter && statusFilter !== 'all')   params.set('status', statusFilter);
+      if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
       const res = await fetch(`/api/finance/fixed-assets?${params}`);
       if (res.ok) {
         const d = await res.json();
@@ -223,7 +223,7 @@ export default function FixedAssetsPage() {
         <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setPage(1); }}>
           <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All statuses</SelectItem>
+            <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="disposed">Disposed</SelectItem>
             <SelectItem value="written_off">Written Off</SelectItem>
@@ -232,7 +232,7 @@ export default function FixedAssetsPage() {
         <Select value={categoryFilter} onValueChange={v => { setCategoryFilter(v); setPage(1); }}>
           <SelectTrigger className="w-[200px]"><SelectValue placeholder="All categories" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All categories</SelectItem>
+            <SelectItem value="all">All categories</SelectItem>
             {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
