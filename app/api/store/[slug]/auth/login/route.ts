@@ -24,8 +24,13 @@ export async function POST(request: NextRequest, { params }: { params: { slug: s
       where: { tenantId: tenant.id, phone, deletedAt: null, isBlocked: false },
     });
 
-    if (!customer || !customer.passwordHash) {
-      return NextResponse.json({ error: 'Invalid phone or password' }, { status: 401 });
+    if (!customer) {
+      return NextResponse.json({ error: 'No account found with this phone number.' }, { status: 401 });
+    }
+    if (!customer.passwordHash) {
+      return NextResponse.json({
+        error: 'You have not set a password yet. Please use "Sign Up" to create a password for this phone number, or use "Track Order" to find your orders without logging in.',
+      }, { status: 401 });
     }
 
     const valid = await bcrypt.compare(password, customer.passwordHash);

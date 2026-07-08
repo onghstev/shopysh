@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
       });
 
       if (customer) {
-        // Link Google account to existing customer
+        // Link Google account to existing customer found by email
         customer = await prisma.customer.update({
           where: { id: customer.id },
           data: {
@@ -103,13 +103,15 @@ export async function GET(req: NextRequest) {
           },
         });
       } else {
-        // Create new customer
+        // No match by email — check if there's an existing storefront-created customer
+        // with a g-placeholder phone (created by a previous Google SSO) to avoid duplicates
+        // We create a new record; phone orders are retrieved by phone fallback in my-orders
         const customerCode = await generateCustomerCode(tenantId);
         customer = await prisma.customer.create({
           data: {
             tenantId,
             customerCode,
-            phone: `g-${googleUser.id}`,  // Unique placeholder since Google doesn't provide phone
+            phone: `g-${googleUser.id}`,
             name: googleUser.name || googleUser.given_name || '',
             email: googleUser.email,
             googleId: googleUser.id,

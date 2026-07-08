@@ -13,7 +13,7 @@ import {
   CreditCard, Megaphone, BarChart3, Search, Shield, FolderTree, KeyRound,
   UsersRound, FileBarChart, BookOpen, Presentation, ExternalLink, Code,
   Sparkles, Wallet, TrendingUp, TrendingDown, Landmark, FileText, PieChart,
-  Layers, Building2, Scale, UserCheck, UserX,
+  Layers, Building2, Scale, UserCheck, UserX, HardDrive,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -79,6 +79,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/finance/receivables',               label: 'Debtors / AR',        icon: UserCheck },
       { href: '/finance/payables',                  label: 'Creditors / AP',      icon: UserX },
       { href: '/finance/vendors',                   label: 'Vendors',             icon: Building2 },
+      { href: '/finance/fixed-assets',              label: 'Fixed Assets',        icon: HardDrive },
       {
         href: '/finance/reports', label: 'Reports', icon: BarChart3,
         children: [

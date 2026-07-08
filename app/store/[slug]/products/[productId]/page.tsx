@@ -68,6 +68,7 @@ async function getProductData(storeSlug: string, productIdOrSlug: string) {
     : [];
 
   const settings = (tenant.settings as any) ?? {};
+  const paymentConfig = settings.paymentConfig ?? {};
   return {
     isUuid,
     store: {
@@ -77,6 +78,8 @@ async function getProductData(storeSlug: string, productIdOrSlug: string) {
       address: tenant.address, description: settings.description ?? '',
       city: settings.city ?? '', state: settings.state ?? '', country: settings.country ?? '',
       bankAccounts: (tenant.bankAccounts ?? []) as { bankName: string; accountName: string; accountNumber: string; currency: string }[],
+      enabledPaymentMethods: (paymentConfig.enabledMethods ?? []) as string[],
+      mobileMoneyInstructions: (paymentConfig.mobileMoneyInstructions ?? '') as string,
     },
     product: {
       id: product.id, slug: product.slug, name: product.name, description: product.description,
@@ -287,6 +290,8 @@ export default async function ProductPage({ params }: Props) {
                 storeName={store.name}
                 bankAccounts={store.bankAccounts}
                 storePhone={store.phone ?? null}
+                enabledPaymentMethods={store.enabledPaymentMethods}
+                mobileMoneyInstructions={store.mobileMoneyInstructions}
               />
 
               {/* Contact Store */}

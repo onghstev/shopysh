@@ -20,17 +20,18 @@ export async function GET() {
 
     return NextResponse.json({
       config: {
+        enabledMethods: paymentConfig.enabledMethods ?? [],
+        bankName: paymentConfig.bankName || '',
+        accountNumber: paymentConfig.accountNumber || '',
+        accountName: paymentConfig.accountName || '',
+        mobileMoneyInstructions: paymentConfig.mobileMoneyInstructions || '',
+        // Legacy gateway fields kept for backward compat
         gateway: paymentConfig.gateway || 'paystack',
         paystackSecretKey: paymentConfig.paystackSecretKey ? '••••' + paymentConfig.paystackSecretKey.slice(-6) : '',
         paystackPublicKey: paymentConfig.paystackPublicKey || '',
         flutterwaveSecretKey: paymentConfig.flutterwaveSecretKey ? '••••' + paymentConfig.flutterwaveSecretKey.slice(-6) : '',
         flutterwavePublicKey: paymentConfig.flutterwavePublicKey || '',
         flutterwaveWebhookHash: paymentConfig.flutterwaveWebhookHash ? '••••' + paymentConfig.flutterwaveWebhookHash.slice(-4) : '',
-        hasPaystack: !!paymentConfig.paystackSecretKey,
-        hasFlutterwave: !!paymentConfig.flutterwaveSecretKey,
-        bankName: paymentConfig.bankName || '',
-        accountNumber: paymentConfig.accountNumber || '',
-        accountName: paymentConfig.accountName || '',
       },
     });
   } catch (error: any) {
@@ -55,9 +56,10 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json();
     const {
+      enabledMethods,
+      bankName, accountNumber, accountName, mobileMoneyInstructions,
       gateway, paystackSecretKey, paystackPublicKey,
       flutterwaveSecretKey, flutterwavePublicKey, flutterwaveWebhookHash,
-      bankName, accountNumber, accountName,
     } = body;
 
     const tenant = await prisma.tenant.findUnique({
@@ -70,18 +72,20 @@ export async function PATCH(request: NextRequest) {
 
     const updatedPaymentConfig: Record<string, any> = {
       ...currentPayment,
-      gateway: gateway || currentPayment.gateway || 'paystack',
     };
 
-    // Only update secrets if they don't start with masked characters
+    if (Array.isArray(enabledMethods)) updatedPaymentConfig.enabledMethods = enabledMethods;
+    if (bankName !== undefined) updatedPaymentConfig.bankName = bankName;
+    if (accountNumber !== undefined) updatedPaymentConfig.accountNumber = accountNumber;
+    if (accountName !== undefined) updatedPaymentConfig.accountName = accountName;
+    if (mobileMoneyInstructions !== undefined) updatedPaymentConfig.mobileMoneyInstructions = mobileMoneyInstructions;
+    // Legacy gateway fields
+    if (gateway) updatedPaymentConfig.gateway = gateway;
     if (paystackSecretKey && !paystackSecretKey.startsWith('••')) updatedPaymentConfig.paystackSecretKey = paystackSecretKey;
     if (paystackPublicKey !== undefined) updatedPaymentConfig.paystackPublicKey = paystackPublicKey;
     if (flutterwaveSecretKey && !flutterwaveSecretKey.startsWith('••')) updatedPaymentConfig.flutterwaveSecretKey = flutterwaveSecretKey;
     if (flutterwavePublicKey !== undefined) updatedPaymentConfig.flutterwavePublicKey = flutterwavePublicKey;
     if (flutterwaveWebhookHash && !flutterwaveWebhookHash.startsWith('••')) updatedPaymentConfig.flutterwaveWebhookHash = flutterwaveWebhookHash;
-    if (bankName !== undefined) updatedPaymentConfig.bankName = bankName;
-    if (accountNumber !== undefined) updatedPaymentConfig.accountNumber = accountNumber;
-    if (accountName !== undefined) updatedPaymentConfig.accountName = accountName;
 
     await prisma.tenant.update({
       where: { id: session.user.tenantId },

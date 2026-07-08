@@ -126,7 +126,13 @@ export default function SettingsPage() {
   const [llmConfig, setLlmConfig] = useState<any>({});
   const [llmSaving, setLlmSaving] = useState(false);
   const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
-  const [paymentConfig, setPaymentConfig] = useState<any>({ gateway: 'paystack', paystackSecretKey: '', paystackPublicKey: '', flutterwaveSecretKey: '', flutterwavePublicKey: '', flutterwaveWebhookHash: '', bankName: '', accountNumber: '', accountName: '' });
+  const [paymentConfig, setPaymentConfig] = useState<any>({
+    enabledMethods: [] as string[],
+    bankName: '', accountNumber: '', accountName: '',
+    mobileMoneyCurrency: 'NGN', mobileMoneyInstructions: '',
+    gateway: 'paystack', paystackSecretKey: '', paystackPublicKey: '',
+    flutterwaveSecretKey: '', flutterwavePublicKey: '', flutterwaveWebhookHash: '',
+  });
   const [paymentSaving, setPaymentSaving] = useState(false);
   const [smsConfig, setSmsConfig] = useState<any>({ provider: 'termii', termiiApiKey: '', termiiSenderId: '', africastalkingApiKey: '', africastalkingUsername: '', africastalkingSenderId: '' });
   const [smsSaving, setSmsSaving] = useState(false);
@@ -789,86 +795,160 @@ export default function SettingsPage() {
         </TabsContent>
 
         {/* Payments Tab */}
-        <TabsContent value="payments" className="mt-6">
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Wallet className="w-5 h-5" /> Payment Settings</CardTitle>
-              <CardDescription>Configure how you accept payments from customers</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label>Active Payment Gateway</Label>
-                <Select value={paymentConfig.gateway || 'paystack'} onValueChange={(v) => setPaymentConfig((prev: any) => ({ ...prev, gateway: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select gateway" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="paystack">Paystack</SelectItem>
-                    <SelectItem value="flutterwave">Flutterwave</SelectItem>
-                    <SelectItem value="bank_transfer">Bank Transfer Only</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        <TabsContent value="payments" className="mt-6 space-y-5">
+          <div>
+            <h2 className="text-base font-semibold">Payment Methods</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">Choose which payment options your customers can use at checkout. Only enabled methods will appear on your store.</p>
+          </div>
 
-              {(paymentConfig.gateway === 'paystack' || !paymentConfig.gateway) && (
-                <div className="space-y-4 p-4 border rounded-lg">
-                  <h4 className="font-semibold text-sm">Paystack Configuration</h4>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label>Secret Key</Label>
-                      <Input type="password" placeholder="sk_live_..." value={paymentConfig.paystackSecretKey || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, paystackSecretKey: e.target.value }))} />
+          {/* Pay on Delivery */}
+          {(() => {
+            const enabled = (paymentConfig.enabledMethods ?? []).includes('pay_on_delivery');
+            const toggle = () => setPaymentConfig((prev: any) => ({
+              ...prev,
+              enabledMethods: enabled
+                ? prev.enabledMethods.filter((m: string) => m !== 'pay_on_delivery')
+                : [...(prev.enabledMethods ?? []), 'pay_on_delivery'],
+            }));
+            return (
+              <Card className={`shadow-sm transition-all ${enabled ? 'border-primary/40 bg-primary/[0.02]' : ''}`}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${enabled ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                        <Wallet className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-sm">Pay on Delivery</CardTitle>
+                        <CardDescription className="text-xs mt-0.5">Customer pays cash when their order arrives</CardDescription>
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>Public Key</Label>
-                      <Input placeholder="pk_live_..." value={paymentConfig.paystackPublicKey || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, paystackPublicKey: e.target.value }))} />
-                    </div>
+                    <Switch checked={enabled} onCheckedChange={toggle} />
                   </div>
-                </div>
-              )}
+                </CardHeader>
+                {enabled && (
+                  <CardContent className="pt-0">
+                    <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+                      No additional configuration needed. Customers will see this option at checkout.
+                    </p>
+                  </CardContent>
+                )}
+              </Card>
+            );
+          })()}
 
-              {paymentConfig.gateway === 'flutterwave' && (
-                <div className="space-y-4 p-4 border rounded-lg">
-                  <h4 className="font-semibold text-sm">Flutterwave Configuration</h4>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label>Secret Key</Label>
-                      <Input type="password" placeholder="FLWSECK_..." value={paymentConfig.flutterwaveSecretKey || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, flutterwaveSecretKey: e.target.value }))} />
+          {/* Bank Transfer */}
+          {(() => {
+            const enabled = (paymentConfig.enabledMethods ?? []).includes('bank_transfer');
+            const toggle = () => setPaymentConfig((prev: any) => ({
+              ...prev,
+              enabledMethods: enabled
+                ? prev.enabledMethods.filter((m: string) => m !== 'bank_transfer')
+                : [...(prev.enabledMethods ?? []), 'bank_transfer'],
+            }));
+            return (
+              <Card className={`shadow-sm transition-all ${enabled ? 'border-primary/40 bg-primary/[0.02]' : ''}`}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${enabled ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                        <Building2 className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-sm">Bank Transfer</CardTitle>
+                        <CardDescription className="text-xs mt-0.5">Customer transfers to your bank account before delivery</CardDescription>
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>Public Key</Label>
-                      <Input placeholder="FLWPUBK_..." value={paymentConfig.flutterwavePublicKey || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, flutterwavePublicKey: e.target.value }))} />
+                    <Switch checked={enabled} onCheckedChange={toggle} />
+                  </div>
+                </CardHeader>
+                {enabled && (
+                  <CardContent className="pt-0 space-y-3">
+                    <p className="text-xs text-muted-foreground">Your bank details will be shown to the customer at checkout.</p>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Bank Name</Label>
+                        <Input placeholder="e.g. GTBank" value={paymentConfig.bankName || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, bankName: e.target.value }))} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Account Number</Label>
+                        <Input placeholder="0123456789" value={paymentConfig.accountNumber || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, accountNumber: e.target.value }))} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Account Name</Label>
+                        <Input placeholder="Business name" value={paymentConfig.accountName || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, accountName: e.target.value }))} />
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Webhook Hash (Optional)</Label>
-                    <Input type="password" placeholder="Webhook verification hash" value={paymentConfig.flutterwaveWebhookHash || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, flutterwaveWebhookHash: e.target.value }))} />
-                  </div>
-                </div>
-              )}
+                    {enabled && (!paymentConfig.bankName || !paymentConfig.accountNumber || !paymentConfig.accountName) && (
+                      <p className="text-xs text-amber-600 flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5" /> Fill in all bank details so customers can make transfers.
+                      </p>
+                    )}
+                  </CardContent>
+                )}
+              </Card>
+            );
+          })()}
 
-              <div className="space-y-4 p-4 border rounded-lg">
-                <h4 className="font-semibold text-sm">Bank Transfer Details</h4>
-                <p className="text-xs text-muted-foreground">Displayed to customers who choose bank transfer payment</p>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="space-y-1.5">
-                    <Label>Bank Name</Label>
-                    <Input placeholder="e.g. GTBank" value={paymentConfig.bankName || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, bankName: e.target.value }))} />
+          {/* Mobile Money */}
+          {(() => {
+            const enabled = (paymentConfig.enabledMethods ?? []).includes('mobile_money');
+            const toggle = () => setPaymentConfig((prev: any) => ({
+              ...prev,
+              enabledMethods: enabled
+                ? prev.enabledMethods.filter((m: string) => m !== 'mobile_money')
+                : [...(prev.enabledMethods ?? []), 'mobile_money'],
+            }));
+            return (
+              <Card className={`shadow-sm transition-all ${enabled ? 'border-primary/40 bg-primary/[0.02]' : ''}`}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${enabled ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                        <ShoppingCart className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-sm">Mobile Money</CardTitle>
+                        <CardDescription className="text-xs mt-0.5">Opay, Palmpay, Kuda, MTN MoMo, etc.</CardDescription>
+                      </div>
+                    </div>
+                    <Switch checked={enabled} onCheckedChange={toggle} />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>Account Number</Label>
-                    <Input placeholder="0123456789" value={paymentConfig.accountNumber || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, accountNumber: e.target.value }))} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Account Name</Label>
-                    <Input placeholder="Business name" value={paymentConfig.accountName || ''} onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, accountName: e.target.value }))} />
-                  </div>
-                </div>
-              </div>
+                </CardHeader>
+                {enabled && (
+                  <CardContent className="pt-0 space-y-3">
+                    <p className="text-xs text-muted-foreground">Provide payment instructions shown to the customer at checkout.</p>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Payment Instructions</Label>
+                      <Textarea
+                        placeholder="e.g. Send payment to 08012345678 on Opay (Business Name). Send screenshot to us on WhatsApp after payment."
+                        rows={3}
+                        value={paymentConfig.mobileMoneyInstructions || ''}
+                        onChange={(e) => setPaymentConfig((prev: any) => ({ ...prev, mobileMoneyInstructions: e.target.value }))}
+                      />
+                    </div>
+                    {enabled && !paymentConfig.mobileMoneyInstructions && (
+                      <p className="text-xs text-amber-600 flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5" /> Add payment instructions so customers know where to send money.
+                      </p>
+                    )}
+                  </CardContent>
+                )}
+              </Card>
+            );
+          })()}
 
-              <Button onClick={savePaymentConfig} disabled={paymentSaving} className="gap-2">
-                {paymentSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Save Payment Settings
-              </Button>
-            </CardContent>
-          </Card>
+          {(paymentConfig.enabledMethods ?? []).length === 0 && (
+            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              No payment method enabled. Customers will not be able to complete checkout until you enable at least one.
+            </p>
+          )}
+
+          <Button onClick={savePaymentConfig} disabled={paymentSaving} className="gap-2">
+            {paymentSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Save Payment Settings
+          </Button>
         </TabsContent>
       </Tabs>
     </div>

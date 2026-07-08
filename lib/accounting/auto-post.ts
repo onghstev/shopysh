@@ -116,6 +116,47 @@ export async function postInvoiceCreated(opts: {
   });
 }
 
+/** Asset depreciation: DR Depreciation Expense, CR Accumulated Depreciation */
+export async function postAssetDepreciation(opts: {
+  tenantId: string;
+  assetId: string;
+  assetName: string;
+  amount: number;
+  currency?: string;
+  entryDate?: Date;
+  journalEntryId?: string;
+}) {
+  await safePost(async () => {
+    await ensureDefaultAccounts(opts.tenantId);
+    const { prisma } = await import('@/lib/db');
+
+    // Depreciation Expense account (code 6700) and Accumulated Depreciation (code 1700)
+    const depExpAccount = await prisma.glAccount.findFirst({
+      where: { tenantId: opts.tenantId, code: '6700' },
+      select: { id: true },
+    });
+    const accumDepAccount = await prisma.glAccount.findFirst({
+      where: { tenantId: opts.tenantId, code: '1700' },
+      select: { id: true },
+    });
+    if (!depExpAccount || !accumDepAccount) return;
+
+    await createAndPostJournal({
+      tenantId:    opts.tenantId,
+      entryDate:   opts.entryDate ?? new Date(),
+      description: `Depreciation – ${opts.assetName}`,
+      entryType:   'DEPRECIATION',
+      sourceType:  'FIXED_ASSET',
+      sourceId:    opts.assetId,
+      currency:    opts.currency ?? 'NGN',
+      lines: [
+        { accountId: depExpAccount.id,  debit:  opts.amount, description: 'Depreciation expense' },
+        { accountId: accumDepAccount.id, credit: opts.amount, description: 'Accumulated depreciation' },
+      ],
+    });
+  });
+}
+
 /** Expense approved/recorded: DR Expense category account, CR Cash/AP */
 export async function postExpenseRecorded(opts: {
   tenantId: string;

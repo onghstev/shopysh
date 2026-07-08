@@ -31,12 +31,21 @@ interface Props {
   storeName: string;
   bankAccounts: BankAccount[];
   storePhone: string | null;
+  enabledPaymentMethods: string[];
+  mobileMoneyInstructions: string;
 }
 
-export default function StorefrontOrderForm({ product, slug, storeId, storeName, bankAccounts, storePhone }: Props) {
+export default function StorefrontOrderForm({ product, slug, storeId, storeName, bankAccounts, storePhone, enabledPaymentMethods, mobileMoneyInstructions }: Props) {
+  // Only show methods the merchant has enabled; fall back to all if none configured (backward compat)
+  const availableOptions = enabledPaymentMethods.length > 0
+    ? PAYMENT_OPTIONS.filter(o => enabledPaymentMethods.includes(o.value))
+    : PAYMENT_OPTIONS;
+
   const [step, setStep] = useState<Step>('start');
   const [quantity, setQuantity] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pay_on_delivery');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
+    (availableOptions[0]?.value ?? 'pay_on_delivery') as PaymentMethod
+  );
   const [form, setForm] = useState({ name: '', phone: '', email: '', address: '', notes: '' });
   const [submitting, setSubmitting] = useState(false);
   const [orderResult, setOrderResult] = useState<any>(null);
@@ -76,17 +85,18 @@ export default function StorefrontOrderForm({ product, slug, storeId, storeName,
     if (!form.name.trim() || !form.phone.trim()) return;
 
     if (paymentMethod === 'bank_transfer' && bankAccounts.length === 0) {
-      setPaymentError('Bank Transfer is not available at this store. Please choose Pay on Delivery or contact the store.');
+      setPaymentError('Bank Transfer is not available at this store. Please choose another payment method or contact the store.');
       return;
     }
-    if (paymentMethod === 'mobile_money') {
-      setPaymentError('Mobile Money payment is not yet configured for this store. Please choose Pay on Delivery or Bank Transfer.');
+    if (paymentMethod === 'mobile_money' && !mobileMoneyInstructions) {
+      setPaymentError('Mobile Money payment is not yet configured for this store. Please choose another payment method.');
       return;
     }
 
     setPaymentError(null);
 
     // Pay on Delivery skips the payment preview — go straight to placing order
+    // Bank Transfer and Mobile Money go to the payment instructions screen first
     if (paymentMethod === 'pay_on_delivery') {
       placeOrder();
     } else {
@@ -126,6 +136,11 @@ export default function StorefrontOrderForm({ product, slug, storeId, storeName,
   };
 
   if (product.stockQuantity <= 0) return null;
+  if (availableOptions.length === 0) return (
+    <div className="bg-muted/50 border border-border/50 rounded-2xl p-5 text-center text-sm text-muted-foreground">
+      Online ordering is not available for this store right now. Please contact the store directly.
+    </div>
+  );
 
   // ── Step: Done ────────────────────────────────────────────────────────────
   if (step === 'done' && orderResult) {
@@ -151,30 +166,44 @@ export default function StorefrontOrderForm({ product, slug, storeId, storeName,
     );
   }
 
-  // ── Step: Payment preview (Bank Transfer only) ────────────────────────────
+  // ── Step: Payment preview (Bank Transfer or Mobile Money) ────────────────
   if (step === 'payment') {
+    const isMobileMoney = paymentMethod === 'mobile_money';
     return (
       <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-4">
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => setStep('details')} className="text-amber-700 hover:text-amber-900 transition-colors">
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <h3 className="font-semibold text-sm text-amber-900">Bank Transfer Details</h3>
+          <h3 className="font-semibold text-sm text-amber-900">
+            {isMobileMoney ? 'Mobile Money Payment' : 'Bank Transfer Details'}
+          </h3>
         </div>
 
-        <p className="text-sm text-amber-800">
-          Transfer <span className="font-bold">{total}</span> to any of the accounts below, then click <strong>I've Paid</strong> to confirm your order.
-        </p>
-
-        <div className="space-y-2">
-          {bankAccounts.map((acct, i) => (
-            <BankDetailCard key={i} acct={acct} />
-          ))}
-        </div>
-
-        <p className="text-xs text-amber-700 bg-amber-100 rounded-lg px-3 py-2">
-          Use <strong>{form.name}</strong> or your phone number as the transfer narration so the store can identify your payment.
-        </p>
+        {isMobileMoney ? (
+          <>
+            <p className="text-sm text-amber-800">
+              Send <span className="font-bold">{total}</span> using Mobile Money, then click <strong>I've Paid</strong>.
+            </p>
+            <div className="bg-white rounded-xl border border-amber-200 p-4 text-sm text-amber-900 leading-relaxed whitespace-pre-line">
+              {mobileMoneyInstructions}
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-amber-800">
+              Transfer <span className="font-bold">{total}</span> to any of the accounts below, then click <strong>I've Paid</strong> to confirm your order.
+            </p>
+            <div className="space-y-2">
+              {bankAccounts.map((acct, i) => (
+                <BankDetailCard key={i} acct={acct} />
+              ))}
+            </div>
+            <p className="text-xs text-amber-700 bg-amber-100 rounded-lg px-3 py-2">
+              Use <strong>{form.name}</strong> or your phone number as the transfer narration so the store can identify your payment.
+            </p>
+          </>
+        )}
 
         <button
           onClick={placeOrder}
@@ -234,7 +263,7 @@ export default function StorefrontOrderForm({ product, slug, storeId, storeName,
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-2 block">Payment Method *</label>
             <div className="grid gap-2">
-              {PAYMENT_OPTIONS.map(({ value, label, description, Icon }) => (
+              {availableOptions.map(({ value, label, description, Icon }) => (
                 <button
                   key={value}
                   type="button"

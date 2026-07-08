@@ -30,6 +30,7 @@ interface Order {
   totalAmount: number;
   currency: string;
   paymentStatus: string;
+  paymentMethod: string | null;
   deliveryMethod: string | null;
   deliveryAddress: string | null;
   createdAt: string;
@@ -61,7 +62,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 };
 
 export default function CustomerAccountClient({ store }: { store: StoreInfo }) {
-  const [view, setView] = useState<'auth' | 'orders' | 'order-detail'>('auth');
+  const [view, setView] = useState<'auth' | 'orders' | 'order-detail' | 'track'>('auth');
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [token, setToken] = useState<string | null>(null);
   const [customer, setCustomer] = useState<any>(null);
@@ -72,6 +73,9 @@ export default function CustomerAccountClient({ store }: { store: StoreInfo }) {
   const [error, setError] = useState('');
 
   const [form, setForm] = useState({ name: '', phone: '', email: '', password: '' });
+  const [trackForm, setTrackForm] = useState({ orderNumber: '', phone: '' });
+  const [trackError, setTrackError] = useState('');
+  const [trackLoading, setTrackLoading] = useState(false);
 
   const storageKey = `tekhuna_customer_${store.id}`;
 
@@ -190,6 +194,30 @@ export default function CustomerAccountClient({ store }: { store: StoreInfo }) {
     setView('auth');
   };
 
+  const handleTrackOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTrackError('');
+    setTrackLoading(true);
+    try {
+      const params = new URLSearchParams({
+        orderNumber: trackForm.orderNumber.trim().toUpperCase(),
+        phone: trackForm.phone.trim(),
+      });
+      const res = await fetch(`/api/store/${store.subdomain}/track-order?${params}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setTrackError(data.error || 'Order not found');
+      } else {
+        setSelectedOrder(data.order);
+        setView('order-detail');
+      }
+    } catch {
+      setTrackError('Network error. Please try again.');
+    } finally {
+      setTrackLoading(false);
+    }
+  };
+
   const viewOrder = (order: Order) => {
     setSelectedOrder(order);
     setView('order-detail');
@@ -221,6 +249,31 @@ export default function CustomerAccountClient({ store }: { store: StoreInfo }) {
         {/* Auth View */}
         {view === 'auth' && (
           <div className="max-w-md mx-auto">
+            {/* Tab switcher */}
+            <div className="flex rounded-2xl border border-border/50 bg-white p-1 mb-7 shadow-sm">
+              <button
+                type="button"
+                onClick={() => { setAuthMode('login'); setError(''); }}
+                className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all ${authMode !== 'register' && view === 'auth' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Log In
+              </button>
+              <button
+                type="button"
+                onClick={() => setView('track')}
+                className="flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all text-muted-foreground hover:text-foreground"
+              >
+                Track Order
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAuthMode('register'); setError(''); }}
+                className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all ${authMode === 'register' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Sign Up
+              </button>
+            </div>
+
             <div className="text-center mb-8">
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg" style={{ backgroundColor: `${store.primaryColor}10`, boxShadow: `0 8px 25px ${store.primaryColor}15` }}>
                 <User className="w-7 h-7" style={{ color: store.primaryColor }} />
@@ -325,6 +378,64 @@ export default function CustomerAccountClient({ store }: { store: StoreInfo }) {
           </div>
         )}
 
+        {/* Track Order View (guest) */}
+        {view === 'track' && (
+          <div className="max-w-md mx-auto">
+            {/* Tab switcher */}
+            <div className="flex rounded-2xl border border-border/50 bg-white p-1 mb-7 shadow-sm">
+              <button type="button" onClick={() => setView('auth')} className="flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all text-muted-foreground hover:text-foreground">Log In</button>
+              <button type="button" className="flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all bg-primary text-primary-foreground shadow-sm">Track Order</button>
+              <button type="button" onClick={() => setView('auth')} className="flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all text-muted-foreground hover:text-foreground">Sign Up</button>
+            </div>
+
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg" style={{ backgroundColor: `${store.primaryColor}10`, boxShadow: `0 8px 25px ${store.primaryColor}15` }}>
+                <Package className="w-7 h-7" style={{ color: store.primaryColor }} />
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight">Track Your Order</h1>
+              <p className="text-sm text-muted-foreground mt-2">Enter your order number and phone to check status</p>
+            </div>
+
+            <form onSubmit={handleTrackOrder} className="bg-white dark:bg-gray-900/80 rounded-2xl border border-border/50 p-7 space-y-4 shadow-sm">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wide">Order Number</label>
+                <input
+                  type="text" required placeholder="e.g. ORD-ABC123-XY12"
+                  className="w-full px-4 py-3 text-sm border border-border/50 rounded-xl bg-muted/20 focus:bg-background focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40 outline-none transition-all font-mono uppercase"
+                  value={trackForm.orderNumber}
+                  onChange={e => { setTrackForm(p => ({ ...p, orderNumber: e.target.value })); setTrackError(''); }}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block uppercase tracking-wide">Phone Number</label>
+                <input
+                  type="tel" required placeholder="Phone used when ordering"
+                  className="w-full px-4 py-3 text-sm border border-border/50 rounded-xl bg-muted/20 focus:bg-background focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40 outline-none transition-all"
+                  value={trackForm.phone}
+                  onChange={e => { setTrackForm(p => ({ ...p, phone: e.target.value })); setTrackError(''); }}
+                />
+              </div>
+
+              {trackError && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-950/30 px-4 py-2.5 rounded-xl ring-1 ring-red-200/50 font-medium">{trackError}</p>}
+
+              <button
+                type="submit" disabled={trackLoading}
+                className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                style={{ backgroundColor: store.primaryColor }}
+              >
+                {trackLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+                {trackLoading ? 'Searching…' : 'Track Order'}
+              </button>
+            </form>
+
+            <p className="text-center mt-8">
+              <Link href={`/store/${store.subdomain}`} className="text-sm text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 font-medium">
+                <ArrowLeft className="w-3.5 h-3.5" /> Back to store
+              </Link>
+            </p>
+          </div>
+        )}
+
         {/* Orders List View */}
         {view === 'orders' && (
           <div>
@@ -410,8 +521,8 @@ export default function CustomerAccountClient({ store }: { store: StoreInfo }) {
 
           return (
             <div>
-              <button onClick={() => setView('orders')} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-8 transition font-medium">
-                <ArrowLeft className="w-4 h-4" /> Back to orders
+              <button onClick={() => token ? setView('orders') : setView('track')} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-8 transition font-medium">
+                <ArrowLeft className="w-4 h-4" /> {token ? 'Back to orders' : 'Track another order'}
               </button>
 
               <div className="bg-white dark:bg-gray-900/80 rounded-2xl border border-border/50 p-7 space-y-7 shadow-sm">
@@ -490,10 +601,20 @@ export default function CustomerAccountClient({ store }: { store: StoreInfo }) {
                       <span className="font-medium">{order.deliveryAddress}</span>
                     </div>
                   )}
-                  <div className="mt-2 text-sm">
-                    <span className="text-muted-foreground">Payment: </span>
-                    <span className={`font-semibold ${order.paymentStatus === 'COMPLETED' ? 'text-emerald-600' : 'text-yellow-600'}`}>
-                      {order.paymentStatus === 'COMPLETED' ? 'Paid' : order.paymentStatus === 'PENDING' ? 'Pending' : order.paymentStatus}
+                  <div className="mt-2 text-sm flex items-center justify-between">
+                    <span className="text-muted-foreground">Payment</span>
+                    <span className="text-right">
+                      <span className={`font-semibold ${order.paymentStatus === 'COMPLETED' ? 'text-emerald-600' : 'text-yellow-600'}`}>
+                        {order.paymentStatus === 'COMPLETED' ? 'Paid' : order.paymentStatus === 'PENDING' ? 'Awaiting payment' : order.paymentStatus}
+                      </span>
+                      {order.paymentMethod && (
+                        <span className="text-muted-foreground text-xs block mt-0.5">
+                          {order.paymentMethod === 'pay_on_delivery' ? 'Pay on Delivery'
+                            : order.paymentMethod === 'bank_transfer' ? 'Bank Transfer'
+                            : order.paymentMethod === 'mobile_money' ? 'Mobile Money'
+                            : order.paymentMethod}
+                        </span>
+                      )}
                     </span>
                   </div>
                 </div>

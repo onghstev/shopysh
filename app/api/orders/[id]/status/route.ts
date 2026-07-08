@@ -6,15 +6,15 @@ import { getAuthSession, unauthorized, notFound, badRequest, serverError, toNumb
 import { postOrderPayment, postOrderCOGS } from '@/lib/accounting/auto-post';
 
 const STATUS_FLOW: Record<string, string[]> = {
-  PENDING: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['PROCESSING', 'CANCELLED'],
-  PROCESSING: ['READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'CANCELLED'],
+  PENDING:          ['CONFIRMED', 'CANCELLED'],
+  CONFIRMED:        ['PROCESSING', 'CANCELLED'],
+  PROCESSING:       ['READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'CANCELLED'],
   READY_FOR_PICKUP: ['COMPLETED', 'CANCELLED'],
   OUT_FOR_DELIVERY: ['DELIVERED', 'CANCELLED'],
-  DELIVERED: ['COMPLETED'],
-  COMPLETED: [],
-  CANCELLED: ['REFUNDED'],
-  REFUNDED: [],
+  DELIVERED:        ['COMPLETED'],
+  COMPLETED:        [],
+  CANCELLED:        ['REFUNDED'],
+  REFUNDED:         [],
 };
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
@@ -34,7 +34,12 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     const allowedStatuses = STATUS_FLOW[order.status] ?? [];
     if (!allowedStatuses.includes(newStatus)) {
-      return badRequest(`Cannot transition from ${order.status} to ${newStatus}`);
+      const allowed = allowedStatuses.length
+        ? `You can only move it to: ${allowedStatuses.join(', ').replace(/_/g, ' ')}.`
+        : 'This order is in a final state and cannot be updated.';
+      return badRequest(
+        `Cannot move order from ${order.status.replace(/_/g, ' ')} to ${newStatus.replace(/_/g, ' ')}. ${allowed}`
+      );
     }
 
     const updateData: any = { status: newStatus };

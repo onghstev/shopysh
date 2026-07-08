@@ -19,8 +19,39 @@ export async function GET(request: NextRequest, { params }: { params: { slug: st
       return NextResponse.json({ error: 'Store not found' }, { status: 404 });
     }
 
+    // Collect all customer IDs that could belong to this person.
+    // This handles duplicates created by Google SSO or phone-format differences.
+    const allCustomerIds = new Set<string>([customerPayload.customerId]);
+
+    // Fetch the actual customer to get their email
+    const thisCustomer = await prisma.customer.findUnique({
+      where: { id: customerPayload.customerId },
+      select: { phone: true, email: true },
+    });
+
+    const phone = thisCustomer?.phone ?? customerPayload.phone;
+    const email = thisCustomer?.email;
+
+    // Match by phone (unless it's a Google placeholder)
+    if (phone && !phone.startsWith('g-')) {
+      const byPhone = await prisma.customer.findMany({
+        where: { tenantId: tenant.id, phone, deletedAt: null },
+        select: { id: true },
+      });
+      byPhone.forEach((c: any) => allCustomerIds.add(c.id));
+    }
+
+    // Match by email for Google SSO customers
+    if (email) {
+      const byEmail = await prisma.customer.findMany({
+        where: { tenantId: tenant.id, email, deletedAt: null },
+        select: { id: true },
+      });
+      byEmail.forEach((c: any) => allCustomerIds.add(c.id));
+    }
+
     const orders = await prisma.order.findMany({
-      where: { customerId: customerPayload.customerId, tenantId: tenant.id },
+      where: { customerId: { in: Array.from(allCustomerIds) }, tenantId: tenant.id },
       include: {
         items: {
           include: { product: { select: { name: true, images: { take: 1, orderBy: { displayOrder: 'asc' } } } } },
@@ -38,6 +69,7 @@ export async function GET(request: NextRequest, { params }: { params: { slug: st
         totalAmount: Number(o.totalAmount),
         currency: o.currency,
         paymentStatus: o.paymentStatus,
+        paymentMethod: o.paymentMethod,
         deliveryMethod: o.deliveryMethod,
         deliveryAddress: o.deliveryAddress,
         createdAt: o.createdAt,
