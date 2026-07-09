@@ -79,13 +79,16 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/finance/receivables',               label: 'Debtors / AR',        icon: UserCheck },
       { href: '/finance/payables',                  label: 'Creditors / AP',      icon: UserX },
       { href: '/finance/vendors',                   label: 'Vendors',             icon: Building2 },
+      { href: '/finance/expenses',                   label: 'Expenses',            icon: TrendingDown },
       { href: '/finance/fixed-assets',              label: 'Fixed Assets',        icon: HardDrive },
+      { href: '/finance/budget',                    label: 'Budget',              icon: PieChart },
       {
         href: '/finance/reports', label: 'Reports', icon: BarChart3,
         children: [
           { href: '/finance/reports/trial-balance',    label: 'Trial Balance',    icon: Scale },
           { href: '/finance/reports/income-statement', label: 'Income Statement', icon: PieChart },
           { href: '/finance/reports/balance-sheet',    label: 'Balance Sheet',    icon: FileBarChart },
+          { href: '/finance/reports/vat-summary',      label: 'VAT Summary',      icon: FileText },
         ],
       },
     ],

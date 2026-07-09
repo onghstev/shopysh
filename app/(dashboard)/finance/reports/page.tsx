@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BarChart3, Scale, TrendingUp, Activity, FileText, BookOpen, ChevronRight } from 'lucide-react';
+import { BarChart3, Scale, TrendingUp, Activity, FileText, BookOpen, ChevronRight, Receipt } from 'lucide-react';
 
 const REPORTS = [
   {
@@ -52,6 +52,14 @@ const REPORTS = [
     color: 'bg-primary/10 text-primary',
     tags: ['GL', 'Detailed'],
   },
+  {
+    href: '/finance/reports/vat-summary',
+    title: 'VAT Summary',
+    description: 'Output VAT collected on sales vs Input VAT paid on purchases. Net amount payable to FIRS.',
+    icon: Receipt,
+    color: 'bg-orange-50 text-orange-600',
+    tags: ['VAT', 'Tax', 'FIRS'],
+  },
 ];
 
 export default function ReportsPage() {
@@ -86,8 +94,8 @@ export default function ReportsPage() {
       </div>
 
       <div className="rounded-2xl border border-border/50 bg-muted/30 p-5">
-        <h2 className="font-semibold text-sm mb-2">Nigerian Tax Reports</h2>
-        <p className="text-xs text-muted-foreground">VAT returns, WHT schedules, PAYE summaries, and CIT computation — coming in the next Finance Module update.</p>
+        <h2 className="font-semibold text-sm mb-2">Coming Soon</h2>
+        <p className="text-xs text-muted-foreground">WHT schedules, PAYE summaries, and CIT computation — planned for the next Finance Module update.</p>
       </div>
     </div>
   );
