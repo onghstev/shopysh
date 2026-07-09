@@ -17,17 +17,18 @@ interface Customer {
 
 interface Props {
   value: string; // customerId
+  displayName?: string; // show this in the chip when value is set externally
   onChange: (customerId: string, customerName: string) => void;
   onClear: () => void;
   placeholder?: string;
 }
 
-export default function CustomerLookup({ value, onChange, onClear, placeholder = 'Search by name, phone, or email…' }: Props) {
+export default function CustomerLookup({ value, displayName, onChange, onClear, placeholder = 'Search by name, phone, or email…' }: Props) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [selectedName, setSelectedName] = useState('');
+  const [selectedName, setSelectedName] = useState(displayName ?? '');
   const [isSundry, setIsSundry] = useState(false);
 
   // Inline create form state
@@ -124,6 +125,7 @@ export default function CustomerLookup({ value, onChange, onClear, placeholder =
   };
 
   // If a customer is already selected, show the chip
+  const chipName = selectedName || displayName || value;
   if (value || isSundry) {
     return (
       <div
@@ -138,7 +140,7 @@ export default function CustomerLookup({ value, onChange, onClear, placeholder =
         ) : (
           <UserCheck className="w-3.5 h-3.5 shrink-0" style={{ color: 'hsl(168 84% 26%)' }} />
         )}
-        <span className="flex-1 truncate font-medium">{selectedName}</span>
+        <span className="flex-1 truncate font-medium">{chipName}</span>
         <button
           type="button"
           onClick={handleClear}

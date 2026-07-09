@@ -266,6 +266,7 @@ model Customer {
   invoices              Invoice[]
   campaignMessages      CampaignMessage[]
   incomes               Income[]
+  journalLines          JournalLine[]     @relation("JournalLineCustomer")
 
   @@unique([tenantId, customerCode], map: "idx_customers_code_tenant")
   @@unique([tenantId, phone], map: "idx_customers_phone_tenant")
@@ -1143,6 +1144,7 @@ model JournalLine {
 
   journalEntry JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
   account      GlAccount    @relation(fields: [accountId], references: [id])
+  customer     Customer?    @relation("JournalLineCustomer", fields: [customerId], references: [id])
 
   @@index([journalEntryId], map: "idx_journal_lines_entry")
   @@index([accountId], map: "idx_journal_lines_account")

@@ -38,7 +38,10 @@ export async function GET(req: NextRequest) {
         orderBy: [{ entryDate: 'desc' }, { entryNumber: 'asc' }],
         include: {
           lines: {
-            include: { account: { select: { id: true, code: true, name: true, systemTag: true, accountType: true } } },
+            include: {
+              account: { select: { id: true, code: true, name: true, systemTag: true, accountType: true } },
+              customer: { select: { id: true, name: true, phone: true, email: true, customerCode: true } },
+            },
           },
         },
       }),
