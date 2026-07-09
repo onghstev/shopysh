@@ -15,7 +15,7 @@ import CustomerLookup from '@/components/finance/CustomerLookup';
 const fmt = (n: number) => n.toLocaleString('en-NG', { minimumFractionDigits: 2 });
 
 // ── Print invoice in an isolated popup window ─────────────────────────────────
-function printInvoice(entry: any) {
+function printInvoice(entry: any, biz: any) {
   const salesLine = entry.lines?.find((l: any) => l.account?.systemTag === 'SALES');
   const vatLine   = entry.lines?.find((l: any) => l.account?.systemTag === 'VAT_OUTPUT');
   const arLine    = entry.lines?.find((l: any) => l.account?.systemTag === 'AR');
@@ -27,6 +27,18 @@ function printInvoice(entry: any) {
   const fmtN        = (n: number) => n.toLocaleString('en-NG', { minimumFractionDigits: 2 });
   const invoiceDate = new Date(entry.entryDate).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' });
   const ref         = entry.reference || entry.entryNumber;
+
+  // Business header lines (only render non-empty values)
+  const bizName    = biz?.businessName || biz?.name || '';
+  const bizAddress = [biz?.city, biz?.state, biz?.country].filter(Boolean).join(', ');
+  const bizPhone   = biz?.phone  || '';
+  const bizEmail   = biz?.email  || '';
+  const bizHeader  = [
+    bizName    ? `<div style="font-size:20px;font-weight:800;color:#1a1a1a">${bizName}</div>` : '',
+    bizAddress ? `<div style="font-size:13px;color:#6b7280;margin-top:2px">${bizAddress}</div>` : '',
+    bizPhone   ? `<div style="font-size:13px;color:#6b7280">Tel: ${bizPhone}</div>` : '',
+    bizEmail   ? `<div style="font-size:13px;color:#6b7280">${bizEmail}</div>` : '',
+  ].join('');
 
   const html = `<!DOCTYPE html>
 <html>
@@ -66,6 +78,7 @@ function printInvoice(entry: any) {
       <h1>INVOICE</h1>
       <h2>${ref}</h2>
     </div>
+    <div style="text-align:right">${bizHeader}</div>
   </div>
   <hr/>
   <div class="row">
@@ -111,7 +124,7 @@ function printInvoice(entry: any) {
 }
 
 // ── Invoice preview modal (before printing) ───────────────────────────────────
-function InvoicePrintView({ entry, onClose }: { entry: any; onClose: () => void }) {
+function InvoicePrintView({ entry, biz, onClose }: { entry: any; biz: any; onClose: () => void }) {
   const salesLine = entry.lines?.find((l: any) => l.account?.systemTag === 'SALES');
   const vatLine   = entry.lines?.find((l: any) => l.account?.systemTag === 'VAT_OUTPUT');
   const arLine    = entry.lines?.find((l: any) => l.account?.systemTag === 'AR');
@@ -130,7 +143,7 @@ function InvoicePrintView({ entry, onClose }: { entry: any; onClose: () => void 
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <h2 className="font-semibold text-sm text-muted-foreground">Invoice Preview — {entry.reference || entry.entryNumber}</h2>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => printInvoice(entry)}>
+            <Button size="sm" variant="outline" onClick={() => printInvoice(entry, biz)}>
               <Printer className="w-3.5 h-3.5 mr-1.5" /> Print / Save PDF
             </Button>
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted">
@@ -146,6 +159,18 @@ function InvoicePrintView({ entry, onClose }: { entry: any; onClose: () => void 
               <h1 className="text-4xl font-bold tracking-tight" style={{ color: 'hsl(168 84% 26%)' }}>INVOICE</h1>
               <p className="text-xl font-semibold mt-1">{entry.reference || entry.entryNumber}</p>
             </div>
+            {biz && (
+              <div className="text-right">
+                {(biz.businessName || biz.name) && (
+                  <p className="font-bold text-base">{biz.businessName || biz.name}</p>
+                )}
+                {[biz.city, biz.state, biz.country].filter(Boolean).length > 0 && (
+                  <p className="text-sm text-gray-500">{[biz.city, biz.state, biz.country].filter(Boolean).join(', ')}</p>
+                )}
+                {biz.phone && <p className="text-sm text-gray-500">Tel: {biz.phone}</p>}
+                {biz.email && <p className="text-sm text-gray-500">{biz.email}</p>}
+              </div>
+            )}
           </div>
 
           <hr className="border-gray-200" />
@@ -552,6 +577,7 @@ export default function SalesBookPage() {
   const [page, setPage]             = useState(1);
   const [showRecord, setShowRecord] = useState(false);
   const [printing, setPrinting]     = useState<any>(null);
+  const [biz, setBiz]               = useState<any>(null);
   const limit = 50;
   const { from: defaultFrom, to: defaultTo } = getMonthRange();
   const [from, setFrom] = useState(defaultFrom);
@@ -570,6 +596,14 @@ export default function SalesBookPage() {
   }, [from, to, page]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Fetch business profile once for invoice header
+  useEffect(() => {
+    fetch('/api/settings/profile')
+      .then(r => r.json())
+      .then(d => setBiz(d.tenant ?? null))
+      .catch(() => {});
+  }, []);
 
   const exportCsv = () => {
     const rows = [
@@ -604,7 +638,7 @@ export default function SalesBookPage() {
       {showRecord && (
         <RecordSaleModal onClose={() => setShowRecord(false)} onSaved={() => { setShowRecord(false); load(); }} />
       )}
-      {printing && <InvoicePrintView entry={printing} onClose={() => setPrinting(null)} />}
+      {printing && <InvoicePrintView entry={printing} biz={biz} onClose={() => setPrinting(null)} />}
 
       {/* Header */}
       <div className="flex items-center justify-between">
