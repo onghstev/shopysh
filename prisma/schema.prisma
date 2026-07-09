@@ -68,6 +68,8 @@ model Tenant {
   currencyRates         CurrencyRate[]
   fixedAssets           FixedAsset[]
   assetDepreciation     AssetDepreciation[]
+  recurringJournals     RecurringJournal[]
+  bankStatements        BankStatement[]
 
   @@index([isActive, createdAt(sort: Desc)], map: "idx_tenants_active")
   @@map("tenants")
@@ -1091,9 +1093,10 @@ model JournalEntry {
   sourceType  String?          @map("source_type") @db.VarChar(50)
   sourceId    String?          @map("source_id") @db.Uuid
 
-  isReversal        Boolean  @default(false) @map("is_reversal")
-  reversesEntryId   String?  @map("reverses_entry_id") @db.Uuid
-  reversedByEntryId String?  @map("reversed_by_entry_id") @db.Uuid
+  isReversal           Boolean  @default(false) @map("is_reversal")
+  reversesEntryId      String?  @map("reverses_entry_id") @db.Uuid
+  reversedByEntryId    String?  @map("reversed_by_entry_id") @db.Uuid
+  recurringJournalId   String?  @map("recurring_journal_id") @db.Uuid
 
   currency     String    @default("NGN") @db.VarChar(3)
   exchangeRate Decimal   @default(1) @map("exchange_rate") @db.Decimal(18, 6)
@@ -1107,9 +1110,10 @@ model JournalEntry {
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  tenant  Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  period  AccountingPeriod? @relation(fields: [periodId], references: [id])
-  lines   JournalLine[]
+  tenant           Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  period           AccountingPeriod?  @relation(fields: [periodId], references: [id])
+  lines            JournalLine[]
+  recurringJournal RecurringJournal?  @relation(fields: [recurringJournalId], references: [id])
 
   @@unique([tenantId, entryNumber], map: "idx_journal_entry_number")
   @@index([tenantId, entryDate(sort: Desc)], map: "idx_journal_date")
@@ -1348,4 +1352,90 @@ model AssetDepreciation {
   @@index([assetId], map: "idx_asset_depreciation_asset")
   @@index([tenantId], map: "idx_asset_depreciation_tenant")
   @@map("asset_depreciation")
+}
+
+// ========================================
+// RECURRING JOURNAL ENTRIES
+// ========================================
+
+model RecurringJournal {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  name            String    @db.VarChar(255)
+  description     String?   @db.Text
+  frequency       String    @db.VarChar(20)   // daily | weekly | monthly | quarterly | yearly
+  dayOfMonth      Int?      @map("day_of_month")
+  entryType       String    @default("GENERAL_JOURNAL") @map("entry_type") @db.VarChar(50)
+  currency        String    @default("NGN") @db.VarChar(3)
+  isActive        Boolean   @default(true) @map("is_active")
+  nextRunDate     DateTime  @map("next_run_date") @db.Date
+  lastRunDate     DateTime? @map("last_run_date") @db.Date
+  endDate         DateTime? @map("end_date") @db.Date
+  runCount        Int       @default(0) @map("run_count")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant  Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lines   RecurringJournalLine[]
+  runs    JournalEntry[]
+
+  @@index([tenantId, isActive, nextRunDate], map: "idx_recurring_journals")
+  @@map("recurring_journals")
+}
+
+model RecurringJournalLine {
+  id                 String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recurringJournalId String  @map("recurring_journal_id") @db.Uuid
+  accountId          String  @map("account_id") @db.Uuid
+  debit              Decimal @default(0) @db.Decimal(18, 2)
+  credit             Decimal @default(0) @db.Decimal(18, 2)
+  description        String? @db.VarChar(255)
+
+  recurringJournal RecurringJournal @relation(fields: [recurringJournalId], references: [id], onDelete: Cascade)
+
+  @@index([recurringJournalId], map: "idx_recurring_journal_lines")
+  @@map("recurring_journal_lines")
+}
+
+// ========================================
+// BANK RECONCILIATION
+// ========================================
+
+model BankStatement {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  bankAccountId String?   @map("bank_account_id") @db.Uuid
+  statementDate DateTime  @map("statement_date") @db.Date
+  openingBalance Decimal  @default(0) @map("opening_balance") @db.Decimal(18, 2)
+  closingBalance Decimal  @default(0) @map("closing_balance") @db.Decimal(18, 2)
+  currency      String    @default("NGN") @db.VarChar(3)
+  importedAt    DateTime  @default(now()) @map("imported_at")
+  status        String    @default("pending") @db.VarChar(20) // pending | reconciled
+
+  tenant  Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lines   BankStatementLine[]
+
+  @@index([tenantId, statementDate], map: "idx_bank_statements")
+  @@map("bank_statements")
+}
+
+model BankStatementLine {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  statementId     String    @map("statement_id") @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  transactionDate DateTime  @map("transaction_date") @db.Date
+  description     String    @db.VarChar(500)
+  debit           Decimal   @default(0) @db.Decimal(18, 2)
+  credit          Decimal   @default(0) @db.Decimal(18, 2)
+  balance         Decimal?  @db.Decimal(18, 2)
+  reference       String?   @db.VarChar(255)
+  matchedEntryId  String?   @map("matched_entry_id") @db.Uuid  // FK to JournalEntry
+  isMatched       Boolean   @default(false) @map("is_matched")
+  isIgnored       Boolean   @default(false) @map("is_ignored")
+
+  statement BankStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+
+  @@index([statementId], map: "idx_bank_statement_lines")
+  @@index([tenantId, isMatched], map: "idx_bank_statement_lines_matched")
+  @@map("bank_statement_lines")
 }

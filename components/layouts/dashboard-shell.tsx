@@ -13,7 +13,7 @@ import {
   CreditCard, Megaphone, BarChart3, Search, Shield, FolderTree, KeyRound,
   UsersRound, FileBarChart, BookOpen, Presentation, ExternalLink, Code,
   Sparkles, Wallet, TrendingUp, TrendingDown, Landmark, FileText, PieChart,
-  Layers, Building2, Scale, UserCheck, UserX, HardDrive,
+  Layers, Building2, Scale, UserCheck, UserX, HardDrive, RefreshCw, CreditCard as BankCard,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -82,6 +82,8 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/finance/expenses',                   label: 'Expenses',            icon: TrendingDown },
       { href: '/finance/fixed-assets',              label: 'Fixed Assets',        icon: HardDrive },
       { href: '/finance/budget',                    label: 'Budget',              icon: PieChart },
+      { href: '/finance/recurring-journals',        label: 'Recurring Journals',  icon: RefreshCw },
+      { href: '/finance/bank-reconciliation',       label: 'Bank Reconciliation', icon: BankCard },
       {
         href: '/finance/reports', label: 'Reports', icon: BarChart3,
         children: [
