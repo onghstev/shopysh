@@ -136,11 +136,11 @@ export async function GET(req: NextRequest) {
         status: { in: ['SENT', 'OVERDUE', 'PARTIALLY_PAID'] },
         dueDate: { lt: thirtyDaysAgo },
       },
-      select: { totalAmount: true, amountPaid: true },
+      select: { totalAmount: true },
     });
     const overdueAR = {
       count: overdueInvoices.length,
-      amount: overdueInvoices.reduce((s, i) => s + (Number(i.totalAmount) - Number(i.amountPaid ?? 0)), 0),
+      amount: overdueInvoices.reduce((s, i) => s + Number(i.totalAmount), 0),
     };
 
     return NextResponse.json({

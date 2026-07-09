@@ -29,7 +29,7 @@ export default function QuickEntry() {
   const [date, setDate]         = useState(today());
   const [description, setDesc]  = useState('');
   const [amount, setAmount]     = useState('');
-  const [payMethod, setPayMethod] = useState('cash');
+  const [payMethod, setPayMethod] = useState('CASH');
 
   // Sale-specific
   const [customerName, setCustomerName] = useState('');
@@ -61,7 +61,7 @@ export default function QuickEntry() {
   }, []);
 
   function resetFields() {
-    setDate(today()); setDesc(''); setAmount(''); setPayMethod('cash');
+    setDate(today()); setDesc(''); setAmount(''); setPayMethod('CASH');
     setCustomerName(''); setVatAmount('0');
     setVendorName(''); setExpenseAccId(''); setExpenseVat('0');
     setContraAccId('');
@@ -198,9 +198,9 @@ export default function QuickEntry() {
                         <Select value={payMethod} onValueChange={setPayMethod}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="cash">Cash</SelectItem>
-                            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                            <SelectItem value="credit">On Credit (AR)</SelectItem>
+                            <SelectItem value="CASH">Cash</SelectItem>
+                            <SelectItem value="BANK">Bank Transfer</SelectItem>
+                            <SelectItem value="INVOICE">On Credit (AR)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -236,9 +236,9 @@ export default function QuickEntry() {
                         <Select value={payMethod} onValueChange={setPayMethod}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="cash">Cash</SelectItem>
-                            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                            <SelectItem value="credit">On Credit (AP)</SelectItem>
+                            <SelectItem value="CASH">Cash</SelectItem>
+                            <SelectItem value="BANK">Bank Transfer</SelectItem>
+                            <SelectItem value="ON_CREDIT">On Credit (AP)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
