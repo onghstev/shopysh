@@ -6,7 +6,7 @@ import {
   TrendingUp, TrendingDown, Wallet, BookOpen, FileText, Users2,
   BarChart3, PieChart, Scale, Receipt, ChevronRight, RefreshCw,
   ArrowUpRight, ArrowDownRight, Minus, Building2, Layers,
-  Landmark, CreditCard, UserCheck, UserX,
+  Landmark, CreditCard, UserCheck, UserX, HardDrive, AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -56,9 +56,10 @@ const QUICK_LINKS = [
   { href: '/finance/bank-book',      label: 'Bank Book',         icon: CreditCard,   desc: 'Bank ledger'           },
   { href: '/finance/receivables',    label: 'Debtors / AR',      icon: UserCheck,    desc: 'Customer aging'        },
   { href: '/finance/payables',       label: 'Creditors / AP',    icon: UserX,        desc: 'Supplier aging'        },
-  { href: '/customers',              label: 'Customers',         icon: UserCheck,    desc: 'Customer accounts'     },
+  { href: '/finance/fixed-assets',   label: 'Fixed Assets',      icon: HardDrive,    desc: 'Asset register'        },
+  { href: '/finance/budget',         label: 'Budget',            icon: BarChart3,    desc: 'Budget vs actuals'     },
   { href: '/finance/vendors',        label: 'Vendors',           icon: Building2,    desc: 'Supplier management'   },
-  { href: '/finance/reports',        label: 'Reports',           icon: BarChart3,    desc: 'Financial statements'  },
+  { href: '/finance/reports',        label: 'Reports',           icon: Scale,        desc: 'Financial statements'  },
 ];
 
 const STATUS_BADGE: Record<string, string> = {
@@ -88,6 +89,7 @@ export default function FinanceDashboardPage() {
   const trend = data?.trend ?? [];
   const recent = data?.recentJournals ?? [];
   const counts = data?.counts ?? {};
+  const overdueAR = data?.overdueAR ?? { count: 0, amount: 0 };
 
   return (
     <div className="space-y-6">
@@ -102,15 +104,27 @@ export default function FinanceDashboardPage() {
         </Button>
       </div>
 
+      {/* Overdue AR alert */}
+      {!loading && overdueAR.count > 0 && (
+        <Link href="/finance/receivables"
+          className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 transition-colors">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span className="text-sm font-medium">
+            {overdueAR.count} invoice{overdueAR.count > 1 ? 's' : ''} overdue by 30+ days — {fmt(overdueAR.amount)} outstanding
+          </span>
+          <ChevronRight className="w-4 h-4 ml-auto shrink-0" />
+        </Link>
+      )}
+
       {/* KPI row */}
       {loading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          {Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
+        <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+          {Array(7).fill(0).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          <KpiCard label="Revenue (YTD)"  value={fmt(kpis.totalRevenue ?? 0)}  icon={TrendingUp}   color="bg-emerald-50 text-emerald-600" />
-          <KpiCard label="Expenses (YTD)" value={fmt(kpis.totalExpenses ?? 0)} icon={TrendingDown}  color="bg-red-50 text-red-500" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+          <KpiCard label="Revenue (YTD)"  value={fmt(kpis.totalRevenue ?? 0)}         icon={TrendingUp}   color="bg-emerald-50 text-emerald-600" />
+          <KpiCard label="Expenses (YTD)" value={fmt(kpis.totalExpenses ?? 0)}        icon={TrendingDown} color="bg-red-50 text-red-500" />
           <KpiCard
             label="Net Profit"
             value={fmt(kpis.netProfit ?? 0)}
@@ -119,9 +133,11 @@ export default function FinanceDashboardPage() {
             icon={PieChart}
             color={(kpis.netProfit ?? 0) >= 0 ? 'bg-primary/10 text-primary' : 'bg-red-50 text-red-500'}
           />
-          <KpiCard label="Cash Balance"  value={fmt(kpis.cashBalance ?? 0)}  icon={Wallet}       color="bg-sky-50 text-sky-600" />
-          <KpiCard label="Receivables"   value={fmt(kpis.arBalance ?? 0)}    icon={Receipt}      color="bg-amber-50 text-amber-600" />
-          <KpiCard label="Payables"      value={fmt(kpis.apBalance ?? 0)}    icon={Scale}        color="bg-violet-50 text-violet-600" />
+          <KpiCard label="Cash Balance"   value={fmt(kpis.cashBalance ?? 0)}         icon={Wallet}       color="bg-sky-50 text-sky-600" />
+          <KpiCard label="Receivables"    value={fmt(kpis.arBalance ?? 0)}            icon={Receipt}      color="bg-amber-50 text-amber-600" />
+          <KpiCard label="Payables"       value={fmt(kpis.apBalance ?? 0)}            icon={Scale}        color="bg-violet-50 text-violet-600" />
+          <KpiCard label="Fixed Assets"   value={fmt(kpis.fixedAssetsNetBook ?? 0)}  icon={HardDrive}    color="bg-teal-50 text-teal-600"
+            sub={`${counts.fixedAssets ?? 0} active asset${(counts.fixedAssets ?? 0) !== 1 ? 's' : ''}`} />
         </div>
       )}
 
@@ -191,7 +207,7 @@ export default function FinanceDashboardPage() {
       {/* Module grid */}
       <div>
         <h2 className="font-semibold text-sm mb-3 text-muted-foreground uppercase tracking-wider">Finance Modules</h2>
-        <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-11 gap-3">
+        <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-3">
           {QUICK_LINKS.map(({ href, label, icon: Icon, desc }) => (
             <Link key={href} href={href}
               className="group flex flex-col items-center gap-2 p-3 rounded-2xl border border-border/50 bg-card hover:border-primary/40 hover:bg-primary/5 transition-all text-center shadow-sm">
@@ -205,11 +221,12 @@ export default function FinanceDashboardPage() {
       </div>
 
       {/* Bottom stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         {[
-          { label: 'GL Accounts',    value: counts.accounts ?? 0,      href: '/finance/accounts', icon: Layers    },
-          { label: 'Vendors',        value: counts.vendors ?? 0,        href: '/finance/vendors',  icon: Building2 },
-          { label: 'Draft Entries',  value: counts.draftJournals ?? 0,  href: '/finance/journal',  icon: BookOpen  },
+          { label: 'GL Accounts',    value: counts.accounts ?? 0,      href: '/finance/accounts',     icon: Layers    },
+          { label: 'Vendors',        value: counts.vendors ?? 0,        href: '/finance/vendors',      icon: Building2 },
+          { label: 'Fixed Assets',   value: counts.fixedAssets ?? 0,   href: '/finance/fixed-assets', icon: HardDrive },
+          { label: 'Draft Entries',  value: counts.draftJournals ?? 0,  href: '/finance/journal',      icon: BookOpen  },
         ].map(({ label, value, href, icon: Icon }) => (
           <Link key={href} href={href}
             className="rounded-2xl border border-border/50 bg-card px-4 py-3 flex items-center justify-between shadow-sm hover:border-primary/30 transition-colors group">

@@ -121,16 +121,43 @@ export async function GET(req: NextRequest) {
       prisma.vendor.count({ where: { tenantId, isActive: true, deletedAt: null } }),
     ]);
 
+    // Fixed assets summary
+    const activeAssets = await prisma.fixedAsset.findMany({
+      where: { tenantId, status: 'active', deletedAt: null },
+      select: { bookValue: true },
+    });
+    const fixedAssetsNetBook = activeAssets.reduce((s, a) => s + Number(a.bookValue), 0);
+
+    // Overdue receivables (invoices unpaid > 30 days) from purchase invoices / sales book
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const overdueInvoices = await prisma.invoice.findMany({
+      where: {
+        tenantId,
+        status: { in: ['SENT', 'OVERDUE', 'PARTIALLY_PAID'] },
+        dueDate: { lt: thirtyDaysAgo },
+      },
+      select: { totalAmount: true, amountPaid: true },
+    });
+    const overdueAR = {
+      count: overdueInvoices.length,
+      amount: overdueInvoices.reduce((s, i) => s + (Number(i.totalAmount) - Number(i.amountPaid ?? 0)), 0),
+    };
+
     return NextResponse.json({
       kpis: {
         totalRevenue, totalExpenses,
         netProfit: totalRevenue - totalExpenses,
         cashBalance, arBalance, apBalance,
+        fixedAssetsNetBook,
         profitMargin: totalRevenue > 0 ? ((totalRevenue - totalExpenses) / totalRevenue) * 100 : 0,
       },
       trend,
       recentJournals,
-      counts: { draftJournals: draftCount, accounts: accountCount, vendors: vendorCount },
+      overdueAR,
+      counts: {
+        draftJournals: draftCount, accounts: accountCount, vendors: vendorCount,
+        fixedAssets: activeAssets.length,
+      },
     });
   } catch (e: any) {
     console.error('GET /api/finance/dashboard', e);
