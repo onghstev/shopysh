@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, RefreshCw, BarChart3, Loader2, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, RefreshCw, BarChart3, Loader2, Trash2, ChevronDown, ChevronRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,61 @@ import { toast } from 'sonner';
 
 const fmt = (n: number) => n.toLocaleString('en-NG', { minimumFractionDigits: 2 });
 const fmtShort = (n: number) => new Intl.NumberFormat('en-NG', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
+
+function BudgetLineRow({ line, variance, lineOver, variancePct, showExplain }: {
+  line: any; variance: number; lineOver: boolean; variancePct: number; showExplain: boolean;
+}) {
+  const [explanation, setExplanation] = useState<string | null>(null);
+  const [explaining, setExplaining]   = useState(false);
+
+  async function explain() {
+    setExplaining(true);
+    try {
+      const res = await fetch('/api/finance/ai/budget-explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountId:   line.account.id,
+          accountName: line.account.name,
+          budgeted:    line.budgeted,
+          actual:      line.actual,
+          variance,
+          variancePct,
+        }),
+      });
+      const d = await res.json();
+      if (d.explanation) setExplanation(d.explanation);
+    } finally { setExplaining(false); }
+  }
+
+  return (
+    <>
+      <tr className="hover:bg-muted/10">
+        <td className="px-5 py-2.5">
+          <p className="font-medium text-sm">{line.account.name}</p>
+          <p className="text-xs text-muted-foreground font-mono">{line.account.code}</p>
+          {explanation && <p className="text-xs text-muted-foreground italic mt-0.5">{explanation}</p>}
+        </td>
+        <td className="px-5 py-2.5 text-right font-medium">₦{fmt(line.budgeted)}</td>
+        <td className="px-5 py-2.5 text-right">₦{fmt(line.actual)}</td>
+        <td className={`px-5 py-2.5 text-right font-semibold text-sm ${lineOver ? 'text-red-600' : 'text-emerald-600'}`}>
+          {lineOver ? '-' : '+'}₦{fmt(Math.abs(variance))}
+        </td>
+        <td className="px-5 py-2.5">
+          <ProgressBar actual={line.actual} budgeted={line.budgeted} />
+        </td>
+        <td className="px-2 py-2.5">
+          {showExplain && (
+            <button onClick={explain} disabled={explaining} title="Explain with AI"
+              className="text-muted-foreground hover:text-primary transition-colors">
+              {explaining ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+            </button>
+          )}
+        </td>
+      </tr>
+    </>
+  );
+}
 
 function pct(actual: number, budgeted: number) {
   if (!budgeted) return 0;
@@ -216,27 +271,24 @@ export default function BudgetPage() {
                           <th className="text-right px-5 py-2.5 text-xs font-semibold text-muted-foreground">Actual (YTD)</th>
                           <th className="text-right px-5 py-2.5 text-xs font-semibold text-muted-foreground">Variance</th>
                           <th className="px-5 py-2.5 w-40 text-xs font-semibold text-muted-foreground">Progress</th>
+                          <th className="px-2 py-2.5 w-8"></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
                         {(b.linesByAccount ?? []).map((line: any) => {
-                          const variance = line.budgeted - line.actual;
-                          const lineOver = line.actual > line.budgeted;
+                          const variance    = line.budgeted - line.actual;
+                          const lineOver    = line.actual > line.budgeted;
+                          const variancePct = line.budgeted ? ((line.actual - line.budgeted) / line.budgeted) * 100 : 0;
+                          const showExplain = lineOver && Math.abs(variancePct) > 10;
                           return (
-                            <tr key={line.account.id} className="hover:bg-muted/10">
-                              <td className="px-5 py-2.5">
-                                <p className="font-medium text-sm">{line.account.name}</p>
-                                <p className="text-xs text-muted-foreground font-mono">{line.account.code}</p>
-                              </td>
-                              <td className="px-5 py-2.5 text-right font-medium">₦{fmt(line.budgeted)}</td>
-                              <td className="px-5 py-2.5 text-right">₦{fmt(line.actual)}</td>
-                              <td className={`px-5 py-2.5 text-right font-semibold text-sm ${lineOver ? 'text-red-600' : 'text-emerald-600'}`}>
-                                {lineOver ? '-' : '+'}₦{fmt(Math.abs(variance))}
-                              </td>
-                              <td className="px-5 py-2.5">
-                                <ProgressBar actual={line.actual} budgeted={line.budgeted} />
-                              </td>
-                            </tr>
+                            <BudgetLineRow
+                              key={line.account.id}
+                              line={line}
+                              variance={variance}
+                              lineOver={lineOver}
+                              variancePct={variancePct}
+                              showExplain={showExplain}
+                            />
                           );
                         })}
                       </tbody>

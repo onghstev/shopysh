@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Receipt, Download, RefreshCw, ChevronLeft, AlertCircle } from 'lucide-react';
+import { Receipt, Download, RefreshCw, ChevronLeft, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,15 +18,39 @@ const DEF_TO   = now.toISOString().slice(0, 10);
 export default function VATSummaryPage() {
   const [from, setFrom]   = useState(DEF_FROM);
   const [to, setTo]       = useState(DEF_TO);
-  const [data, setData]   = useState<any>(null);
+  const [data, setData]       = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [narrative, setNarrative]         = useState<string | null>(null);
+  const [narrativeLoading, setNarrativeLoading] = useState(false);
 
   const load = async () => {
     setLoading(true);
+    setNarrative(null);
     try {
       const res = await fetch(`/api/finance/reports/vat-summary?from=${from}&to=${to}`);
       if (res.ok) setData(await res.json());
     } finally { setLoading(false); }
+  };
+
+  const generateNarrative = async () => {
+    if (!data) return;
+    setNarrativeLoading(true);
+    try {
+      const res = await fetch('/api/finance/ai/vat-narrative', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from, to,
+          outputVAT:          data.outputVAT.total,
+          inputVAT:           data.inputVAT.total,
+          vatPayable:         data.vatPayable,
+          outputTransactions: data.outputVAT.entries.length,
+          inputTransactions:  data.inputVAT.entries.length,
+        }),
+      });
+      const d = await res.json();
+      if (d.narrative) setNarrative(d.narrative);
+    } finally { setNarrativeLoading(false); }
   };
 
   const exportCsv = () => {
@@ -101,6 +125,29 @@ export default function VATSummaryPage() {
               <p className="text-xs mt-1 opacity-70">{sub}</p>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* AI Narrative */}
+      {data && (
+        <div className="rounded-2xl border border-border/50 p-5 shadow-sm bg-card">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-sm flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> FIRS Return Narrative
+            </h2>
+            <Button size="sm" variant="outline" onClick={generateNarrative} disabled={narrativeLoading}>
+              {narrativeLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />}
+              {narrative ? 'Regenerate' : 'Generate with AI'}
+            </Button>
+          </div>
+          {narrative ? (
+            <div className="space-y-2">
+              <p className="text-sm leading-relaxed text-foreground bg-muted/30 rounded-xl p-4 border">{narrative}</p>
+              <p className="text-xs text-muted-foreground">Copy this text into your FIRS VAT return narrative field.</p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Click "Generate with AI" to produce a professional FIRS return narrative based on the figures above.</p>
+          )}
         </div>
       )}
 

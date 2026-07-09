@@ -84,6 +84,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/finance/budget',                    label: 'Budget',              icon: PieChart },
       { href: '/finance/recurring-journals',        label: 'Recurring Journals',  icon: RefreshCw },
       { href: '/finance/bank-reconciliation',       label: 'Bank Reconciliation', icon: BankCard },
+      { href: '/finance/cash-forecast',             label: 'Cash Flow Forecast',  icon: TrendingUp },
       {
         href: '/finance/reports', label: 'Reports', icon: BarChart3,
         children: [

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Upload, CheckCircle, XCircle, Minus, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
+import { Upload, CheckCircle, XCircle, Minus, RefreshCw, ChevronDown, ChevronRight, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -72,6 +72,8 @@ export default function BankReconciliationPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [matchingLineId, setMatchingLineId] = useState<string | null>(null);
   const [matchEntry, setMatchEntry] = useState('');
+  const [autoMatching, setAutoMatching] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<Record<string, any[]>>({});
   const fileRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -193,6 +195,29 @@ export default function BankReconciliationPage() {
     load();
   }
 
+  async function handleAutoMatch(statementId: string) {
+    setAutoMatching(statementId);
+    try {
+      const res = await fetch('/api/finance/ai/auto-match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statementId }),
+      });
+      const data = await res.json();
+      // Store suggestions keyed by lineId for manual matching UI
+      const suggMap: Record<string, any[]> = {};
+      for (const s of (data.suggestions ?? [])) {
+        if (s.candidates?.length) suggMap[s.lineId] = s.candidates;
+      }
+      setSuggestions(prev => ({ ...prev, ...suggMap }));
+      toast({ title: `AI matched ${data.autoMatched?.length ?? 0} transaction${data.autoMatched?.length !== 1 ? 's' : ''} automatically`, description: 'Remaining suggestions shown inline — review and confirm.' });
+      load();
+    } catch {
+      toast({ title: 'Auto-match failed', variant: 'destructive' } as any);
+    }
+    setAutoMatching(null);
+  }
+
   async function handleDelete(id: string) {
     if (!confirm('Delete this bank statement?')) return;
     await fetch(`/api/finance/bank-reconciliation/${id}`, { method: 'DELETE' });
@@ -262,6 +287,14 @@ export default function BankReconciliationPage() {
                           <div className="h-1.5 bg-primary rounded-full" style={{ width: `${pct}%` }} />
                         </div>
                       </div>
+                      {stmt.status !== 'reconciled' && unmatched > 0 && (
+                        <Button size="sm" variant="outline" onClick={() => handleAutoMatch(stmt.id)} disabled={autoMatching === stmt.id}>
+                          {autoMatching === stmt.id
+                            ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                            : <Sparkles className="w-3.5 h-3.5 mr-1" />}
+                          AI Match
+                        </Button>
+                      )}
                       {stmt.status !== 'reconciled' && unmatched === 0 && (
                         <Button size="sm" onClick={() => handleComplete(stmt.id)}>
                           <CheckCircle className="w-3.5 h-3.5 mr-1" /> Complete
@@ -335,7 +368,14 @@ export default function BankReconciliationPage() {
                                     <div className="flex gap-1">
                                       {!line.isMatched && !line.isIgnored && (
                                         <>
-                                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setMatchingLineId(line.id); setMatchEntry(''); }}>
+                                          {suggestions[line.id]?.[0] && (
+                                            <Button size="sm" className="h-7 text-xs bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20"
+                                              onClick={() => { setMatchingLineId(line.id); setMatchEntry(suggestions[line.id][0].entryId); }}
+                                              title={`AI suggestion: ${suggestions[line.id][0].entryNumber} (${suggestions[line.id][0].score}% match)`}>
+                                              <Sparkles className="w-3 h-3 mr-1" />{suggestions[line.id][0].score}%
+                                            </Button>
+                                          )}
+                                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setMatchingLineId(line.id); setMatchEntry(suggestions[line.id]?.[0]?.entryId ?? ''); }}>
                                             Match
                                           </Button>
                                           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => handleIgnore(stmt.id, line.id)}>
