@@ -14,7 +14,103 @@ import CustomerLookup from '@/components/finance/CustomerLookup';
 
 const fmt = (n: number) => n.toLocaleString('en-NG', { minimumFractionDigits: 2 });
 
-// ── Printable invoice overlay ─────────────────────────────────────────────────
+// ── Print invoice in an isolated popup window ─────────────────────────────────
+function printInvoice(entry: any) {
+  const salesLine = entry.lines?.find((l: any) => l.account?.systemTag === 'SALES');
+  const vatLine   = entry.lines?.find((l: any) => l.account?.systemTag === 'VAT_OUTPUT');
+  const arLine    = entry.lines?.find((l: any) => l.account?.systemTag === 'AR');
+  const customer  = arLine?.customer;
+
+  const subtotal    = salesLine ? Number(salesLine.credit) : 0;
+  const vatAmt      = vatLine   ? Number(vatLine.credit)   : 0;
+  const total       = Number(entry.totalDebit);
+  const fmtN        = (n: number) => n.toLocaleString('en-NG', { minimumFractionDigits: 2 });
+  const invoiceDate = new Date(entry.entryDate).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' });
+  const ref         = entry.reference || entry.entryNumber;
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Invoice ${ref}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; font-size: 14px; color: #1a1a1a; padding: 48px; }
+    h1 { font-size: 36px; font-weight: 900; color: hsl(168,84%,26%); letter-spacing: -1px; }
+    h2 { font-size: 18px; font-weight: 700; margin-top: 4px; color: #333; }
+    hr { border: none; border-top: 1px solid #e5e7eb; margin: 24px 0; }
+    .row { display: flex; justify-content: space-between; gap: 32px; margin-bottom: 24px; }
+    .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #9ca3af; font-weight: 700; margin-bottom: 8px; }
+    .meta-line { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+    .meta-line span:first-child { color: #9ca3af; }
+    .meta-line span:last-child { font-weight: 600; }
+    .ref { color: hsl(168,84%,26%); font-family: monospace; }
+    .gl  { color: #9ca3af; font-family: monospace; font-size: 11px; }
+    table { width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-top: 8px; }
+    thead tr { background: #f9fafb; }
+    th { text-align: left; padding: 10px 16px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; font-weight: 700; border-bottom: 1px solid #e5e7eb; }
+    th:last-child { text-align: right; }
+    td { padding: 12px 16px; border-bottom: 1px solid #f3f4f6; }
+    td:last-child { text-align: right; font-family: monospace; }
+    .vat-row td { background: #fffbeb; color: #b45309; }
+    tfoot tr { background: #f9fafb; border-top: 2px solid #d1d5db; }
+    tfoot td { font-weight: 700; font-size: 16px; padding: 14px 16px; }
+    tfoot td:last-child { color: hsl(168,84%,26%); font-size: 18px; font-family: monospace; }
+    .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #9ca3af; }
+    @media print { body { padding: 32px; } }
+  </style>
+</head>
+<body>
+  <div class="row" style="align-items:flex-start">
+    <div>
+      <h1>INVOICE</h1>
+      <h2>${ref}</h2>
+    </div>
+  </div>
+  <hr/>
+  <div class="row">
+    <div style="flex:1">
+      <div class="label">Bill To</div>
+      ${customer
+        ? `<div style="font-weight:700;font-size:15px">${customer.name || customer.phone}</div>
+           ${customer.email ? `<div style="color:#6b7280;font-size:13px">${customer.email}</div>` : ''}
+           ${customer.phone ? `<div style="color:#6b7280;font-size:13px">${customer.phone}</div>` : ''}`
+        : `<div style="color:#9ca3af;font-style:italic">Sundry / Walk-in Customer</div>`}
+    </div>
+    <div style="min-width:200px">
+      <div class="meta-line"><span>Invoice Date</span><span>${invoiceDate}</span></div>
+      <div class="meta-line"><span>Reference</span><span class="ref">${ref}</span></div>
+      <div class="meta-line"><span>GL Entry</span><span class="gl">${entry.entryNumber}</span></div>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Description</th><th style="text-align:right">Amount</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>${entry.description?.split('—')[0]?.trim() || entry.description || ''}</td>
+        <td>₦${fmtN(subtotal)}</td>
+      </tr>
+      ${vatAmt > 0 ? `<tr class="vat-row"><td>VAT</td><td>₦${fmtN(vatAmt)}</td></tr>` : ''}
+    </tbody>
+    <tfoot>
+      <tr><td>Total Due</td><td>₦${fmtN(total)}</td></tr>
+    </tfoot>
+  </table>
+  <div class="footer">
+    <p>Thank you for your business.</p>
+    ${vatAmt > 0 ? `<p>This invoice includes VAT of ₦${fmtN(vatAmt)}.</p>` : ''}
+  </div>
+  <script>window.onload = function(){ window.print(); }</script>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank', 'width=800,height=900');
+  if (win) { win.document.write(html); win.document.close(); }
+}
+
+// ── Invoice preview modal (before printing) ───────────────────────────────────
 function InvoicePrintView({ entry, onClose }: { entry: any; onClose: () => void }) {
   const salesLine = entry.lines?.find((l: any) => l.account?.systemTag === 'SALES');
   const vatLine   = entry.lines?.find((l: any) => l.account?.systemTag === 'VAT_OUTPUT');
@@ -27,14 +123,14 @@ function InvoicePrintView({ entry, onClose }: { entry: any; onClose: () => void 
   const invoiceDate = new Date(entry.entryDate).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:inset-auto print:relative">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-6 print:shadow-none print:rounded-none print:my-0">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-6">
 
-        {/* Toolbar — hidden on print */}
-        <div className="flex items-center justify-between px-6 py-4 border-b print:hidden">
-          <h2 className="font-semibold text-sm text-muted-foreground">Invoice Preview</h2>
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-6 py-4 border-b">
+          <h2 className="font-semibold text-sm text-muted-foreground">Invoice Preview — {entry.reference || entry.entryNumber}</h2>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => window.print()}>
+            <Button size="sm" variant="outline" onClick={() => printInvoice(entry)}>
               <Printer className="w-3.5 h-3.5 mr-1.5" /> Print / Save PDF
             </Button>
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted">
@@ -45,7 +141,6 @@ function InvoicePrintView({ entry, onClose }: { entry: any; onClose: () => void 
 
         {/* Invoice body */}
         <div className="p-10 space-y-6">
-          {/* Letterhead */}
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-4xl font-bold tracking-tight" style={{ color: 'hsl(168 84% 26%)' }}>INVOICE</h1>
@@ -55,7 +150,6 @@ function InvoicePrintView({ entry, onClose }: { entry: any; onClose: () => void 
 
           <hr className="border-gray-200" />
 
-          {/* Bill-to + meta */}
           <div className="grid grid-cols-2 gap-8">
             <div>
               <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-2">Bill To</p>
@@ -88,7 +182,6 @@ function InvoicePrintView({ entry, onClose }: { entry: any; onClose: () => void 
             </div>
           </div>
 
-          {/* Line items */}
           <div className="border rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
@@ -122,12 +215,9 @@ function InvoicePrintView({ entry, onClose }: { entry: any; onClose: () => void 
             </table>
           </div>
 
-          {/* Footer */}
           <div className="text-center text-xs text-gray-400 pt-4 border-t border-gray-100 space-y-1">
             <p>Thank you for your business.</p>
-            {vatAmt > 0 && (
-              <p>This invoice includes VAT of ₦{fmt(vatAmt)}.</p>
-            )}
+            {vatAmt > 0 && <p>This invoice includes VAT of ₦{fmt(vatAmt)}.</p>}
           </div>
         </div>
       </div>
