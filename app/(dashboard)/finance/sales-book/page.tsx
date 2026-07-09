@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Download, RefreshCw, ChevronLeft, ChevronRight, BookOpen, Plus, X,
-  Hash, Percent, DollarSign, Loader2, RotateCcw,
+  Hash, Percent, Loader2, RotateCcw, Printer,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,127 @@ import { toast } from 'sonner';
 import CustomerLookup from '@/components/finance/CustomerLookup';
 
 const fmt = (n: number) => n.toLocaleString('en-NG', { minimumFractionDigits: 2 });
+
+// ── Printable invoice overlay ─────────────────────────────────────────────────
+function InvoicePrintView({ entry, onClose }: { entry: any; onClose: () => void }) {
+  const salesLine = entry.lines?.find((l: any) => l.account?.systemTag === 'SALES');
+  const vatLine   = entry.lines?.find((l: any) => l.account?.systemTag === 'VAT_OUTPUT');
+  const arLine    = entry.lines?.find((l: any) => l.account?.systemTag === 'AR');
+  const customer  = arLine?.customer;
+
+  const subtotal    = salesLine ? Number(salesLine.credit) : 0;
+  const vatAmt      = vatLine   ? Number(vatLine.credit)   : 0;
+  const total       = Number(entry.totalDebit);
+  const invoiceDate = new Date(entry.entryDate).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:inset-auto print:relative">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-6 print:shadow-none print:rounded-none print:my-0">
+
+        {/* Toolbar — hidden on print */}
+        <div className="flex items-center justify-between px-6 py-4 border-b print:hidden">
+          <h2 className="font-semibold text-sm text-muted-foreground">Invoice Preview</h2>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => window.print()}>
+              <Printer className="w-3.5 h-3.5 mr-1.5" /> Print / Save PDF
+            </Button>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Invoice body */}
+        <div className="p-10 space-y-6">
+          {/* Letterhead */}
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight" style={{ color: 'hsl(168 84% 26%)' }}>INVOICE</h1>
+              <p className="text-xl font-semibold mt-1">{entry.reference || entry.entryNumber}</p>
+            </div>
+          </div>
+
+          <hr className="border-gray-200" />
+
+          {/* Bill-to + meta */}
+          <div className="grid grid-cols-2 gap-8">
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-2">Bill To</p>
+              {customer ? (
+                <>
+                  <p className="font-semibold text-base">{customer.name || customer.phone}</p>
+                  {customer.email && <p className="text-sm text-gray-500">{customer.email}</p>}
+                  {customer.phone && <p className="text-sm text-gray-500">{customer.phone}</p>}
+                  {customer.customerCode && <p className="text-xs text-gray-400 font-mono">{customer.customerCode}</p>}
+                </>
+              ) : (
+                <p className="text-gray-400 italic">Sundry / Walk-in Customer</p>
+              )}
+            </div>
+            <div className="text-right space-y-1.5 text-sm">
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-400">Invoice Date</span>
+                <span className="font-medium">{invoiceDate}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-400">Reference</span>
+                <span className="font-mono font-semibold" style={{ color: 'hsl(168 84% 26%)' }}>
+                  {entry.reference || entry.entryNumber}
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-400">GL Entry</span>
+                <span className="font-mono text-xs text-gray-400">{entry.entryNumber}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Line items */}
+          <div className="border rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b">
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">Description</th>
+                  <th className="text-right py-3 px-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-gray-100">
+                  <td className="py-3 px-4 text-gray-800">
+                    {entry.description?.split('—')[0]?.trim() || entry.description}
+                  </td>
+                  <td className="py-3 px-4 text-right font-mono">₦{fmt(subtotal)}</td>
+                </tr>
+                {vatAmt > 0 && (
+                  <tr className="bg-amber-50/50 border-b border-gray-100">
+                    <td className="py-3 px-4 text-amber-700 text-sm">VAT</td>
+                    <td className="py-3 px-4 text-right font-mono text-amber-700">₦{fmt(vatAmt)}</td>
+                  </tr>
+                )}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-gray-300 bg-gray-50">
+                  <td className="py-4 px-4 font-bold text-lg">Total Due</td>
+                  <td className="py-4 px-4 text-right font-bold text-xl" style={{ color: 'hsl(168 84% 26%)' }}>
+                    ₦{fmt(total)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          {/* Footer */}
+          <div className="text-center text-xs text-gray-400 pt-4 border-t border-gray-100 space-y-1">
+            <p>Thank you for your business.</p>
+            {vatAmt > 0 && (
+              <p>This invoice includes VAT of ₦{fmt(vatAmt)}.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function getMonthRange() {
   const now = new Date();
@@ -334,12 +455,13 @@ function RecordSaleModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function SalesBookPage() {
-  const [entries, setEntries]     = useState<any[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [totals, setTotals]       = useState({ totalDebit: 0, totalCredit: 0 });
-  const [total, setTotal]         = useState(0);
-  const [page, setPage]           = useState(1);
+  const [entries, setEntries]       = useState<any[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [totals, setTotals]         = useState({ totalDebit: 0, totalCredit: 0 });
+  const [total, setTotal]           = useState(0);
+  const [page, setPage]             = useState(1);
   const [showRecord, setShowRecord] = useState(false);
+  const [printing, setPrinting]     = useState<any>(null);
   const limit = 50;
   const { from: defaultFrom, to: defaultTo } = getMonthRange();
   const [from, setFrom] = useState(defaultFrom);
@@ -392,6 +514,7 @@ export default function SalesBookPage() {
       {showRecord && (
         <RecordSaleModal onClose={() => setShowRecord(false)} onSaved={() => { setShowRecord(false); load(); }} />
       )}
+      {printing && <InvoicePrintView entry={printing} onClose={() => setPrinting(null)} />}
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -451,20 +574,21 @@ export default function SalesBookPage() {
                 <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4">VAT</th>
                 <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4">Total DR</th>
                 <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4">Status</th>
+                <th className="py-3 px-4"></th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 Array(8).fill(0).map((_, i) => (
                   <tr key={i} className="border-b border-border/40">
-                    {Array(8).fill(0).map((_, j) => (
+                    {Array(9).fill(0).map((_, j) => (
                       <td key={j} className="py-3 px-4"><Skeleton className="h-4 w-full" /></td>
                     ))}
                   </tr>
                 ))
               ) : entries.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-16 text-center">
+                  <td colSpan={9} className="py-16 text-center">
                     <BookOpen className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground">No entries found for this period</p>
                   </td>
@@ -506,6 +630,17 @@ export default function SalesBookPage() {
                         <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
                           {e.status}
                         </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        {e.entryType === 'SALES_INVOICE' && (
+                          <Button
+                            size="sm" variant="outline"
+                            className="h-7 px-2 text-xs gap-1 whitespace-nowrap"
+                            onClick={() => setPrinting(e)}
+                          >
+                            <Printer className="w-3 h-3" /> Print
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   );

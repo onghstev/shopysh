@@ -72,7 +72,6 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/finance',                           label: 'Dashboard',           icon: Wallet },
       { href: '/finance/accounts',                  label: 'Chart of Accounts',   icon: Layers },
       { href: '/finance/journal',                   label: 'Journal Entries',     icon: BookOpen },
-      { href: '/finance/invoices',                   label: 'Invoices',            icon: FileText },
       { href: '/finance/sales-book',                label: 'Sales Book',          icon: TrendingUp },
       { href: '/finance/purchase-book',             label: 'Purchase Book',       icon: TrendingDown },
       { href: '/finance/cash-book',                 label: 'Cash Book',           icon: Landmark },
