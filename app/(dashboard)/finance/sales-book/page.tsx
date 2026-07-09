@@ -21,7 +21,9 @@ function printInvoice(entry: any, biz: any) {
   const arLine    = entry.lines?.find((l: any) => l.account?.systemTag === 'AR');
   const customer  = arLine?.customer;
 
-  const subtotal    = salesLine ? Number(salesLine.credit) : 0;
+  // All Sales credit lines = individual invoice items
+  const salesLines  = (entry.lines ?? []).filter((l: any) => l.account?.systemTag === 'SALES' && Number(l.credit) > 0);
+  const subtotal    = salesLines.reduce((s: number, l: any) => s + Number(l.credit), 0) || 0;
   const vatAmt      = vatLine   ? Number(vatLine.credit)   : 0;
   const total       = Number(entry.totalDebit);
   const fmtN        = (n: number) => n.toLocaleString('en-NG', { minimumFractionDigits: 2 });
@@ -101,10 +103,10 @@ function printInvoice(entry: any, biz: any) {
       <tr><th>Description</th><th style="text-align:right">Amount</th></tr>
     </thead>
     <tbody>
-      <tr>
-        <td>${entry.description?.split('—')[0]?.trim() || entry.description || ''}</td>
-        <td>₦${fmtN(subtotal)}</td>
-      </tr>
+      ${salesLines.length > 0
+        ? salesLines.map((l: any) => `<tr><td>${l.description || ''}</td><td>₦${fmtN(Number(l.credit))}</td></tr>`).join('')
+        : `<tr><td>${entry.description?.split('—')[0]?.trim() || entry.description || ''}</td><td>₦${fmtN(subtotal)}</td></tr>`
+      }
       ${vatAmt > 0 ? `<tr class="vat-row"><td>VAT</td><td>₦${fmtN(vatAmt)}</td></tr>` : ''}
     </tbody>
     <tfoot>
@@ -125,13 +127,13 @@ function printInvoice(entry: any, biz: any) {
 
 // ── Invoice preview modal (before printing) ───────────────────────────────────
 function InvoicePrintView({ entry, biz, onClose }: { entry: any; biz: any; onClose: () => void }) {
-  const salesLine = entry.lines?.find((l: any) => l.account?.systemTag === 'SALES');
-  const vatLine   = entry.lines?.find((l: any) => l.account?.systemTag === 'VAT_OUTPUT');
-  const arLine    = entry.lines?.find((l: any) => l.account?.systemTag === 'AR');
-  const customer  = arLine?.customer;
+  const salesLines2 = (entry.lines ?? []).filter((l: any) => l.account?.systemTag === 'SALES' && Number(l.credit) > 0);
+  const vatLine     = entry.lines?.find((l: any) => l.account?.systemTag === 'VAT_OUTPUT');
+  const arLine      = entry.lines?.find((l: any) => l.account?.systemTag === 'AR');
+  const customer    = arLine?.customer;
 
-  const subtotal    = salesLine ? Number(salesLine.credit) : 0;
-  const vatAmt      = vatLine   ? Number(vatLine.credit)   : 0;
+  const subtotal    = salesLines2.reduce((s: number, l: any) => s + Number(l.credit), 0);
+  const vatAmt      = vatLine ? Number(vatLine.credit) : 0;
   const total       = Number(entry.totalDebit);
   const invoiceDate = new Date(entry.entryDate).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -216,12 +218,20 @@ function InvoicePrintView({ entry, biz, onClose }: { entry: any; biz: any; onClo
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b border-gray-100">
-                  <td className="py-3 px-4 text-gray-800">
-                    {entry.description?.split('—')[0]?.trim() || entry.description}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono">₦{fmt(subtotal)}</td>
-                </tr>
+                {salesLines2.length > 0
+                  ? salesLines2.map((l: any, i: number) => (
+                      <tr key={i} className="border-b border-gray-100">
+                        <td className="py-3 px-4 text-gray-800">{l.description}</td>
+                        <td className="py-3 px-4 text-right font-mono">₦{fmt(Number(l.credit))}</td>
+                      </tr>
+                    ))
+                  : (
+                      <tr className="border-b border-gray-100">
+                        <td className="py-3 px-4 text-gray-800">{entry.description?.split('—')[0]?.trim() || entry.description}</td>
+                        <td className="py-3 px-4 text-right font-mono">₦{fmt(subtotal)}</td>
+                      </tr>
+                    )
+                }
                 {vatAmt > 0 && (
                   <tr className="bg-amber-50/50 border-b border-gray-100">
                     <td className="py-3 px-4 text-amber-700 text-sm">VAT</td>
@@ -387,30 +397,37 @@ function VATInput({ amount, vatAmount, onVatChange }: {
 }
 
 // ── Record Sale modal ─────────────────────────────────────────────────────────
+type SaleItem = { id: number; description: string; qty: string; unitPrice: string };
+
+let _itemId = 0;
+const newItem = (): SaleItem => ({ id: ++_itemId, description: '', qty: '1', unitPrice: '' });
+
 function RecordSaleModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const today = new Date().toISOString().slice(0, 10);
-  const [form, setForm] = useState({
-    date: today,
-    reference: '',
-    description: '',
-    amount: '',
-    vatAmount: '0',
-    paymentMethod: 'INVOICE',
-  });
+  const [date, setDate]                 = useState(today);
+  const [reference, setReference]       = useState('');
+  const [paymentMethod, setPayMethod]   = useState('INVOICE');
+  const [vatAmount, setVatAmount]       = useState('0');
   const [customerId, setCustomerId]     = useState('');
   const [customerName, setCustomerName] = useState('');
+  const [items, setItems]               = useState<SaleItem[]>([newItem()]);
   const [saving, setSaving]             = useState(false);
 
-  const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+  const updateItem = (id: number, field: keyof SaleItem, val: string) =>
+    setItems(prev => prev.map(it => it.id === id ? { ...it, [field]: val } : it));
+  const addItem    = () => setItems(prev => [...prev, newItem()]);
+  const removeItem = (id: number) => setItems(prev => prev.length > 1 ? prev.filter(it => it.id !== id) : prev);
+
+  const lineTotal = (it: SaleItem) => (parseFloat(it.qty) || 1) * (parseFloat(it.unitPrice) || 0);
+  const subtotal  = items.reduce((s, it) => s + lineTotal(it), 0);
+  const vatAmt    = parseFloat(vatAmount) || 0;
+  const total     = subtotal + vatAmt;
 
   const handleSubmit = async () => {
-    if (!form.date || !form.description || !form.amount || !form.paymentMethod) {
-      toast.error('Date, description, amount, and payment method are required');
-      return;
-    }
-    if (!form.reference) {
-      toast.error('Invoice reference is required — click the refresh icon to generate one');
-      return;
+    if (!date || !paymentMethod) { toast.error('Date and payment method are required'); return; }
+    if (!reference) { toast.error('Reference is required — click ↺ to generate one'); return; }
+    if (items.some(it => !it.description.trim() || lineTotal(it) <= 0)) {
+      toast.error('Each item must have a description and a price greater than zero'); return;
     }
     setSaving(true);
     try {
@@ -418,11 +435,16 @@ function RecordSaleModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...form,
-          amount:      parseFloat(form.amount),
-          vatAmount:   parseFloat(form.vatAmount) || 0,
-          customerId:  customerId  || undefined,
+          date, reference, paymentMethod,
+          vatAmount: vatAmt,
+          customerId:   customerId   || undefined,
           customerName: customerName || 'Sundry Customer',
+          items: items.map(it => ({
+            description: it.description.trim(),
+            qty:         parseFloat(it.qty)       || 1,
+            unitPrice:   parseFloat(it.unitPrice)  || 0,
+            lineTotal:   lineTotal(it),
+          })),
         }),
       });
       const data = await res.json();
@@ -432,91 +454,125 @@ function RecordSaleModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
     } finally { setSaving(false); }
   };
 
-  const subtotal = parseFloat(form.amount) || 0;
-  const vatAmt   = parseFloat(form.vatAmount) || 0;
-  const total    = subtotal + vatAmt;
-
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto">
-      <div className="bg-background rounded-2xl shadow-xl w-full max-w-lg my-6 p-6 space-y-4">
+      <div className="bg-background rounded-2xl shadow-xl w-full max-w-2xl my-6 p-6 space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-lg">Record Sale</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
         </div>
 
+        {/* Header fields */}
         <div className="grid grid-cols-2 gap-3">
-          {/* Date */}
           <div className="space-y-1.5">
             <Label className="text-xs">Date *</Label>
-            <Input type="date" value={form.date} onChange={e => set('date', e.target.value)} className="h-9 rounded-xl" />
+            <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-9 rounded-xl" />
           </div>
-
-          {/* Reference - auto-generated, editable */}
           <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1">
-              <Hash className="w-3 h-3" /> Reference *
-            </Label>
-            <RefInput
-              value={form.reference}
-              onChange={v => set('reference', v)}
-              paymentMethod={form.paymentMethod}
-            />
+            <Label className="text-xs flex items-center gap-1"><Hash className="w-3 h-3" /> Reference *</Label>
+            <RefInput value={reference} onChange={setReference} paymentMethod={paymentMethod} />
           </div>
-
-          {/* Customer */}
           <div className="space-y-1.5 col-span-2">
             <Label className="text-xs">Customer</Label>
             <CustomerLookup
-              value={customerId}
-              displayName={customerName}
+              value={customerId} displayName={customerName}
               onChange={(id, name) => { setCustomerId(id); setCustomerName(name); }}
               onClear={() => { setCustomerId(''); setCustomerName(''); }}
             />
           </div>
+        </div>
 
-          {/* Description */}
-          <div className="space-y-1.5 col-span-2">
-            <Label className="text-xs">Description *</Label>
-            <Input
-              value={form.description}
-              onChange={e => set('description', e.target.value)}
-              placeholder="e.g. Sale of goods"
-              className="h-9 rounded-xl"
-            />
+        {/* Line items table */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs">Line Items *</Label>
+            <button
+              type="button" onClick={addItem}
+              className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+            >
+              <Plus className="w-3 h-3" /> Add Item
+            </button>
           </div>
 
-          {/* Amount */}
-          <div className="space-y-1.5">
-            <Label className="text-xs">Amount (excl. VAT) *</Label>
-            <Input
-              type="number" value={form.amount}
-              onChange={e => set('amount', e.target.value)}
-              placeholder="0.00" min="0"
-              className="h-9 rounded-xl"
-            />
+          <div className="border border-border rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/40 border-b border-border">
+                  <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground w-[45%]">Description</th>
+                  <th className="text-right py-2 px-3 text-xs font-semibold text-muted-foreground w-16">Qty</th>
+                  <th className="text-right py-2 px-3 text-xs font-semibold text-muted-foreground">Unit Price</th>
+                  <th className="text-right py-2 px-3 text-xs font-semibold text-muted-foreground">Total</th>
+                  <th className="w-8"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map(it => (
+                  <tr key={it.id} className="border-b border-border/50 last:border-0">
+                    <td className="px-3 py-2">
+                      <Input
+                        value={it.description}
+                        onChange={e => updateItem(it.id, 'description', e.target.value)}
+                        placeholder="e.g. Consulting services"
+                        className="h-8 text-sm border-0 shadow-none focus-visible:ring-0 px-0"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Input
+                        type="number" min="0.01" step="any"
+                        value={it.qty}
+                        onChange={e => updateItem(it.id, 'qty', e.target.value)}
+                        className="h-8 text-sm text-right border-0 shadow-none focus-visible:ring-0 px-0 w-14"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Input
+                        type="number" min="0" step="0.01"
+                        value={it.unitPrice}
+                        onChange={e => updateItem(it.id, 'unitPrice', e.target.value)}
+                        placeholder="0.00"
+                        className="h-8 text-sm text-right border-0 shadow-none focus-visible:ring-0 px-0"
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono text-sm whitespace-nowrap">
+                      {lineTotal(it) > 0 ? `₦${fmt(lineTotal(it))}` : '—'}
+                    </td>
+                    <td className="px-2 py-2">
+                      <button
+                        type="button"
+                        onClick={() => removeItem(it.id)}
+                        className="text-muted-foreground hover:text-destructive disabled:opacity-30"
+                        disabled={items.length === 1}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+        </div>
 
-          {/* VAT with toggle */}
+        {/* VAT + Payment Method */}
+        <div className="grid grid-cols-2 gap-3">
           <VATInput
-            amount={form.amount}
-            vatAmount={form.vatAmount}
-            onVatChange={v => set('vatAmount', v)}
+            amount={String(subtotal)}
+            vatAmount={vatAmount}
+            onVatChange={setVatAmount}
           />
-
-          {/* Payment Method */}
-          <div className="space-y-1.5 col-span-2">
+          <div className="space-y-1.5">
             <Label className="text-xs">Payment Method *</Label>
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
               {[
-                { value: 'INVOICE', label: 'On Credit (AR)' },
-                { value: 'CASH',    label: 'Cash'           },
-                { value: 'BANK',    label: 'Bank Transfer'  },
+                { value: 'INVOICE', label: 'On Credit' },
+                { value: 'CASH',    label: 'Cash'      },
+                { value: 'BANK',    label: 'Bank'      },
               ].map(opt => (
                 <button
                   key={opt.value}
-                  onClick={() => { set('paymentMethod', opt.value); set('reference', ''); }}
+                  onClick={() => { setPayMethod(opt.value); setReference(''); }}
                   className={`flex-1 py-2 rounded-xl border text-xs font-medium transition-colors ${
-                    form.paymentMethod === opt.value
+                    paymentMethod === opt.value
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'border-input hover:bg-muted'
                   }`}
@@ -528,32 +584,27 @@ function RecordSaleModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
           </div>
         </div>
 
-        {/* Totals summary */}
+        {/* Totals */}
         {subtotal > 0 && (
-          <div className="rounded-xl bg-muted/40 p-3 text-sm space-y-1">
-            <div className="flex justify-between text-muted-foreground">
-              <span>Net Amount</span><span>₦{fmt(subtotal)}</span>
+          <div className="rounded-xl bg-muted/40 px-4 py-3 text-sm space-y-1.5">
+            {items.filter(it => lineTotal(it) > 0).map(it => (
+              <div key={it.id} className="flex justify-between text-muted-foreground text-xs">
+                <span className="truncate mr-4">{it.description || 'Item'}</span>
+                <span className="font-mono">₦{fmt(lineTotal(it))}</span>
+              </div>
+            ))}
+            <div className="flex justify-between text-muted-foreground pt-1 border-t border-border">
+              <span>Subtotal</span><span className="font-mono">₦{fmt(subtotal)}</span>
             </div>
             {vatAmt > 0 && (
-              <>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>VAT (→ VAT Output GL)</span>
-                  <span className="text-amber-700 font-medium">₦{fmt(vatAmt)}</span>
-                </div>
-                <div className="text-[11px] text-muted-foreground bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">
-                  VAT is posted separately to your VAT Output account (not mixed with sales revenue)
-                </div>
-              </>
-            )}
-            <div className="flex justify-between font-bold pt-1 border-t border-border">
-              <span>Total {form.paymentMethod === 'INVOICE' ? 'AR Debit' : 'Cash/Bank Debit'}</span>
-              <span>₦{fmt(total)}</span>
-            </div>
-            {vatAmt > 0 && (
-              <div className="text-[11px] text-muted-foreground pt-0.5">
-                GL split: ₦{fmt(subtotal)} → Sales Revenue · ₦{fmt(vatAmt)} → VAT Output
+              <div className="flex justify-between text-amber-700">
+                <span>VAT (→ VAT Output GL)</span>
+                <span className="font-mono">₦{fmt(vatAmt)}</span>
               </div>
             )}
+            <div className="flex justify-between font-bold pt-1 border-t border-border text-base">
+              <span>Total</span><span className="font-mono">₦{fmt(total)}</span>
+            </div>
           </div>
         )}
 
