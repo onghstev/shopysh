@@ -11,10 +11,12 @@ interface Message {
 }
 
 const SUGGESTIONS = [
-  'What were my top expenses last month?',
-  'How is my cash position looking?',
-  'Which accounts have the highest balances?',
-  'Explain the difference between debit and credit here',
+  'What are my top expenses this month?',
+  'What is my current cash balance?',
+  'What is my net profit this month?',
+  'Show me total revenue this year',
+  'What are my overdue invoices?',
+  'Give me an expense breakdown this month',
 ];
 
 export default function FinanceAIChat() {
