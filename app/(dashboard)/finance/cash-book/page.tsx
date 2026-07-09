@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Download, RefreshCw, Banknote, Plus, X } from 'lucide-react';
+import { Download, RefreshCw, Banknote, Plus, X, ReceiptText } from 'lucide-react';
+import { printReceipt } from '@/lib/print-receipt';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -159,6 +160,11 @@ export default function CashBookPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showRecord, setShowRecord] = useState(false);
+  const [biz, setBiz] = useState<any>(null);
+
+  useEffect(() => {
+    fetch('/api/settings/profile').then(r => r.ok ? r.json() : null).then(d => { if (d) setBiz(d); }).catch(() => {});
+  }, []);
   const { from: defaultFrom, to: defaultTo } = getMonthRange();
   const [from, setFrom] = useState(defaultFrom);
   const [to, setTo] = useState(defaultTo);
@@ -265,6 +271,7 @@ export default function CashBookPage() {
                 <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4">Receipts (Dr)</th>
                 <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4">Payments (Cr)</th>
                 <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4">Balance</th>
+                <th className="py-3 px-4" />
               </tr>
             </thead>
             <tbody>
@@ -276,19 +283,20 @@ export default function CashBookPage() {
                   <td className="py-2.5 px-4 text-right" />
                   <td className="py-2.5 px-4 text-right" />
                   <td className="py-2.5 px-4 text-right font-mono font-semibold">₦{fmt(data.openingBalance)}</td>
+                  <td className="py-2.5 px-4" />
                 </tr>
               )}
               {loading ? (
                 Array(8).fill(0).map((_, i) => (
                   <tr key={i} className="border-b border-border/40">
-                    {Array(6).fill(0).map((_, j) => (
+                    {Array(7).fill(0).map((_, j) => (
                       <td key={j} className="py-3 px-4"><Skeleton className="h-4 w-full" /></td>
                     ))}
                   </tr>
                 ))
               ) : lines.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center">
+                  <td colSpan={7} className="py-16 text-center">
                     <Banknote className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground">No cash transactions in this period</p>
                   </td>
@@ -313,6 +321,25 @@ export default function CashBookPage() {
                     <td className="py-2.5 px-4 text-right font-mono text-sm font-semibold">
                       ₦{fmt(l.runningBalance)}
                     </td>
+                    <td className="py-2.5 px-4">
+                      {l.debit > 0 && (
+                        <button
+                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-2 py-1 transition-colors whitespace-nowrap"
+                          onClick={() => printReceipt({
+                            receiptNumber: l.reference || l.entryNumber,
+                            date: l.date,
+                            customerName:  l.customer?.name  || l.customer?.phone,
+                            customerPhone: l.customer?.phone,
+                            customerEmail: l.customer?.email,
+                            paymentMethod: 'Cash',
+                            lines: [{ description: l.description || 'Cash Receipt', amount: l.debit }],
+                            total: l.debit,
+                          }, biz)}
+                        >
+                          <ReceiptText className="w-3 h-3" /> Receipt
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))
               )}
@@ -330,6 +357,7 @@ export default function CashBookPage() {
                   <td className="py-2.5 px-4 text-right font-mono text-sm font-bold" style={{ color: 'hsl(40 78% 47%)' }}>
                     ₦{fmt(totals.closingBalance)}
                   </td>
+                  <td className="py-2.5 px-4" />
                 </tr>
               )}
             </tbody>

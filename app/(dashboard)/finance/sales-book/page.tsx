@@ -3,8 +3,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Download, RefreshCw, ChevronLeft, ChevronRight, BookOpen, Plus, X,
-  Hash, Percent, Loader2, RotateCcw, Printer,
+  Hash, Percent, Loader2, RotateCcw, Printer, ReceiptText,
 } from 'lucide-react';
+import { printReceipt } from '@/lib/print-receipt';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -123,6 +124,35 @@ function printInvoice(entry: any, biz: any) {
 
   const win = window.open('', '_blank', 'width=800,height=900');
   if (win) { win.document.write(html); win.document.close(); }
+}
+
+// ── Print receipt for cash/bank sales ────────────────────────────────────────
+function printSaleReceipt(entry: any, biz: any) {
+  const salesLines = (entry.lines ?? []).filter((l: any) => l.account?.systemTag === 'SALES' && Number(l.credit) > 0);
+  const vatLine    = entry.lines?.find((l: any) => l.account?.systemTag === 'VAT_OUTPUT');
+  // Customer is on the Cash/Bank debit line
+  const cashLine   = entry.lines?.find((l: any) => ['CASH', 'BANK'].includes(l.account?.systemTag ?? '') && Number(l.debit) > 0);
+  const customer   = cashLine?.customer;
+  const vatAmt     = vatLine ? Number(vatLine.credit) : 0;
+  const subtotal   = salesLines.reduce((s: number, l: any) => s + Number(l.credit), 0);
+  const payMethod  = entry.entryType === 'SALES_RECEIPT'
+    ? (entry.lines?.find((l: any) => l.account?.systemTag === 'BANK') ? 'Bank Transfer' : 'Cash')
+    : '';
+
+  printReceipt({
+    receiptNumber: entry.reference || entry.entryNumber,
+    date: entry.entryDate,
+    customerName:  customer?.name  || customer?.phone,
+    customerPhone: customer?.phone,
+    customerEmail: customer?.email,
+    paymentMethod: payMethod,
+    lines: salesLines.length > 0
+      ? salesLines.map((l: any) => ({ description: l.description || 'Sale', amount: Number(l.credit) }))
+      : [{ description: entry.description || 'Sale', amount: subtotal }],
+    subtotal,
+    tax: vatAmt,
+    total: Number(entry.totalDebit),
+  }, biz);
 }
 
 // ── Invoice preview modal (before printing) ───────────────────────────────────
@@ -813,7 +843,16 @@ export default function SalesBookPage() {
                             className="h-7 px-2 text-xs gap-1 whitespace-nowrap"
                             onClick={() => setPrinting(e)}
                           >
-                            <Printer className="w-3 h-3" /> Print
+                            <Printer className="w-3 h-3" /> Invoice
+                          </Button>
+                        )}
+                        {e.entryType === 'SALES_RECEIPT' && (
+                          <Button
+                            size="sm" variant="outline"
+                            className="h-7 px-2 text-xs gap-1 whitespace-nowrap"
+                            onClick={() => printSaleReceipt(e, biz)}
+                          >
+                            <ReceiptText className="w-3 h-3" /> Receipt
                           </Button>
                         )}
                       </td>

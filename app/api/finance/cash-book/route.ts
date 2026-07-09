@@ -51,6 +51,7 @@ export async function GET(req: NextRequest) {
       },
       include: {
         journalEntry: { select: { id: true, entryNumber: true, entryDate: true, description: true, reference: true, entryType: true } },
+        customer: { select: { id: true, name: true, phone: true, email: true } },
       },
       orderBy: [{ journalEntry: { entryDate: 'asc' } }, { journalEntry: { entryNumber: 'asc' } }],
     });
@@ -69,6 +70,7 @@ export async function GET(req: NextRequest) {
         debit: Number(l.debit),
         credit: Number(l.credit),
         runningBalance: running,
+        customer: l.customer ?? null,
       };
     });
 

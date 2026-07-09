@@ -8,9 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Package, User, Calendar, CreditCard, ShoppingCart, Truck } from 'lucide-react';
+import { ArrowLeft, Package, User, Calendar, CreditCard, ShoppingCart, Truck, Printer } from 'lucide-react';
 import { formatCurrency, formatDateTime, ORDER_STATUS_COLORS, PAYMENT_STATUS_COLORS } from '@/lib/format';
 import { toast } from 'sonner';
+import { printReceipt } from '@/lib/print-receipt';
 
 const STATUSES = ['PENDING', 'CONFIRMED', 'PROCESSING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'COMPLETED', 'CANCELLED'];
 
@@ -20,6 +21,11 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [biz, setBiz] = useState<any>(null);
+
+  useEffect(() => {
+    fetch('/api/settings/profile').then(r => r.ok ? r.json() : null).then(d => { if (d) setBiz(d); }).catch(() => {});
+  }, []);
 
   const fetchOrder = useCallback(async () => {
     try {
@@ -66,6 +72,29 @@ export default function OrderDetailPage() {
         </div>
         <div className="ml-auto flex items-center gap-3">
           <Badge className={ORDER_STATUS_COLORS[order?.status] ?? ''}>{order?.status?.replace?.(/_/g, ' ') ?? ''}</Badge>
+          <Button
+            variant="outline" size="sm"
+            onClick={() => printReceipt({
+              receiptNumber: order.orderNumber,
+              date: order.createdAt,
+              customerName:  order.customer?.name,
+              customerPhone: order.customer?.phone,
+              customerEmail: order.customer?.email,
+              paymentMethod: order.paymentMethod?.replace?.(/_/g, ' '),
+              lines: (order.items ?? []).map((it: any) => ({
+                description: it.product?.name ?? it.productName ?? 'Item',
+                qty: it.quantity,
+                unitPrice: Number(it.unitPrice),
+                amount: Number(it.totalPrice),
+              })),
+              subtotal: Number(order.subtotal ?? order.totalAmount),
+              discount: Number(order.discount ?? 0),
+              tax: Number(order.tax ?? 0),
+              total: Number(order.totalAmount),
+            }, biz)}
+          >
+            <Printer className="w-3.5 h-3.5 mr-1.5" /> Print Receipt
+          </Button>
           {order?.status !== 'COMPLETED' && order?.status !== 'CANCELLED' && (
             <Select value="" onValueChange={updateStatus} disabled={updating}>
               <SelectTrigger className="w-[180px]"><SelectValue placeholder="Update Status" /></SelectTrigger>
