@@ -57,6 +57,8 @@ export default function CustomerLookup({ value, displayName, onChange, onClear, 
   useEffect(() => {
     if (!open) return;
     clearTimeout(debounceRef.current);
+    // No debounce on empty query — load recent customers immediately on open
+    if (!query.trim()) { search(''); return; }
     debounceRef.current = setTimeout(() => { search(query); }, 300);
     return () => clearTimeout(debounceRef.current);
   }, [query, open, search]);
@@ -170,8 +172,10 @@ export default function CustomerLookup({ value, displayName, onChange, onClear, 
           <div className="max-h-48 overflow-y-auto">
             {loading ? (
               <div className="py-3 px-4 text-xs text-muted-foreground">Searching…</div>
-            ) : results.length === 0 && query.trim() !== '' ? (
-              <div className="py-3 px-4 text-xs text-muted-foreground">No customers found</div>
+            ) : results.length === 0 ? (
+              <div className="py-3 px-4 text-xs text-muted-foreground">
+                {query.trim() ? 'No customers found' : 'Type a name, phone, or customer code to search'}
+              </div>
             ) : (
               results.map(c => (
                 <button
