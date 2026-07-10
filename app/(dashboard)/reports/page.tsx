@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,17 +8,24 @@ import { Label } from '@/components/ui/label';
 import { Download, FileSpreadsheet, ShoppingCart, Package, Users, CreditCard, Loader2, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
 
-const REPORT_TYPES = [
-  { value: 'orders', label: 'Orders Report', icon: ShoppingCart, description: 'Export all orders with customer details, items, status, and totals', color: 'text-blue-600 bg-blue-50 dark:bg-blue-950' },
-  { value: 'products', label: 'Product Inventory', icon: Package, description: 'Export product catalog with pricing, stock levels, and categories', color: 'text-green-600 bg-green-50 dark:bg-green-950' },
-  { value: 'customers', label: 'Customer Database', icon: Users, description: 'Export customer records with contact info, segments, and lifetime value', color: 'text-purple-600 bg-purple-50 dark:bg-purple-950' },
-  { value: 'payments', label: 'Payment Transactions', icon: CreditCard, description: 'Export payment records with gateway info, amounts, and statuses', color: 'text-orange-600 bg-orange-50 dark:bg-orange-950' },
+const ALL_REPORT_TYPES = [
+  { value: 'orders',    label: 'Orders Report',        icon: ShoppingCart, requires: 'ecommerce', description: 'Export all orders with customer details, items, status, and totals',     color: 'text-blue-600 bg-blue-50 dark:bg-blue-950' },
+  { value: 'products',  label: 'Product Inventory',    icon: Package,      requires: 'inventory', description: 'Export product catalog with pricing, stock levels, and categories',       color: 'text-green-600 bg-green-50 dark:bg-green-950' },
+  { value: 'customers', label: 'Customer Database',    icon: Users,        requires: 'crm',       description: 'Export customer records with contact info, segments, and lifetime value', color: 'text-purple-600 bg-purple-50 dark:bg-purple-950' },
+  { value: 'payments',  label: 'Payment Transactions', icon: CreditCard,   requires: 'ecommerce', description: 'Export payment records with gateway info, amounts, and statuses',         color: 'text-orange-600 bg-orange-50 dark:bg-orange-950' },
 ];
 
 export default function ReportsPage() {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [modules, setModules] = useState<string[]>(['ecommerce', 'finance', 'inventory', 'crm', 'marketing', 'communication']);
+
+  useEffect(() => {
+    fetch('/api/me/features').then(r => r.ok ? r.json() : null).then(d => { if (d?.modules) setModules(d.modules); }).catch(() => {});
+  }, []);
+
+  const REPORT_TYPES = ALL_REPORT_TYPES.filter(r => modules.includes(r.requires));
 
   const downloadReport = async (type: string) => {
     setDownloading(type);
