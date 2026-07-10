@@ -32,6 +32,7 @@ export interface ReceiptData {
 export interface BizProfile {
   businessName?: string;
   name?: string;
+  address?: string;
   city?: string;
   state?: string;
   country?: string;
@@ -41,7 +42,9 @@ export interface BizProfile {
 
 export function printReceipt(data: ReceiptData, biz?: BizProfile | null) {
   const bizName    = biz?.businessName || biz?.name || '';
-  const bizAddress = [biz?.city, biz?.state, biz?.country].filter(Boolean).join(', ');
+  const bizAddress = biz?.address
+    ? biz.address
+    : [biz?.city, biz?.state, biz?.country].filter(Boolean).join(', ');
   const bizPhone   = biz?.phone  || '';
   const bizEmail   = biz?.email  || '';
 

@@ -24,7 +24,7 @@ export default function OrderDetailPage() {
   const [biz, setBiz] = useState<any>(null);
 
   useEffect(() => {
-    fetch('/api/settings/profile').then(r => r.ok ? r.json() : null).then(d => { if (d) setBiz(d); }).catch(() => {});
+    fetch('/api/settings/profile').then(r => r.ok ? r.json() : null).then(d => { if (d) setBiz(d.tenant ?? d); }).catch(() => {});
   }, []);
 
   const fetchOrder = useCallback(async () => {
