@@ -23,12 +23,14 @@ interface NavItem {
   href: string;
   label: string;
   icon: any;
+  requires?: string;   // module key — item hidden if tenant plan doesn't include it
   children?: { href: string; label: string; icon: any }[];
 }
 
 interface NavGroup {
   key: string;
   label: string;
+  requires?: string;   // hides entire group if module missing
   external?: boolean;
   items: NavItem[];
 }
@@ -38,36 +40,39 @@ const NAV_GROUPS: NavGroup[] = [
     key: 'main',
     label: 'Main',
     items: [
-      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/products', label: 'Products', icon: Package },
-      { href: '/categories', label: 'Categories', icon: FolderTree },
-      { href: '/orders', label: 'Orders', icon: ShoppingCart },
-      { href: '/payments', label: 'Payments', icon: CreditCard },
-      { href: '/customers', label: 'Customers', icon: Users },
-      { href: '/team', label: 'Team', icon: UsersRound },
+      { href: '/dashboard',  label: 'Dashboard',  icon: LayoutDashboard },
+      { href: '/products',   label: 'Products',   icon: Package,    requires: 'inventory' },
+      { href: '/categories', label: 'Categories', icon: FolderTree, requires: 'inventory' },
+      { href: '/orders',     label: 'Orders',     icon: ShoppingCart, requires: 'ecommerce' },
+      { href: '/payments',   label: 'Payments',   icon: CreditCard,   requires: 'ecommerce' },
+      { href: '/customers',  label: 'Customers',  icon: Users,      requires: 'crm' },
+      { href: '/team',       label: 'Team',       icon: UsersRound },
     ],
   },
   {
     key: 'marketing',
     label: 'Marketing',
+    requires: 'marketing',
     items: [
       { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
       { href: '/analytics', label: 'Analytics', icon: BarChart3 },
-      { href: '/reports', label: 'Reports', icon: FileBarChart },
+      { href: '/reports',   label: 'Reports',   icon: FileBarChart },
     ],
   },
   {
     key: 'communication',
     label: 'Communication',
+    requires: 'communication',
     items: [
       { href: '/conversations', label: 'Conversations', icon: MessageSquare },
-      { href: '/chat-widget', label: 'Chat Widget', icon: Code },
-      { href: '/ai-assistant', label: 'AI Assistant', icon: Bot },
+      { href: '/chat-widget',   label: 'Chat Widget',   icon: Code },
+      { href: '/ai-assistant',  label: 'AI Assistant',  icon: Bot },
     ],
   },
   {
     key: 'finance',
     label: 'Finance',
+    requires: 'finance',
     items: [
       { href: '/finance',                           label: 'Dashboard',           icon: Wallet },
       { href: '/finance/accounts',                  label: 'Chart of Accounts',   icon: Layers },
@@ -79,7 +84,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/finance/receivables',               label: 'Debtors / AR',        icon: UserCheck },
       { href: '/finance/payables',                  label: 'Creditors / AP',      icon: UserX },
       { href: '/finance/vendors',                   label: 'Vendors',             icon: Building2 },
-      { href: '/finance/expenses',                   label: 'Expenses',            icon: TrendingDown },
+      { href: '/finance/expenses',                  label: 'Expenses',            icon: TrendingDown },
       { href: '/finance/fixed-assets',              label: 'Fixed Assets',        icon: HardDrive },
       { href: '/finance/budget',                    label: 'Budget',              icon: PieChart },
       { href: '/finance/recurring-journals',        label: 'Recurring Journals',  icon: RefreshCw },
@@ -107,12 +112,16 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
+// All modules — used as fallback while features are loading or when no subscription exists
+const ALL_MODULES = ['ecommerce', 'finance', 'inventory', 'crm', 'marketing', 'communication'];
+
 export function DashboardShell({ children, session }: { children: React.ReactNode; session: any }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [lowStockCount, setLowStockCount] = useState(0);
   const [urgentCount, setUrgentCount] = useState(0);
+  const [modules, setModules] = useState<string[]>(ALL_MODULES);
   const pathname = usePathname();
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
@@ -139,6 +148,14 @@ export function DashboardShell({ children, session }: { children: React.ReactNod
   }, []);
 
   useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
+
+  // Load plan feature modules once on mount
+  useEffect(() => {
+    fetch('/api/me/features')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.modules) setModules(d.modules); })
+      .catch(() => {});
+  }, []);
 
   // Clear the dot the moment the user opens the dropdown
   useEffect(() => {
@@ -248,8 +265,17 @@ export function DashboardShell({ children, session }: { children: React.ReactNod
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5 scrollbar-thin">
           {NAV_GROUPS.map((group) => {
+            // Hide entire group if the plan doesn't include its required module
+            if (group.requires && !modules.includes(group.requires)) return null;
+
+            // Filter items within the group by their required module
+            const visibleItems = group.items.filter(
+              item => !item.requires || modules.includes(item.requires)
+            );
+            if (visibleItems.length === 0) return null;
+
             const isExpanded = expandedGroups[group.key] ?? false;
-            const hasActive = group.items.some((item) =>
+            const hasActive = visibleItems.some((item) =>
               pathname === item.href ||
               (item.href !== '/dashboard' && pathname?.startsWith?.(item.href)) ||
               item.children?.some(c => pathname === c.href || pathname?.startsWith?.(c.href))
@@ -271,7 +297,7 @@ export function DashboardShell({ children, session }: { children: React.ReactNod
                 </button>
                 {isExpanded && (
                   <div className="space-y-0.5 mt-0.5">
-                    {group.items.map((item) =>
+                    {visibleItems.map((item) =>
                       item.children ? (
                         <SubNavItem key={item.href} item={item} />
                       ) : (

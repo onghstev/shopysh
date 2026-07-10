@@ -7,6 +7,17 @@ async function main() {
   console.log('Seeding database...');
 
   // 1. Subscription Plans
+  // modules controls which nav sections are visible per plan:
+  //   ecommerce  → Orders, Payments, Storefront
+  //   finance    → all Finance module pages
+  //   inventory  → Products + Stock Inventory
+  //   crm        → Customers
+  //   marketing  → Campaigns, Analytics, Reports
+  //   communication → Conversations, Chat Widget, AI Assistant
+  // Full-suite plans include all modules. Specialised plans omit specific ones.
+
+  const ALL_MODULES = ['ecommerce', 'finance', 'inventory', 'crm', 'marketing', 'communication'];
+
   const starterPlan = await prisma.subscriptionPlan.upsert({
     where: { name: 'Starter' },
     update: {
@@ -16,6 +27,7 @@ async function main() {
       priceUsdYearly: 150,
       maxProducts: 30,
       features: {
+        modules: ALL_MODULES,
         ai_conversations: '1,000 AI conversations/month',
         products: 'Up to 30 products',
         chat_widget: 'Chat widget included',
@@ -32,6 +44,7 @@ async function main() {
       priceUsdMonthly: 15,
       priceUsdYearly: 150,
       features: {
+        modules: ALL_MODULES,
         ai_conversations: '1,000 AI conversations/month',
         products: 'Up to 30 products',
         chat_widget: 'Chat widget included',
@@ -61,6 +74,7 @@ async function main() {
       priceUsdYearly: 200,
       maxProducts: 50,
       features: {
+        modules: ALL_MODULES,
         ai_conversations: '5,000 AI conversations/month',
         products: 'Up to 50 products',
         chat_widget: 'Chat widget included',
@@ -80,6 +94,7 @@ async function main() {
       priceUsdMonthly: 20,
       priceUsdYearly: 200,
       features: {
+        modules: ALL_MODULES,
         ai_conversations: '5,000 AI conversations/month',
         products: 'Up to 50 products',
         chat_widget: 'Chat widget included',
@@ -112,6 +127,7 @@ async function main() {
       priceUsdYearly: 300,
       maxProducts: 200,
       features: {
+        modules: ALL_MODULES,
         ai_conversations: '20,000 AI conversations/month',
         products: 'Up to 200 products',
         chat_widget: 'Chat widget included',
@@ -132,6 +148,7 @@ async function main() {
       priceUsdMonthly: 30,
       priceUsdYearly: 300,
       features: {
+        modules: ALL_MODULES,
         ai_conversations: '20,000 AI conversations/month',
         products: 'Up to 200 products',
         chat_widget: 'Chat widget included',
@@ -156,7 +173,91 @@ async function main() {
     },
   });
 
-  console.log('Subscription plans created:', starterPlan.name, businessPlan.name, premiumPlan.name);
+  // ERP / Finance plan — Finance + Inventory + CRM + Marketing + Communication, no Ecommerce
+  const erpPlan = await prisma.subscriptionPlan.upsert({
+    where: { name: 'ERP Finance' },
+    update: {
+      features: {
+        modules: ['finance', 'inventory', 'crm', 'marketing', 'communication'],
+        finance: 'Full Finance & Accounting suite',
+        inventory: 'Products & Stock Inventory tracking',
+        crm: 'Customer management',
+        marketing: 'Campaigns & Analytics',
+        communication: 'Conversations & AI assistant',
+        support: 'Priority support',
+      },
+    },
+    create: {
+      name: 'ERP Finance',
+      description: 'Full ERP & Finance suite for businesses not selling online',
+      priceNgnMonthly: 25000,
+      priceNgnYearly: 250000,
+      priceUsdMonthly: 25,
+      priceUsdYearly: 250,
+      features: {
+        modules: ['finance', 'inventory', 'crm', 'marketing', 'communication'],
+        finance: 'Full Finance & Accounting suite',
+        inventory: 'Products & Stock Inventory tracking',
+        crm: 'Customer management',
+        marketing: 'Campaigns & Analytics',
+        communication: 'Conversations & AI assistant',
+        support: 'Priority support',
+      },
+      maxAiConversations: 10000,
+      maxProducts: 500,
+      maxWhatsappAccounts: 1,
+      maxUsers: 10,
+      maxStorageMb: 10240,
+      maxBroadcastsMonthly: 1000,
+      apiAccess: false,
+      customAiTraining: false,
+      prioritySupport: true,
+      displayOrder: 4,
+    },
+  });
+
+  // Ecommerce-only plan — Orders + Storefront + Products + CRM + Marketing, no Finance
+  const ecommercePlan = await prisma.subscriptionPlan.upsert({
+    where: { name: 'Ecommerce' },
+    update: {
+      features: {
+        modules: ['ecommerce', 'inventory', 'crm', 'marketing'],
+        ecommerce: 'Online storefront, Orders & Payments',
+        inventory: 'Products & Stock management',
+        crm: 'Customer management',
+        marketing: 'Campaigns & Analytics',
+        support: 'Email support',
+      },
+    },
+    create: {
+      name: 'Ecommerce',
+      description: 'Online storefront and order management — no accounting required',
+      priceNgnMonthly: 18000,
+      priceNgnYearly: 180000,
+      priceUsdMonthly: 18,
+      priceUsdYearly: 180,
+      features: {
+        modules: ['ecommerce', 'inventory', 'crm', 'marketing'],
+        ecommerce: 'Online storefront, Orders & Payments',
+        inventory: 'Products & Stock management',
+        crm: 'Customer management',
+        marketing: 'Campaigns & Analytics',
+        support: 'Email support',
+      },
+      maxAiConversations: 2000,
+      maxProducts: 200,
+      maxWhatsappAccounts: 1,
+      maxUsers: 3,
+      maxStorageMb: 5120,
+      maxBroadcastsMonthly: 200,
+      apiAccess: false,
+      customAiTraining: false,
+      prioritySupport: false,
+      displayOrder: 5,
+    },
+  });
+
+  console.log('Subscription plans created/updated:', starterPlan.name, businessPlan.name, premiumPlan.name, erpPlan.name, ecommercePlan.name);
 
   // 2. Demo Tenant
   const demoTenant = await prisma.tenant.upsert({

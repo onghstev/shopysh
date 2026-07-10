@@ -70,6 +70,7 @@ model Tenant {
   assetDepreciation     AssetDepreciation[]
   recurringJournals     RecurringJournal[]
   bankStatements        BankStatement[]
+  stockMovements        StockMovement[]
 
   @@index([isActive, createdAt(sort: Desc)], map: "idx_tenants_active")
   @@map("tenants")
@@ -108,11 +109,12 @@ model User {
   updatedAt      DateTime  @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
 
-  tenant                Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant                Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   accounts              Account[]
   auditLogs             AuditLog[]
   createdCampaigns      Campaign[]
   assignedConversations Conversation[]
+  stockMovements        StockMovement[] @relation("StockMovementCreator")
 
   @@unique([email, tenantId], map: "idx_users_email_tenant")
   @@index([tenantId, isActive], map: "idx_users_tenant_active")
@@ -200,10 +202,11 @@ model Product {
   updatedAt           DateTime  @updatedAt @map("updated_at")
   deletedAt           DateTime? @map("deleted_at")
 
-  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  category     ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  images       ProductImage[]
-  orderItems   OrderItem[]
+  tenant         Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category       ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  images         ProductImage[]
+  orderItems     OrderItem[]
+  stockMovements StockMovement[]
 
   @@unique([tenantId, slug], map: "idx_products_tenant_slug")
   @@index([tenantId, isActive, createdAt(sort: Desc)], map: "idx_products_tenant_active")
@@ -211,6 +214,28 @@ model Product {
   @@index([tenantId, isFeatured], map: "idx_products_featured")
   @@index([tenantId, sku], map: "idx_products_sku")
   @@map("products")
+}
+
+model StockMovement {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  productId   String   @map("product_id") @db.Uuid
+  type        String   @db.VarChar(20)
+  quantity    Int
+  balanceAfter Int     @map("balance_after")
+  reference   String?  @db.VarChar(255)
+  reason      String?  @db.Text
+  costPrice   Decimal? @map("cost_price") @db.Decimal(12, 2)
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdBy User?    @relation("StockMovementCreator", fields: [createdById], references: [id])
+
+  @@index([tenantId, productId, createdAt(sort: Desc)], map: "idx_stock_movements_product")
+  @@index([tenantId, createdAt(sort: Desc)], map: "idx_stock_movements_tenant")
+  @@map("stock_movements")
 }
 
 model ProductImage {
