@@ -136,7 +136,7 @@ export default function SettingsPage() {
   const [paymentSaving, setPaymentSaving] = useState(false);
   const [smsConfig, setSmsConfig] = useState<any>({ provider: 'termii', termiiApiKey: '', termiiSenderId: '', africastalkingApiKey: '', africastalkingUsername: '', africastalkingSenderId: '' });
   const [smsSaving, setSmsSaving] = useState(false);
-  const [financeConfig, setFinanceConfig] = useState<any>({ glPostingMode: 'AUTO', glAccountMappings: {} });
+  const [financeConfig, setFinanceConfig] = useState<any>({ glPostingMode: 'AUTO', glAccountMappings: {}, fixedAssetCategoryMappings: {} });
   const [financeSaving, setFinanceSaving] = useState(false);
   const [glAccounts, setGlAccounts] = useState<any[]>([]);
   const isSuperAdmin = session?.user?.role === 'SUPER_ADMIN';
@@ -1070,6 +1070,69 @@ export default function SettingsPage() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="">Use system default</SelectItem>
+                                {glAccounts
+                                  .filter((a: any) => !a.parentId || a._count?.children === 0)
+                                  .map((a: any) => (
+                                    <SelectItem key={a.id} value={a.id}>
+                                      [{a.code}] {a.name}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Fixed Asset Category GL Mappings */}
+          <Card className="shadow-sm border-border/50">
+            <CardHeader>
+              <CardTitle className="text-lg">Fixed Asset Category GL Accounts</CardTitle>
+              <CardDescription>
+                Assign a specific GL account to each fixed asset category. This overrides the "Default Fixed Asset" mapping above
+                for assets of that category, but is overridden by the GL account set directly on an individual asset.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {glAccounts.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4">
+                  No GL accounts found. Set up your Chart of Accounts in Finance → Chart of Accounts first.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2 pr-4 w-1/3">Asset Category</th>
+                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2">GL Account</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        'Land & Buildings', 'Plant & Machinery', 'Motor Vehicles',
+                        'Furniture & Fittings', 'Computer Equipment', 'Office Equipment',
+                        'Tools & Equipment', 'Leasehold Improvements', 'Other',
+                      ].map(cat => (
+                        <tr key={cat} className="border-b border-border/40">
+                          <td className="py-3 pr-4 font-medium">{cat}</td>
+                          <td className="py-3">
+                            <Select
+                              value={financeConfig.fixedAssetCategoryMappings?.[cat] ?? ''}
+                              onValueChange={v => setFinanceConfig((prev: any) => ({
+                                ...prev,
+                                fixedAssetCategoryMappings: { ...(prev.fixedAssetCategoryMappings ?? {}), [cat]: v || undefined },
+                              }))}
+                            >
+                              <SelectTrigger className="h-9 rounded-xl text-sm">
+                                <SelectValue placeholder="Use default fixed asset account" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Use default fixed asset account</SelectItem>
                                 {glAccounts
                                   .filter((a: any) => !a.parentId || a._count?.children === 0)
                                   .map((a: any) => (

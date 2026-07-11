@@ -12,6 +12,7 @@ export async function GET(_req: NextRequest) {
   return NextResponse.json({
     glPostingMode: s.glPostingMode ?? 'AUTO',
     glAccountMappings: s.glAccountMappings ?? {},
+    fixedAssetCategoryMappings: s.fixedAssetCategoryMappings ?? {},
   });
 }
 
@@ -19,7 +20,7 @@ export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await req.json();
-  const { glPostingMode, glAccountMappings } = body;
+  const { glPostingMode, glAccountMappings, fixedAssetCategoryMappings } = body;
 
   const tenant = await prisma.tenant.findUnique({ where: { id: session.user.tenantId }, select: { settings: true } });
   const existing = (tenant?.settings as any) ?? {};
@@ -31,11 +32,16 @@ export async function PATCH(req: NextRequest) {
         ...existing,
         ...(glPostingMode !== undefined ? { glPostingMode } : {}),
         ...(glAccountMappings !== undefined ? { glAccountMappings } : {}),
+        ...(fixedAssetCategoryMappings !== undefined ? { fixedAssetCategoryMappings } : {}),
       },
     },
     select: { settings: true },
   });
 
   const s = (updated.settings as any) ?? {};
-  return NextResponse.json({ glPostingMode: s.glPostingMode, glAccountMappings: s.glAccountMappings ?? {} });
+  return NextResponse.json({
+    glPostingMode: s.glPostingMode,
+    glAccountMappings: s.glAccountMappings ?? {},
+    fixedAssetCategoryMappings: s.fixedAssetCategoryMappings ?? {},
+  });
 }

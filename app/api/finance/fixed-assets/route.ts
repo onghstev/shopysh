@@ -127,9 +127,10 @@ export async function POST(req: NextRequest) {
 
     // Post asset acquisition to GL if a GL account is linked and accounts are available
     try {
-      const { glPostingMode, glAccountMappings } = await getFinanceSettings(tenantId);
-      // Use the asset's specific GL account, or fall back to the FIXED_ASSET mapping slot
+      const { glPostingMode, glAccountMappings, fixedAssetCategoryMappings } = await getFinanceSettings(tenantId);
+      // Resolution chain: per-asset GL → category mapping → FIXED_ASSET default mapping
       const assetGlAccountId = glAccountId
+        || fixedAssetCategoryMappings[category] || null
         || await resolveGLAccount(tenantId, 'FIXED_ASSET', glAccountMappings)
         || null;
       if (assetGlAccountId) {

@@ -17,11 +17,13 @@ export async function resolveGLAccount(
 export async function getFinanceSettings(tenantId: string): Promise<{
   glPostingMode: 'AUTO' | 'EOD';
   glAccountMappings: Record<string, string>;
+  fixedAssetCategoryMappings: Record<string, string>;
 }> {
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { settings: true } });
   const s = (tenant?.settings as any) ?? {};
   return {
     glPostingMode: s.glPostingMode ?? 'AUTO',
     glAccountMappings: s.glAccountMappings ?? {},
+    fixedAssetCategoryMappings: s.fixedAssetCategoryMappings ?? {},
   };
 }
