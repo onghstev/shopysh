@@ -1015,13 +1015,13 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* GL Account Mappings */}
+          {/* GL Account Mappings — Transaction Journal Patterns */}
           <Card className="shadow-sm border-border/50">
             <CardHeader>
-              <CardTitle className="text-lg">GL Account Mappings</CardTitle>
+              <CardTitle className="text-lg">Transaction Journal Mappings</CardTitle>
               <CardDescription>
-                Map transaction types to specific GL accounts. Leave blank to use the account with the matching system tag.
-                Accounts are loaded from your Chart of Accounts.
+                For each transaction type, select the account to <strong>Debit (DR)</strong> and the account to <strong>Credit (CR)</strong>.
+                Accounts showing "Default" are system presets — select a different account to override.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1029,63 +1029,128 @@ export default function SettingsPage() {
                 <p className="text-sm text-muted-foreground py-4">
                   No GL accounts found. Set up your Chart of Accounts in Finance → Chart of Accounts first.
                 </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2 pr-4 w-1/3">Account Slot</th>
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2 pr-4">Description</th>
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2">Override Account</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        { tag: 'CASH',        label: 'Cash Account',         desc: 'Used for cash sales, cash receipts, and cash payments' },
-                        { tag: 'BANK',        label: 'Bank Account',         desc: 'Used for bank-transfer sales and bank payments' },
-                        { tag: 'AR',          label: 'Accounts Receivable',  desc: 'Debited on credit sales (invoices), credited on customer payments' },
-                        { tag: 'SALES',       label: 'Sales Revenue',        desc: 'Credited on every sale transaction' },
-                        { tag: 'VAT_OUTPUT',  label: 'VAT Output',           desc: 'Credited when VAT is charged on sales' },
-                        { tag: 'AP',          label: 'Accounts Payable',     desc: 'Credited on credit purchases, debited when suppliers are paid' },
-                        { tag: 'PURCHASE',    label: 'Purchase / COGS',      desc: 'Debited on purchase and goods-received transactions' },
-                        { tag: 'EXPENSE',     label: 'General Expense',      desc: 'Default expense account debited on expense recording (falls back to Miscellaneous Expenses 6800)' },
-                        { tag: 'FIXED_ASSET', label: 'Default Fixed Asset',  desc: 'Overrides the per-asset GL account for fixed asset acquisitions when no specific account is set on the asset' },
-                      ].map(row => (
-                        <tr key={row.tag} className="border-b border-border/40">
-                          <td className="py-3 pr-4">
-                            <p className="font-medium">{row.label}</p>
-                            <p className="text-[11px] font-mono text-muted-foreground">{row.tag}</p>
-                          </td>
-                          <td className="py-3 pr-4 text-xs text-muted-foreground">{row.desc}</td>
-                          <td className="py-3">
-                            <Select
-                              value={financeConfig.glAccountMappings?.[row.tag] ?? '__none__'}
-                              onValueChange={v => setFinanceConfig((prev: any) => ({
-                                ...prev,
-                                glAccountMappings: { ...(prev.glAccountMappings ?? {}), [row.tag]: v === '__none__' ? undefined : v },
-                              }))}
-                            >
-                              <SelectTrigger className="h-9 rounded-xl text-sm">
-                                <SelectValue placeholder="Use system default" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__none__">Use system default</SelectItem>
-                                {glAccounts
-                                  .filter((a: any) => !a.parentId || a._count?.children === 0)
-                                  .map((a: any) => (
-                                    <SelectItem key={a.id} value={a.id}>
-                                      [{a.code}] {a.name}
-                                    </SelectItem>
-                                  ))}
-                              </SelectContent>
-                            </Select>
-                          </td>
-                        </tr>
+              ) : (() => {
+                const leafAccounts = glAccounts.filter((a: any) => !a.parentId || a._count?.children === 0);
+
+                const glSelect = (tag: string, defaultCode: string, defaultName: string) => (
+                  <Select
+                    value={financeConfig.glAccountMappings?.[tag] ?? '__none__'}
+                    onValueChange={v => setFinanceConfig((prev: any) => ({
+                      ...prev,
+                      glAccountMappings: { ...(prev.glAccountMappings ?? {}), [tag]: v === '__none__' ? undefined : v },
+                    }))}
+                  >
+                    <SelectTrigger className="h-9 rounded-xl text-xs w-full">
+                      <SelectValue placeholder={`[${defaultCode}] ${defaultName}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Default: [{defaultCode}] {defaultName}</SelectItem>
+                      {leafAccounts.map((a: any) => (
+                        <SelectItem key={a.id} value={a.id}>[{a.code}] {a.name}</SelectItem>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                    </SelectContent>
+                  </Select>
+                );
+
+                const fixedCell = (code: string, name: string) => (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="font-mono">[{code}]</span>{name}
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">system fixed</span>
+                  </div>
+                );
+
+                const autoCell = (label: string) => (
+                  <span className="text-xs text-muted-foreground italic">{label}</span>
+                );
+
+                const GROUPS = [
+                  {
+                    title: 'Sales & Receipts',
+                    rows: [
+                      { event: 'Cash Sale / Cash Payment', note: 'Customer pays cash at point of sale',
+                        dr: glSelect('CASH', '1110', 'Cash on Hand'),
+                        cr: glSelect('SALES', '4100', 'Sales Revenue') },
+                      { event: 'Bank Transfer / Mobile Money Payment', note: 'Customer pays by bank transfer or mobile money',
+                        dr: glSelect('BANK', '1120', 'Cash at Bank'),
+                        cr: glSelect('SALES', '4100', 'Sales Revenue') },
+                      { event: 'Invoice / Credit Sale', note: 'Customer invoice raised; payment expected later',
+                        dr: glSelect('AR', '1200', 'Accounts Receivable'),
+                        cr: glSelect('SALES', '4100', 'Sales Revenue') },
+                      { event: 'Output VAT on Sales', note: 'VAT portion split from the invoice credit',
+                        dr: glSelect('AR', '1200', 'Accounts Receivable'),
+                        cr: glSelect('VAT_OUTPUT', '2200', 'Output VAT Payable') },
+                    ],
+                  },
+                  {
+                    title: 'Purchases & Payables',
+                    rows: [
+                      { event: 'Purchase on Credit', note: 'Goods or services received from a supplier on account',
+                        dr: glSelect('PURCHASE', '5100', 'Cost of Goods Sold'),
+                        cr: glSelect('AP', '2110', 'Accounts Payable') },
+                    ],
+                  },
+                  {
+                    title: 'Expenses',
+                    rows: [
+                      { event: 'Expense Recording', note: 'Credit side is Cash or Bank — automatically determined by payment method',
+                        dr: glSelect('EXPENSE', '6800', 'Miscellaneous Expenses'),
+                        cr: autoCell('Cash on Hand or Cash at Bank (auto)') },
+                    ],
+                  },
+                  {
+                    title: 'Inventory & Cost of Sales',
+                    rows: [
+                      { event: 'Cost of Goods Sold (COGS)', note: 'Auto-posted when a tracked-inventory order is fulfilled',
+                        dr: glSelect('COGS', '5100', 'Cost of Goods Sold'),
+                        cr: glSelect('INVENTORY', '1300', 'Inventory') },
+                    ],
+                  },
+                  {
+                    title: 'Fixed Assets',
+                    rows: [
+                      { event: 'Fixed Asset Acquisition', note: 'When a fixed asset is purchased. Per-category overrides in the section below.',
+                        dr: glSelect('FIXED_ASSET', '1610', 'Property & Equipment'),
+                        cr: autoCell('Cash on Hand or Cash at Bank (auto)') },
+                      { event: 'Asset Depreciation', note: 'Monthly depreciation charge — accounts are system-fixed and cannot be changed here',
+                        dr: fixedCell('6700', 'Depreciation Expense'),
+                        cr: fixedCell('1700', 'Accumulated Depreciation') },
+                    ],
+                  },
+                ];
+
+                return (
+                  <div className="space-y-5">
+                    {/* Column header */}
+                    <div className="grid grid-cols-[1.4fr_1fr_1fr] gap-3 pb-2 border-b border-border">
+                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Transaction Type</div>
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">DR</span>
+                        Debit Account
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">CR</span>
+                        Credit Account
+                      </div>
+                    </div>
+
+                    {GROUPS.map(group => (
+                      <div key={group.title} className="space-y-0">
+                        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 mt-1">{group.title}</p>
+                        {group.rows.map((row, i) => (
+                          <div key={row.event} className={`grid grid-cols-[1.4fr_1fr_1fr] gap-3 py-2.5 items-center ${i < group.rows.length - 1 ? 'border-b border-border/30' : ''}`}>
+                            <div>
+                              <p className="text-sm font-medium leading-snug">{row.event}</p>
+                              <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{row.note}</p>
+                            </div>
+                            <div>{row.dr}</div>
+                            <div>{row.cr}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
 
