@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthSession, unauthorized, notFound, serverError, toNumber } from '@/lib/api-helpers';
+import { writeAuditLog } from '@/lib/audit';
 import { generateProductSlug } from '@/lib/products';
 import { gmcStatusFromRisk } from '@/lib/ai-moderation';
 
@@ -75,6 +76,16 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       include: { category: true, images: { orderBy: { displayOrder: 'asc' } } },
     });
 
+    writeAuditLog({
+      tenantId: session.user.tenantId,
+      userId: session.user.id,
+      userName: session.user.name ?? session.user.email ?? undefined,
+      action: 'PRODUCT_UPDATED',
+      entity: 'Product',
+      entityId: params.id,
+      summary: `Updated product "${product.name}"`,
+    });
+
     return NextResponse.json({ product: { ...product, price: toNumber(product?.price), costPrice: product?.costPrice ? toNumber(product.costPrice) : null } });
   } catch (error: any) {
     return serverError(error);
@@ -94,6 +105,16 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     await prisma.product.update({
       where: { id: params.id },
       data: { deletedAt: new Date() },
+    });
+
+    writeAuditLog({
+      tenantId: session.user.tenantId,
+      userId: session.user.id,
+      userName: session.user.name ?? session.user.email ?? undefined,
+      action: 'PRODUCT_DELETED',
+      entity: 'Product',
+      entityId: params.id,
+      summary: `Deleted product "${existing.name}"`,
     });
 
     return NextResponse.json({ message: 'Product deleted' });

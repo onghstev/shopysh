@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthSession, unauthorized, badRequest, serverError, generateOrderNumber, toNumber } from '@/lib/api-helpers';
+import { writeAuditLog } from '@/lib/audit';
 
 export async function GET(request: NextRequest) {
   try {
@@ -152,6 +153,16 @@ export async function POST(request: NextRequest) {
       });
 
       return order;
+    });
+
+    writeAuditLog({
+      tenantId,
+      userId: session.user.id,
+      userName: session.user.name ?? session.user.email ?? undefined,
+      action: 'ORDER_CREATED',
+      entity: 'Order',
+      entityId: result.id,
+      summary: `Created order ${result.orderNumber} for ${result.customer?.name ?? result.customer?.phone ?? customerId} — ₦${toNumber(result.totalAmount).toLocaleString()}`,
     });
 
     return NextResponse.json({

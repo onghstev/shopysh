@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthSession, unauthorized, badRequest, serverError, toNumber } from '@/lib/api-helpers';
 import { generateCustomerCode } from '@/lib/generate-code';
+import { writeAuditLog } from '@/lib/audit';
 
 export async function GET(request: NextRequest) {
   try {
@@ -72,6 +73,16 @@ export async function POST(request: NextRequest) {
         segment: body?.segment ?? 'New',
         acquisitionSource: body?.acquisitionSource ?? 'web',
       },
+    });
+
+    writeAuditLog({
+      tenantId: session.user.tenantId,
+      userId: session.user.id,
+      userName: session.user.name ?? session.user.email ?? undefined,
+      action: 'CUSTOMER_CREATED',
+      entity: 'Customer',
+      entityId: customer.id,
+      summary: `Created customer ${customer.name ?? customer.phone} (${customer.customerCode})`,
     });
 
     return NextResponse.json({ customer }, { status: 201 });

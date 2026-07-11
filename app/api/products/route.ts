@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthSession, unauthorized, badRequest, serverError, toNumber } from '@/lib/api-helpers';
+import { writeAuditLog } from '@/lib/audit';
 import { checkPlanLimit } from '@/lib/plan-limits';
 import { generateProductSlug } from '@/lib/products';
 import { gmcStatusFromRisk } from '@/lib/ai-moderation';
@@ -111,6 +112,16 @@ export async function POST(request: NextRequest) {
         ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
       },
       include: { category: true, images: true },
+    });
+
+    writeAuditLog({
+      tenantId,
+      userId: session.user.id,
+      userName: session.user.name ?? session.user.email ?? undefined,
+      action: 'PRODUCT_CREATED',
+      entity: 'Product',
+      entityId: product.id,
+      summary: `Created product "${product.name}"${product.sku ? ` (SKU: ${product.sku})` : ''}`,
     });
 
     return NextResponse.json({ product: { ...product, price: toNumber(product?.price), costPrice: product?.costPrice ? toNumber(product.costPrice) : null } }, { status: 201 });

@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthSession, unauthorized, notFound, serverError, toNumber } from '@/lib/api-helpers';
+import { writeAuditLog } from '@/lib/audit';
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -17,6 +18,16 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     await prisma.customer.update({
       where: { id: params.id },
       data: { deletedAt: new Date() },
+    });
+
+    writeAuditLog({
+      tenantId: session.user.tenantId,
+      userId: session.user.id,
+      userName: session.user.name ?? session.user.email ?? undefined,
+      action: 'CUSTOMER_DELETED',
+      entity: 'Customer',
+      entityId: params.id,
+      summary: `Deleted customer ${existing.name ?? existing.phone}`,
     });
 
     return NextResponse.json({ success: true });
@@ -79,6 +90,16 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const customer = await prisma.customer.update({
       where: { id: params.id },
       data,
+    });
+
+    writeAuditLog({
+      tenantId: session.user.tenantId,
+      userId: session.user.id,
+      userName: session.user.name ?? session.user.email ?? undefined,
+      action: 'CUSTOMER_UPDATED',
+      entity: 'Customer',
+      entityId: params.id,
+      summary: `Updated customer ${customer.name ?? customer.phone}`,
     });
 
     return NextResponse.json({
