@@ -1059,17 +1059,17 @@ export default function SettingsPage() {
                           <td className="py-3 pr-4 text-xs text-muted-foreground">{row.desc}</td>
                           <td className="py-3">
                             <Select
-                              value={financeConfig.glAccountMappings?.[row.tag] ?? ''}
+                              value={financeConfig.glAccountMappings?.[row.tag] ?? '__none__'}
                               onValueChange={v => setFinanceConfig((prev: any) => ({
                                 ...prev,
-                                glAccountMappings: { ...(prev.glAccountMappings ?? {}), [row.tag]: v || undefined },
+                                glAccountMappings: { ...(prev.glAccountMappings ?? {}), [row.tag]: v === '__none__' ? undefined : v },
                               }))}
                             >
                               <SelectTrigger className="h-9 rounded-xl text-sm">
                                 <SelectValue placeholder="Use system default" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">Use system default</SelectItem>
+                                <SelectItem value="__none__">Use system default</SelectItem>
                                 {glAccounts
                                   .filter((a: any) => !a.parentId || a._count?.children === 0)
                                   .map((a: any) => (
@@ -1122,17 +1122,17 @@ export default function SettingsPage() {
                           <td className="py-3 pr-4 font-medium">{cat}</td>
                           <td className="py-3">
                             <Select
-                              value={financeConfig.fixedAssetCategoryMappings?.[cat] ?? ''}
+                              value={financeConfig.fixedAssetCategoryMappings?.[cat] ?? '__none__'}
                               onValueChange={v => setFinanceConfig((prev: any) => ({
                                 ...prev,
-                                fixedAssetCategoryMappings: { ...(prev.fixedAssetCategoryMappings ?? {}), [cat]: v || undefined },
+                                fixedAssetCategoryMappings: { ...(prev.fixedAssetCategoryMappings ?? {}), [cat]: v === '__none__' ? undefined : v },
                               }))}
                             >
                               <SelectTrigger className="h-9 rounded-xl text-sm">
                                 <SelectValue placeholder="Use default fixed asset account" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">Use default fixed asset account</SelectItem>
+                                <SelectItem value="__none__">Use default fixed asset account</SelectItem>
                                 {glAccounts
                                   .filter((a: any) => !a.parentId || a._count?.children === 0)
                                   .map((a: any) => (
