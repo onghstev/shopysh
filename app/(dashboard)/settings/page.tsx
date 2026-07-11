@@ -1059,8 +1059,18 @@ export default function SettingsPage() {
                   </div>
                 );
 
-                const autoCell = (label: string) => (
-                  <span className="text-xs text-muted-foreground italic">{label}</span>
+                // Two selects stacked — used when the CR account depends on payment method
+                const dualCashBankSelect = () => (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-muted-foreground shrink-0 w-14 text-right">Cash:</span>
+                      {glSelect('CASH', '1110', 'Cash on Hand')}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-muted-foreground shrink-0 w-14 text-right">Bank:</span>
+                      {glSelect('BANK', '1120', 'Cash at Bank')}
+                    </div>
+                  </div>
                 );
 
                 const GROUPS = [
@@ -1092,9 +1102,9 @@ export default function SettingsPage() {
                   {
                     title: 'Expenses',
                     rows: [
-                      { event: 'Expense Recording', note: 'Credit side is Cash or Bank — automatically determined by payment method',
+                      { event: 'Expense Recording', note: 'Credit is Cash on Hand or Cash at Bank — chosen by payment method when recording the expense',
                         dr: glSelect('EXPENSE', '6800', 'Miscellaneous Expenses'),
-                        cr: autoCell('Cash on Hand or Cash at Bank (auto)') },
+                        cr: dualCashBankSelect() },
                     ],
                   },
                   {
@@ -1108,9 +1118,9 @@ export default function SettingsPage() {
                   {
                     title: 'Fixed Assets',
                     rows: [
-                      { event: 'Fixed Asset Acquisition', note: 'When a fixed asset is purchased. Per-category overrides in the section below.',
+                      { event: 'Fixed Asset Acquisition', note: 'Credit is Cash on Hand or Cash at Bank — chosen by payment method when the asset is recorded. Per-category DR overrides in the section below.',
                         dr: glSelect('FIXED_ASSET', '1610', 'Property & Equipment'),
-                        cr: autoCell('Cash on Hand or Cash at Bank (auto)') },
+                        cr: dualCashBankSelect() },
                       { event: 'Asset Depreciation', note: 'Monthly depreciation charge — accounts are system-fixed and cannot be changed here',
                         dr: fixedCell('6700', 'Depreciation Expense'),
                         cr: fixedCell('1700', 'Accumulated Depreciation') },
