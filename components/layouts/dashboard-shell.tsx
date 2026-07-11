@@ -56,7 +56,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
       { href: '/analytics', label: 'Analytics', icon: BarChart3 },
-      { href: '/reports',   label: 'Reports',   icon: FileBarChart },
     ],
   },
   {
@@ -90,14 +89,29 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/finance/recurring-journals',        label: 'Recurring Journals',  icon: RefreshCw },
       { href: '/finance/bank-reconciliation',       label: 'Bank Reconciliation', icon: BankCard },
       { href: '/finance/cash-forecast',             label: 'Cash Flow Forecast',  icon: TrendingUp },
+    ],
+  },
+  {
+    key: 'reports',
+    label: 'Reports',
+    items: [
       {
-        href: '/finance/reports', label: 'Reports', icon: BarChart3,
+        href: '/finance/reports',
+        label: 'Finance Reports',
+        icon: BarChart3,
+        requires: 'finance',
         children: [
           { href: '/finance/reports/trial-balance',    label: 'Trial Balance',    icon: Scale },
           { href: '/finance/reports/income-statement', label: 'Income Statement', icon: PieChart },
           { href: '/finance/reports/balance-sheet',    label: 'Balance Sheet',    icon: FileBarChart },
           { href: '/finance/reports/vat-summary',      label: 'VAT Summary',      icon: FileText },
         ],
+      },
+      {
+        href: '/reports',
+        label: 'Ecommerce Reports',
+        icon: ShoppingCart,
+        requires: 'ecommerce',
       },
     ],
   },
@@ -126,7 +140,7 @@ export function DashboardShell({ children, session }: { children: React.ReactNod
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
     // All collapsed by default; the active group is expanded via useEffect
-    return { main: false, finance: false, marketing: false, communication: false, resources: false, platform: false };
+    return { main: false, finance: false, marketing: false, communication: false, reports: false, resources: false, platform: false };
   });
 
   const toggleGroup = (key: string) => {
