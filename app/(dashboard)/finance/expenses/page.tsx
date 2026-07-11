@@ -333,7 +333,16 @@ export default function ExpensesPage() {
                           </td>
                           <td className="px-4 py-2.5 text-right font-semibold text-red-700">₦{fmt(Number(e.amount))}</td>
                           <td className="px-4 py-2.5">
-                            <div className="flex gap-1 justify-end">
+                            <div className="flex gap-1 items-center justify-end">
+                              {e.glStatus && (
+                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full whitespace-nowrap ${
+                                  e.glStatus === 'POSTED' ? 'bg-emerald-100 text-emerald-700'
+                                  : e.glStatus === 'DRAFT' ? 'bg-amber-100 text-amber-700'
+                                  : 'bg-muted text-muted-foreground'
+                                }`}>
+                                  GL:{e.glStatus}
+                                </span>
+                              )}
                               <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit(e)}>
                                 <Pencil className="w-3 h-3" />
                               </Button>

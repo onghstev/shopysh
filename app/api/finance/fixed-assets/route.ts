@@ -3,6 +3,8 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession, unauthorized, badRequest, serverError } from '@/lib/api-helpers';
 import { prisma } from '@/lib/db';
+import { getFinanceSettings, resolveGLAccount } from '@/lib/accounting/gl-mappings';
+import { createJournalEntry, createAndPostJournal } from '@/lib/accounting/engine';
 
 function generateAssetCode(category: string, count: number) {
   const prefix = category.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3).padEnd(3, 'X');
@@ -44,6 +46,23 @@ export async function GET(req: NextRequest) {
     const totalAccumDep    = allActive.reduce((s, a) => s + Number(a.accumulatedDepreciation), 0);
     const totalBookValue   = allActive.reduce((s, a) => s + Number(a.bookValue), 0);
 
+    // Attach GL journal status for each asset's latest journal entry
+    const assetIds = items.map((a: any) => a.id);
+    const latestJournals = assetIds.length > 0
+      ? await prisma.journalEntry.findMany({
+          where: { tenantId, sourceType: 'FIXED_ASSET', sourceId: { in: assetIds } },
+          select: { id: true, sourceId: true, status: true, entryType: true },
+          orderBy: { createdAt: 'desc' },
+        })
+      : [];
+
+    const glStatusMap: Record<string, { journalEntryId: string; glStatus: string }> = {};
+    for (const je of latestJournals) {
+      if (je.sourceId && !glStatusMap[je.sourceId]) {
+        glStatusMap[je.sourceId] = { journalEntryId: je.id, glStatus: je.status };
+      }
+    }
+
     return NextResponse.json({
       items: items.map((a: any) => ({
         ...a,
@@ -52,6 +71,7 @@ export async function GET(req: NextRequest) {
         accumulatedDepreciation: Number(a.accumulatedDepreciation),
         bookValue:               Number(a.bookValue),
         disposalValue:           a.disposalValue ? Number(a.disposalValue) : null,
+        ...(glStatusMap[a.id] ?? { journalEntryId: null, glStatus: null }),
       })),
       total, page, pageSize,
       summary: { totalCost, totalAccumDep, totalBookValue, count: allActive.length },
@@ -104,6 +124,41 @@ export async function POST(req: NextRequest) {
         glAccountId:        glAccountId || null,
       },
     });
+
+    // Post asset acquisition to GL if a GL account is linked and accounts are available
+    try {
+      const { glPostingMode, glAccountMappings } = await getFinanceSettings(tenantId);
+      // Use the asset's specific GL account, or fall back to the FIXED_ASSET mapping slot
+      const assetGlAccountId = glAccountId
+        || await resolveGLAccount(tenantId, 'FIXED_ASSET', glAccountMappings)
+        || null;
+      if (assetGlAccountId) {
+        // Determine credit account based on payment method (default cash)
+        const paymentTag = (body.paymentMethod ?? 'cash').toLowerCase().includes('bank') ? 'BANK' : 'CASH';
+        const creditAccountId = await resolveGLAccount(tenantId, paymentTag, glAccountMappings);
+        if (creditAccountId) {
+          const journalInput = {
+            tenantId,
+            entryDate:   new Date(purchaseDate),
+            description: `Asset acquisition – ${name}`,
+            entryType:   'ASSET_ACQUISITION',
+            sourceType:  'FIXED_ASSET',
+            sourceId:    asset.id,
+            currency:    currency || 'NGN',
+            createdById: session.user.id,
+            lines: [
+              { accountId: assetGlAccountId, debit: cost, description: `${name} – cost` },
+              { accountId: creditAccountId,  credit: cost, description: paymentTag === 'BANK' ? 'Bank payment' : 'Cash payment' },
+            ],
+          };
+          glPostingMode === 'EOD'
+            ? await createJournalEntry(journalInput)
+            : await createAndPostJournal(journalInput, session.user.id);
+        }
+      }
+    } catch (e) {
+      console.error('[fixed-assets GL posting]', e); // Never fail asset creation over GL errors
+    }
 
     return NextResponse.json({
       ...asset,

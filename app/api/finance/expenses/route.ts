@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession, unauthorized, badRequest, serverError } from '@/lib/api-helpers';
 import { prisma } from '@/lib/db';
+import { postExpenseRecorded } from '@/lib/accounting/auto-post';
 
 export async function GET(req: NextRequest) {
   try {
@@ -37,7 +38,26 @@ export async function GET(req: NextRequest) {
 
     const totalAmount = await prisma.expense.aggregate({ where, _sum: { amount: true } });
 
-    return NextResponse.json({ items, total, totalAmount: totalAmount._sum.amount || 0, page, pageSize });
+    // Attach GL journal entry status to each expense
+    const expenseIds = items.map((e: any) => e.id);
+    const journalEntries = expenseIds.length > 0
+      ? await prisma.journalEntry.findMany({
+          where: { tenantId, sourceType: 'EXPENSE', sourceId: { in: expenseIds } },
+          select: { id: true, sourceId: true, status: true },
+        })
+      : [];
+
+    const glStatusMap: Record<string, { journalEntryId: string; glStatus: string }> = {};
+    for (const je of journalEntries) {
+      if (je.sourceId) glStatusMap[je.sourceId] = { journalEntryId: je.id, glStatus: je.status };
+    }
+
+    const itemsWithGl = items.map((e: any) => ({
+      ...e,
+      ...(glStatusMap[e.id] ?? { journalEntryId: null, glStatus: null }),
+    }));
+
+    return NextResponse.json({ items: itemsWithGl, total, totalAmount: totalAmount._sum.amount || 0, page, pageSize });
   } catch (e) { return serverError(e); }
 }
 
@@ -64,6 +84,17 @@ export async function POST(req: NextRequest) {
         notes: notes || null,
         isRecurring: isRecurring || false,
       },
+    });
+
+    // Post to GL (respects glPostingMode; silently continues if accounts not set up)
+    await postExpenseRecorded({
+      tenantId,
+      expenseId:     expense.id,
+      amount:        parseFloat(amount),
+      date:          new Date(date),
+      paymentMethod: paymentMethod ?? 'cash',
+      description:   description,
+      createdById:   session.user.id,
     });
 
     return NextResponse.json(expense, { status: 201 });

@@ -157,15 +157,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }),
     ]);
 
-    // Post to GL (silently ignores if CoA not set up)
+    // Post to GL (silently ignores if CoA not set up; respects glPostingMode)
     await postAssetDepreciation({
       tenantId,
-      assetId:    asset.id,
-      assetName:  asset.name,
-      amount:     periodAmount,
-      currency:   asset.currency,
-      entryDate:  depreciationDate,
-      journalEntryId: undefined,
+      assetId:     asset.id,
+      assetName:   asset.name,
+      amount:      periodAmount,
+      currency:    asset.currency,
+      entryDate:   depreciationDate,
+      createdById: session.user.id,
     });
 
     return NextResponse.json({

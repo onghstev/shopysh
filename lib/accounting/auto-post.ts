@@ -4,8 +4,9 @@
  * Silently no-ops when Chart of Accounts hasn't been seeded yet — never throws.
  */
 
-import { createAndPostJournal, findSystemAccount } from './engine';
+import { createAndPostJournal, createJournalEntry, findSystemAccount } from './engine';
 import { ensureDefaultAccounts } from './defaults';
+import { getFinanceSettings, resolveGLAccount } from './gl-mappings';
 
 async function safePost(fn: () => Promise<unknown>): Promise<void> {
   try { await fn(); } catch (e) {
@@ -125,12 +126,13 @@ export async function postAssetDepreciation(opts: {
   currency?: string;
   entryDate?: Date;
   journalEntryId?: string;
+  createdById?: string;
 }) {
   await safePost(async () => {
     await ensureDefaultAccounts(opts.tenantId);
     const { prisma } = await import('@/lib/db');
+    const { glPostingMode } = await getFinanceSettings(opts.tenantId);
 
-    // Depreciation Expense account (code 6700) and Accumulated Depreciation (code 1700)
     const depExpAccount = await prisma.glAccount.findFirst({
       where: { tenantId: opts.tenantId, code: '6700' },
       select: { id: true },
@@ -141,7 +143,7 @@ export async function postAssetDepreciation(opts: {
     });
     if (!depExpAccount || !accumDepAccount) return;
 
-    await createAndPostJournal({
+    const journalInput = {
       tenantId:    opts.tenantId,
       entryDate:   opts.entryDate ?? new Date(),
       description: `Depreciation – ${opts.assetName}`,
@@ -149,54 +151,75 @@ export async function postAssetDepreciation(opts: {
       sourceType:  'FIXED_ASSET',
       sourceId:    opts.assetId,
       currency:    opts.currency ?? 'NGN',
+      createdById: opts.createdById,
       lines: [
-        { accountId: depExpAccount.id,  debit:  opts.amount, description: 'Depreciation expense' },
+        { accountId: depExpAccount.id,   debit:  opts.amount, description: 'Depreciation expense' },
         { accountId: accumDepAccount.id, credit: opts.amount, description: 'Accumulated depreciation' },
       ],
-    });
+    };
+
+    glPostingMode === 'EOD'
+      ? await createJournalEntry(journalInput)
+      : await createAndPostJournal(journalInput, opts.createdById);
   });
 }
 
-/** Expense approved/recorded: DR Expense category account, CR Cash/AP */
+/**
+ * Expense recorded: DR Expense account, CR Cash/Bank.
+ * Returns the created journal entry ID and status, or null if accounts not configured.
+ */
 export async function postExpenseRecorded(opts: {
   tenantId: string;
   expenseId: string;
   amount: number;
+  date: Date;
   currency?: string;
   paymentMethod?: string;
-  glAccountCode?: string;
   description?: string;
-}) {
-  await safePost(async () => {
+  createdById?: string;
+}): Promise<{ journalEntryId: string; status: string } | null> {
+  try {
     await ensureDefaultAccounts(opts.tenantId);
+    const { prisma } = await import('@/lib/db');
+    const { glPostingMode, glAccountMappings } = await getFinanceSettings(opts.tenantId);
 
-    const expenseId = await findSystemAccount(opts.tenantId, 'SALARIES') ?? null;
-    const miscId = await (async () => {
-      const { prisma } = await import('@/lib/db');
-      const acc = await prisma.glAccount.findFirst({
+    // Resolve expense debit account: check mapping first, then fall back to code 6800
+    let expAccId = await resolveGLAccount(opts.tenantId, 'EXPENSE', glAccountMappings);
+    if (!expAccId) {
+      const misc = await prisma.glAccount.findFirst({
         where: { tenantId: opts.tenantId, code: '6800' },
         select: { id: true },
       });
-      return acc?.id ?? null;
-    })();
+      expAccId = misc?.id ?? null;
+    }
+    if (!expAccId) return null;
 
-    const expAccId = miscId;
     const cashTag = opts.paymentMethod?.toLowerCase().includes('bank') ? 'BANK' : 'CASH';
-    const cashId = await findSystemAccount(opts.tenantId, cashTag);
-    if (!expAccId || !cashId) return;
+    const creditAccountId = await resolveGLAccount(opts.tenantId, cashTag, glAccountMappings);
+    if (!creditAccountId) return null;
 
-    await createAndPostJournal({
-      tenantId: opts.tenantId,
-      entryDate: new Date(),
-      description: opts.description ?? `Expense – ${opts.expenseId.slice(-6)}`,
-      entryType: 'EXPENSE_CLAIM',
-      sourceType: 'EXPENSE',
-      sourceId: opts.expenseId,
-      currency: opts.currency ?? 'NGN',
+    const journalInput = {
+      tenantId:    opts.tenantId,
+      entryDate:   opts.date,
+      description: opts.description ?? `Expense recorded`,
+      entryType:   'EXPENSE_CLAIM',
+      sourceType:  'EXPENSE',
+      sourceId:    opts.expenseId,
+      currency:    opts.currency ?? 'NGN',
+      createdById: opts.createdById,
       lines: [
-        { accountId: expAccId, debit: opts.amount, description: 'Expense' },
-        { accountId: cashId, credit: opts.amount, description: 'Cash/bank payment' },
+        { accountId: expAccId,         debit:  opts.amount, description: 'Expense' },
+        { accountId: creditAccountId,  credit: opts.amount, description: cashTag === 'BANK' ? 'Bank payment' : 'Cash payment' },
       ],
-    });
-  });
+    };
+
+    const entry = glPostingMode === 'EOD'
+      ? await createJournalEntry(journalInput)
+      : await createAndPostJournal(journalInput, opts.createdById);
+
+    return { journalEntryId: entry.id, status: entry.status };
+  } catch (e) {
+    console.error('[postExpenseRecorded]', e);
+    return null;
+  }
 }

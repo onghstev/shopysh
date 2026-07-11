@@ -342,9 +342,20 @@ export default function FixedAssetsPage() {
                               </div>
                             </td>
                             <td className="px-4 py-3">
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${stConf.color}`}>
-                                <StIcon className="w-3 h-3" />{stConf.label}
-                              </span>
+                              <div className="flex flex-col gap-1">
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${stConf.color}`}>
+                                  <StIcon className="w-3 h-3" />{stConf.label}
+                                </span>
+                                {(asset as any).glStatus && (
+                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full self-start ${
+                                    (asset as any).glStatus === 'POSTED' ? 'bg-emerald-100 text-emerald-700'
+                                    : (asset as any).glStatus === 'DRAFT' ? 'bg-amber-100 text-amber-700'
+                                    : 'bg-muted text-muted-foreground'
+                                  }`}>
+                                    GL:{(asset as any).glStatus}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-1 justify-end">

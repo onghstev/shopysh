@@ -19,7 +19,18 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   try {
     const session = await getAuthSession();
     if (!session?.user?.tenantId) return unauthorized();
-    await prisma.expense.deleteMany({ where: { id: params.id, tenantId: session.user.tenantId } });
+    const tenantId = session.user.tenantId;
+
+    // Delete linked DRAFT journal entry first (if one exists)
+    const linkedJe = await prisma.journalEntry.findFirst({
+      where: { tenantId, sourceType: 'EXPENSE', sourceId: params.id, status: 'DRAFT' },
+      select: { id: true },
+    });
+    if (linkedJe) {
+      await prisma.journalEntry.delete({ where: { id: linkedJe.id } });
+    }
+
+    await prisma.expense.deleteMany({ where: { id: params.id, tenantId } });
     return NextResponse.json({ success: true });
   } catch (e) { return serverError(e); }
 }

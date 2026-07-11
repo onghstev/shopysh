@@ -1041,14 +1041,15 @@ export default function SettingsPage() {
                     </thead>
                     <tbody>
                       {[
-                        { tag: 'CASH',       label: 'Cash Account',         desc: 'Used for cash sales, cash receipts, and cash payments' },
-                        { tag: 'BANK',       label: 'Bank Account',         desc: 'Used for bank-transfer sales and bank payments' },
-                        { tag: 'AR',         label: 'Accounts Receivable',  desc: 'Debited on credit sales (invoices), credited on customer payments' },
-                        { tag: 'SALES',      label: 'Sales Revenue',        desc: 'Credited on every sale transaction' },
-                        { tag: 'VAT_OUTPUT', label: 'VAT Output',           desc: 'Credited when VAT is charged on sales' },
-                        { tag: 'AP',         label: 'Accounts Payable',     desc: 'Credited on credit purchases, debited when suppliers are paid' },
-                        { tag: 'PURCHASE',   label: 'Purchase / COGS',      desc: 'Debited on purchase and goods-received transactions' },
-                        { tag: 'EXPENSE',    label: 'General Expense',      desc: 'Default expense account for cash and bank payments' },
+                        { tag: 'CASH',        label: 'Cash Account',         desc: 'Used for cash sales, cash receipts, and cash payments' },
+                        { tag: 'BANK',        label: 'Bank Account',         desc: 'Used for bank-transfer sales and bank payments' },
+                        { tag: 'AR',          label: 'Accounts Receivable',  desc: 'Debited on credit sales (invoices), credited on customer payments' },
+                        { tag: 'SALES',       label: 'Sales Revenue',        desc: 'Credited on every sale transaction' },
+                        { tag: 'VAT_OUTPUT',  label: 'VAT Output',           desc: 'Credited when VAT is charged on sales' },
+                        { tag: 'AP',          label: 'Accounts Payable',     desc: 'Credited on credit purchases, debited when suppliers are paid' },
+                        { tag: 'PURCHASE',    label: 'Purchase / COGS',      desc: 'Debited on purchase and goods-received transactions' },
+                        { tag: 'EXPENSE',     label: 'General Expense',      desc: 'Default expense account debited on expense recording (falls back to Miscellaneous Expenses 6800)' },
+                        { tag: 'FIXED_ASSET', label: 'Default Fixed Asset',  desc: 'Overrides the per-asset GL account for fixed asset acquisitions when no specific account is set on the asset' },
                       ].map(row => (
                         <tr key={row.tag} className="border-b border-border/40">
                           <td className="py-3 pr-4">
