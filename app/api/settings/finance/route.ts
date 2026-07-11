@@ -14,6 +14,7 @@ export async function GET(_req: NextRequest) {
       glPostingMode: s.glPostingMode ?? 'AUTO',
       glAccountMappings: s.glAccountMappings && typeof s.glAccountMappings === 'object' ? s.glAccountMappings : {},
       fixedAssetCategoryMappings: s.fixedAssetCategoryMappings && typeof s.fixedAssetCategoryMappings === 'object' ? s.fixedAssetCategoryMappings : {},
+      fixedAssetCategoryCrMappings: s.fixedAssetCategoryCrMappings && typeof s.fixedAssetCategoryCrMappings === 'object' ? s.fixedAssetCategoryCrMappings : {},
     });
   } catch (e: any) {
     console.error('[GET /api/settings/finance]', e);
@@ -26,7 +27,7 @@ export async function PATCH(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const body = await req.json();
-    const { glPostingMode, glAccountMappings, fixedAssetCategoryMappings } = body;
+    const { glPostingMode, glAccountMappings, fixedAssetCategoryMappings, fixedAssetCategoryCrMappings } = body;
 
     const tenant = await prisma.tenant.findUnique({ where: { id: session.user.tenantId }, select: { settings: true } });
     const existing = (tenant?.settings as any) ?? {};
@@ -39,6 +40,7 @@ export async function PATCH(req: NextRequest) {
           ...(glPostingMode !== undefined ? { glPostingMode } : {}),
           ...(glAccountMappings !== undefined ? { glAccountMappings } : {}),
           ...(fixedAssetCategoryMappings !== undefined ? { fixedAssetCategoryMappings } : {}),
+          ...(fixedAssetCategoryCrMappings !== undefined ? { fixedAssetCategoryCrMappings } : {}),
         },
       },
       select: { settings: true },
@@ -49,6 +51,7 @@ export async function PATCH(req: NextRequest) {
       glPostingMode: s.glPostingMode ?? 'AUTO',
       glAccountMappings: s.glAccountMappings && typeof s.glAccountMappings === 'object' ? s.glAccountMappings : {},
       fixedAssetCategoryMappings: s.fixedAssetCategoryMappings && typeof s.fixedAssetCategoryMappings === 'object' ? s.fixedAssetCategoryMappings : {},
+      fixedAssetCategoryCrMappings: s.fixedAssetCategoryCrMappings && typeof s.fixedAssetCategoryCrMappings === 'object' ? s.fixedAssetCategoryCrMappings : {},
     });
   } catch (e: any) {
     console.error('[PATCH /api/settings/finance]', e);

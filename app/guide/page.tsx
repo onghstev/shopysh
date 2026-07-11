@@ -272,6 +272,34 @@ const sections: Section[] = [
         image: `${S}/26b-finance-balance-sheet-result.jpg`,
         imageCaption: 'Balance Sheet — Assets, Liabilities, and Equity sections with balance confirmation',
       },
+      {
+        heading: 'VAT Summary Report',
+        text: 'The VAT Summary report shows all Output VAT collected on sales versus Input VAT paid on purchases for a period. The net amount payable to FIRS (Federal Inland Revenue Service) is calculated automatically. Set a date range and click Generate. Use this report to prepare your VAT returns. Accessible from Finance → Reports → VAT Summary.',
+      },
+      {
+        heading: 'Expense Report (Printable)',
+        text: 'The Expense Report at Finance → Reports → Expense Report lists all recorded expenses for a selected period, grouped by category with subtotals and a grand total. Set From / To dates and click Generate. Click Print (top-right) to open the browser print dialog — filters and controls are hidden automatically, leaving a clean professional printout.',
+      },
+      {
+        heading: 'Fixed Assets Register (Printable)',
+        text: 'The Fixed Assets Register at Finance → Reports → Fixed Assets Register shows every fixed asset with its acquisition date, cost price, accumulated depreciation to date, and current book (net) value. Assets are grouped by category (Equipment, Vehicles, Furniture, etc.). The register loads automatically when you open the page. Click Print to produce a printable version — use this for asset audits and insurance valuations.',
+      },
+      {
+        heading: 'Inventory Report (Printable)',
+        text: 'The Inventory Report at Finance → Reports → Inventory Report shows current stock levels and cost valuations for all active products. Each row shows product name, SKU, category, quantity on hand, cost price, and total stock value. Products at or below the Low Stock Threshold are highlighted in amber. The total inventory valuation is shown at the bottom. Click Print for a clean printed version.',
+      },
+      {
+        heading: 'Cash Book Report (Printable)',
+        text: 'The Cash Book Report at Finance → Reports → Cash Book is a printable period cash statement. Set From / To dates and click Generate. Summary cards show Opening Balance, Total Receipts (green), and Total Payments (red). The table shows each transaction with Date, Description, Reference, Receipts (DR), Payments (CR), and a Running Balance column. An Opening Balance row frames the top and a Totals row closes the bottom. A closing summary box (jade background) confirms: Opening + Receipts − Payments = Closing Balance. Draft entries appear in a lighter shade. Click Print for a clean printout without the filter controls.',
+      },
+      {
+        heading: 'Budget vs Actuals Report (Printable)',
+        text: 'The Budget vs Actuals report at Finance → Reports → Budget vs Actuals compares planned budgets against year-to-date actual spending. Select a Fiscal Year from the dropdown. Summary cards show Grand Total Budgeted, Grand Total Actual (YTD), and Total Variance. Each budget displays a per-account breakdown with Budgeted, Actual, Variance, and % Used columns — a mini progress bar turns red when spending exceeds the budget. A Grand Total box at the bottom gives the overall position. Click Print for a clean printout.',
+      },
+      {
+        heading: 'Bank Reconciliation Report (Printable)',
+        text: 'The Bank Reconciliation Report at Finance → Reports → Bank Reconciliation shows a printable view of any imported bank statement reconciliation. Select a statement from the Statement dropdown (statements are imported in Finance → Bank Reconciliation). Summary cards show Opening Balance, Closing Balance, Matched Lines count, and Unmatched Lines count. The Reconciliation Proof panel shows two columns: Bank Statement arithmetic (opening + debits − credits = closing) and Reconciliation Status (matched vs unmatched receipts and payments). A status badge shows "Fully Reconciled" (green) or the number of unmatched items (amber). The Statement Lines table shows every line with Matched / Unmatched / Ignored badges. Unmatched items are also listed in a separate card at the bottom for follow-up. Click Print to produce a clean printed reconciliation statement.',
+      },
     ],
   },
   {
@@ -360,11 +388,41 @@ const sections: Section[] = [
         heading: 'Billing & Subscription',
         text: 'Settings → Billing shows your current plan (Starter, Business, or Premium), storage usage in MB, and usage stats for the current month. You can view available plans for upgrade here. Storage limits are shown in megabytes — for reference, 1,024 MB = 1 GB.',
       },
+      {
+        heading: 'Finance Tab — GL Posting Mode',
+        text: 'Settings → Finance → GL Posting Mode controls how the system auto-posts accounting entries when orders are completed. Three options are available: Auto-Post (journal entries are created and posted immediately when an order is marked Completed), Draft (entries are created as Drafts for your review before posting), and Disabled (no automatic journal entries — you post all entries manually from the Journal Entries page). Most businesses should use Auto-Post.',
+      },
+      {
+        heading: 'Finance Tab — Transaction Journal Mappings',
+        text: 'The Transaction Journal Mappings table (Settings → Finance) shows the debit and credit accounts used for every type of financial transaction the system auto-posts. The table has three columns: Transaction Type (what event triggers the entry), Debit (DR) account, and Credit (CR) account. Each cell shows a dropdown — the first option is the system default with its GL code (e.g., "Default: [1110] Cash on Hand"), and below it are all your own GL accounts for override. Seven transaction types are listed across five groups: Sales & Receipts (Cash Sale, Bank Transfer / Mobile Money, Invoice / Credit Sale, Output VAT), Purchases & Payables (Purchase on Credit), Expenses (Expense Recording — CR shows separate Cash and Bank selectors), and Inventory & Cost of Sales (COGS), and Fixed Assets (Fixed Asset Acquisition — CR has separate Cash/Bank selectors; Asset Depreciation — DR and CR are fixed system accounts shown in a grey "fixed" badge). Click Save Finance Settings to apply any changes.',
+      },
+      {
+        heading: 'Finance Tab — Fixed Asset Category GL Accounts',
+        text: 'Below the Transaction Journal Mappings table, the Fixed Asset Category GL Accounts section lets you assign a specific asset account to each fixed asset category. For example, you can map "Vehicles" to account [1620] Motor Vehicles and "Computer Equipment" to account [1630] Computer Equipment, rather than using the single catch-all Fixed Asset account. Any category left unmapped will fall back to the FIXED_ASSET mapping in the Transaction Journal table above. This gives you a more granular balance sheet breakdown by asset type.',
+      },
+    ],
+  },
+  {
+    id: 'audit-trail',
+    title: '13. Audit Trail',
+    content: [
+      {
+        heading: 'What the Audit Trail Records',
+        text: 'The Audit Trail (sidebar → Audit Trail) is a chronological log of every significant action taken in your workspace. Every time a user creates, updates, or deletes a record — customers, products, orders, payments, journal entries, settings changes, and more — a timestamped entry is added. The log is append-only and cannot be edited or deleted, making it a reliable record for internal compliance and dispute resolution.',
+      },
+      {
+        heading: 'Reading the Audit Trail',
+        text: 'The Audit Trail page shows a table with columns: Timestamp (date and time of the action), User (the team member who performed it), Action badge (colour-coded — green for creates, blue for updates, red for deletes, amber for status changes), Entity (which type of record was affected, e.g. Order, Customer, Product), and Summary (a plain-English description of what changed). Use the Search bar to filter by user name or action keyword. Use the Action Type and Entity filters at the top to narrow the list to a specific category of change.',
+      },
+      {
+        heading: 'Actions Logged',
+        text: 'The following actions are captured automatically: Customer Created / Updated / Deleted; Product Created / Updated / Deleted; Order Created and Order Status Changed (each transition logged separately, e.g. PENDING → CONFIRMED); Payment Recorded; Journal Entry Created / Posted / Reversed; Fixed Asset Created / Updated / Depreciated / Disposed; Settings Updated; Team Member Added / Role Changed. New actions are added to the log in real time — there is no need to refresh the page.',
+      },
     ],
   },
   {
     id: 'admin',
-    title: '13. Admin Portal (Super Admin Only)',
+    title: '14. Admin Portal (Super Admin Only)',
     content: [
       {
         heading: 'Admin Portal Overview',
@@ -485,7 +543,7 @@ export default function GuidePage() {
 
         {/* Footer */}
         <div className="mt-16 pt-8 border-t text-center text-sm text-gray-400">
-          <p>Shopysh User Guide • Last updated: June 2026</p>
+          <p>Shopysh User Guide • Last updated: July 2026</p>
           <p className="mt-1">For support, contact your platform administrator.</p>
         </div>
       </div>

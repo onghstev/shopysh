@@ -136,7 +136,7 @@ export default function SettingsPage() {
   const [paymentSaving, setPaymentSaving] = useState(false);
   const [smsConfig, setSmsConfig] = useState<any>({ provider: 'termii', termiiApiKey: '', termiiSenderId: '', africastalkingApiKey: '', africastalkingUsername: '', africastalkingSenderId: '' });
   const [smsSaving, setSmsSaving] = useState(false);
-  const [financeConfig, setFinanceConfig] = useState<any>({ glPostingMode: 'AUTO', glAccountMappings: {}, fixedAssetCategoryMappings: {} });
+  const [financeConfig, setFinanceConfig] = useState<any>({ glPostingMode: 'AUTO', glAccountMappings: {}, fixedAssetCategoryMappings: {}, fixedAssetCategoryCrMappings: {} });
   const [financeSaving, setFinanceSaving] = useState(false);
   const [glAccounts, setGlAccounts] = useState<any[]>([]);
   const isSuperAdmin = session?.user?.role === 'SUPER_ADMIN';
@@ -1118,12 +1118,15 @@ export default function SettingsPage() {
                   {
                     title: 'Fixed Assets',
                     rows: [
-                      { event: 'Fixed Asset Acquisition', note: 'Credit is Cash on Hand or Cash at Bank — chosen by payment method when the asset is recorded. Per-category DR overrides in the section below.',
+                      { event: 'Fixed Asset Acquisition', note: 'Asset added to the register; credit side follows the payment method (cash or bank)',
                         dr: glSelect('FIXED_ASSET', '1610', 'Property & Equipment'),
                         cr: dualCashBankSelect() },
-                      { event: 'Asset Depreciation', note: 'Monthly depreciation charge — accounts are system-fixed and cannot be changed here',
-                        dr: fixedCell('6700', 'Depreciation Expense'),
-                        cr: fixedCell('1700', 'Accumulated Depreciation') },
+                      { event: 'Asset Depreciation', note: 'Periodic depreciation charge posted to the income statement',
+                        dr: glSelect('DEPRECIATION_EXPENSE', '6700', 'Depreciation Expense'),
+                        cr: glSelect('ACCUM_DEPRECIATION', '1700', 'Accumulated Depreciation') },
+                      { event: 'Asset Disposal', note: 'Asset removed from register — debit removes accumulated depreciation, credit removes the asset at cost',
+                        dr: glSelect('ACCUM_DEPRECIATION', '1700', 'Accumulated Depreciation'),
+                        cr: glSelect('FIXED_ASSET', '1610', 'Property & Equipment') },
                     ],
                   },
                 ];
@@ -1183,8 +1186,9 @@ export default function SettingsPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border">
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2 pr-4 w-1/3">Asset Category</th>
-                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2">GL Account</th>
+                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2 pr-4 w-1/4">Asset Category</th>
+                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2 pr-4 w-2/5">Debit (DR) — Asset Account</th>
+                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2">Credit (CR) — Payment Account</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1195,7 +1199,7 @@ export default function SettingsPage() {
                       ].map(cat => (
                         <tr key={cat} className="border-b border-border/40">
                           <td className="py-3 pr-4 font-medium">{cat}</td>
-                          <td className="py-3">
+                          <td className="py-3 pr-4">
                             <Select
                               value={financeConfig.fixedAssetCategoryMappings?.[cat] ?? '__none__'}
                               onValueChange={v => setFinanceConfig((prev: any) => ({
@@ -1203,11 +1207,34 @@ export default function SettingsPage() {
                                 fixedAssetCategoryMappings: { ...(prev.fixedAssetCategoryMappings ?? {}), [cat]: v === '__none__' ? undefined : v },
                               }))}
                             >
-                              <SelectTrigger className="h-9 rounded-xl text-sm">
+                              <SelectTrigger className="h-9 rounded-xl text-xs w-full">
                                 <SelectValue placeholder="Use default fixed asset account" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="__none__">Use default fixed asset account</SelectItem>
+                                <SelectItem value="__none__">Default: [1610] Property &amp; Equipment</SelectItem>
+                                {glAccounts
+                                  .filter((a: any) => !a.parentId || a._count?.children === 0)
+                                  .map((a: any) => (
+                                    <SelectItem key={a.id} value={a.id}>
+                                      [{a.code}] {a.name}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="py-3">
+                            <Select
+                              value={financeConfig.fixedAssetCategoryCrMappings?.[cat] ?? '__none__'}
+                              onValueChange={v => setFinanceConfig((prev: any) => ({
+                                ...prev,
+                                fixedAssetCategoryCrMappings: { ...(prev.fixedAssetCategoryCrMappings ?? {}), [cat]: v === '__none__' ? undefined : v },
+                              }))}
+                            >
+                              <SelectTrigger className="h-9 rounded-xl text-xs w-full">
+                                <SelectValue placeholder="Default: Cash or Bank (per payment method)" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">Default: Cash or Bank (per payment method)</SelectItem>
                                 {glAccounts
                                   .filter((a: any) => !a.parentId || a._count?.children === 0)
                                   .map((a: any) => (
