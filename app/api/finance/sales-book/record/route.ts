@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
-import { createAndPostJournal, findSystemAccount } from '@/lib/accounting/engine';
+import { createJournalEntry, createAndPostJournal } from '@/lib/accounting/engine';
+import { getFinanceSettings, resolveGLAccount } from '@/lib/accounting/gl-mappings';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +16,6 @@ export async function POST(req: NextRequest) {
   const {
     date, customerId, customerName, reference, paymentMethod,
     vatAmount = 0,
-    // Multi-item support: prefer items[] array, fall back to legacy single description+amount
     items,
     description: legacyDesc,
     amount:      legacyAmount,
@@ -23,7 +23,6 @@ export async function POST(req: NextRequest) {
 
   const effectiveCustomerName = customerName || 'Sundry Customer';
 
-  // Normalise to items array regardless of which format was sent
   const saleItems: { description: string; qty: number; unitPrice: number; lineTotal: number }[] =
     Array.isArray(items) && items.length > 0
       ? items.map((it: any) => {
@@ -45,18 +44,18 @@ export async function POST(req: NextRequest) {
   const vat      = Number(vatAmount);
   const total    = netTotal + vat;
 
-  // Primary description for the journal entry header
   const headerDesc = saleItems.length === 1
     ? saleItems[0].description
     : `${saleItems.length} items — ${reference || 'sale'}`;
 
-  // Find system accounts
+  const { glPostingMode, glAccountMappings } = await getFinanceSettings(tenantId);
+
   const [arId, cashId, bankId, salesId, vatOutputId] = await Promise.all([
-    findSystemAccount(tenantId, 'AR'),
-    findSystemAccount(tenantId, 'CASH'),
-    findSystemAccount(tenantId, 'BANK'),
-    findSystemAccount(tenantId, 'SALES'),
-    findSystemAccount(tenantId, 'VAT_OUTPUT'),
+    resolveGLAccount(tenantId, 'AR', glAccountMappings),
+    resolveGLAccount(tenantId, 'CASH', glAccountMappings),
+    resolveGLAccount(tenantId, 'BANK', glAccountMappings),
+    resolveGLAccount(tenantId, 'SALES', glAccountMappings),
+    resolveGLAccount(tenantId, 'VAT_OUTPUT', glAccountMappings),
   ]);
 
   if (!salesId) {
@@ -82,7 +81,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid paymentMethod. Use INVOICE, CASH, or BANK.' }, { status: 400 });
   }
 
-  // One debit line for the total receivable / cash
   const lines: any[] = [
     {
       accountId:   debitAccountId,
@@ -93,7 +91,6 @@ export async function POST(req: NextRequest) {
     },
   ];
 
-  // One Sales credit line per item — this is what the invoice print reads back
   for (const it of saleItems) {
     lines.push({ accountId: salesId, debit: 0, credit: it.lineTotal, description: it.description });
   }
@@ -103,17 +100,20 @@ export async function POST(req: NextRequest) {
     lines.push({ accountId: vatOutputId, debit: 0, credit: vat, description: 'VAT Output' });
   }
 
-  try {
-    const entry = await createAndPostJournal({
-      tenantId,
-      entryDate:   new Date(date),
-      description: `${headerDesc} — ${effectiveCustomerName}`,
-      entryType,
-      reference,
-      createdById: userId,
-      lines,
-    }, userId);
+  const journalInput = {
+    tenantId,
+    entryDate:   new Date(date),
+    description: `${headerDesc} — ${effectiveCustomerName}`,
+    entryType,
+    reference,
+    createdById: userId,
+    lines,
+  };
 
+  try {
+    const entry = glPostingMode === 'EOD'
+      ? await createJournalEntry(journalInput)
+      : await createAndPostJournal(journalInput, userId);
     return NextResponse.json({ entry });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 422 });

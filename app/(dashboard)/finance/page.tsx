@@ -6,10 +6,11 @@ import {
   TrendingUp, TrendingDown, Wallet, BookOpen, FileText, Users2,
   BarChart3, PieChart, Scale, Receipt, ChevronRight, RefreshCw,
   ArrowUpRight, ArrowDownRight, Minus, Building2, Layers,
-  Landmark, CreditCard, UserCheck, UserX, HardDrive, AlertCircle,
+  Landmark, CreditCard, UserCheck, UserX, HardDrive, AlertCircle, Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
@@ -72,15 +73,36 @@ const STATUS_BADGE: Record<string, string> = {
 export default function FinanceDashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [eodRunning, setEodRunning] = useState(false);
+  const [postingMode, setPostingMode] = useState<string>('AUTO');
 
   const load = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/finance/dashboard');
-      if (res.ok) setData(await res.json());
+      const [dashRes, finRes] = await Promise.all([
+        fetch('/api/finance/dashboard'),
+        fetch('/api/settings/finance'),
+      ]);
+      if (dashRes.ok) setData(await dashRes.json());
+      if (finRes.ok) { const d = await finRes.json(); setPostingMode(d.glPostingMode ?? 'AUTO'); }
     } finally {
       setLoading(false);
     }
+  };
+
+  const runEOD = async () => {
+    if (!confirm('Post all DRAFT journal entries now? This will mark them as POSTED and cannot be undone.')) return;
+    setEodRunning(true);
+    try {
+      const res = await fetch('/api/finance/eod', { method: 'POST' });
+      const d = await res.json();
+      if (res.ok) {
+        toast.success(`EOD complete: ${d.posted} entries posted${d.errors > 0 ? `, ${d.errors} errors` : ''}`);
+        load();
+      } else {
+        toast.error(d.error || 'EOD process failed');
+      }
+    } finally { setEodRunning(false); }
   };
 
   useEffect(() => { load(); }, []);
@@ -98,10 +120,18 @@ export default function FinanceDashboardPage() {
           <h1 className="text-2xl font-bold tracking-tight">Finance Command Center</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Double-entry GL · Real-time balances · Full audit trail</p>
         </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {postingMode === 'EOD' && (
+            <Button size="sm" onClick={runEOD} disabled={eodRunning} className="bg-amber-600 hover:bg-amber-700 text-white">
+              {eodRunning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Receipt className="w-4 h-4 mr-2" />}
+              Run End-of-Day Posting
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Overdue AR alert */}

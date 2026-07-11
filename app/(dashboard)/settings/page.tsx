@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, Bot, CreditCard, Save, CheckCircle2, Loader2, Key, AlertTriangle, CheckCircle, Cpu, Wallet, Bell, Mail, XCircle, Send, ExternalLink, Copy, HardDrive, ShoppingCart, Globe } from 'lucide-react';
+import { Building2, Bot, CreditCard, Save, CheckCircle2, Loader2, Key, AlertTriangle, CheckCircle, Cpu, Wallet, Bell, Mail, XCircle, Send, ExternalLink, Copy, HardDrive, ShoppingCart, Globe, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 
 function EmailTestSection() {
@@ -136,6 +136,9 @@ export default function SettingsPage() {
   const [paymentSaving, setPaymentSaving] = useState(false);
   const [smsConfig, setSmsConfig] = useState<any>({ provider: 'termii', termiiApiKey: '', termiiSenderId: '', africastalkingApiKey: '', africastalkingUsername: '', africastalkingSenderId: '' });
   const [smsSaving, setSmsSaving] = useState(false);
+  const [financeConfig, setFinanceConfig] = useState<any>({ glPostingMode: 'AUTO', glAccountMappings: {} });
+  const [financeSaving, setFinanceSaving] = useState(false);
+  const [glAccounts, setGlAccounts] = useState<any[]>([]);
   const isSuperAdmin = session?.user?.role === 'SUPER_ADMIN';
 
   const fetchProfile = useCallback(async () => {
@@ -191,6 +194,26 @@ export default function SettingsPage() {
     try { const r = await fetch('/api/settings/sms-config'); if (r.ok) { const d = await r.json(); if (d?.config) setSmsConfig((prev: any) => ({ ...prev, ...d.config })); } } catch (e: any) { console.error(e); }
   }, []);
 
+  const fetchFinanceConfig = useCallback(async () => {
+    try {
+      const [fRes, aRes] = await Promise.all([
+        fetch('/api/settings/finance'),
+        fetch('/api/finance/accounts'),
+      ]);
+      if (fRes.ok) { const d = await fRes.json(); setFinanceConfig(d); }
+      if (aRes.ok) { const d = await aRes.json(); setGlAccounts(d.accounts ?? []); }
+    } catch (e: any) { console.error(e); }
+  }, []);
+
+  const saveFinanceConfig = async () => {
+    setFinanceSaving(true);
+    try {
+      const res = await fetch('/api/settings/finance', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(financeConfig) });
+      if (!res.ok) { const d = await res.json(); throw new Error(d?.error || 'Failed'); }
+      toast.success('Finance settings saved');
+    } catch (e: any) { toast.error(e.message || 'Failed to save finance settings'); } finally { setFinanceSaving(false); }
+  };
+
   const saveSmsConfig = async () => {
     setSmsSaving(true);
     try {
@@ -201,6 +224,7 @@ export default function SettingsPage() {
   };
 
   useEffect(() => { fetchProfile(); fetchAi(); fetchBilling(); fetchStorage(); fetchPaymentConfig(); fetchSmsConfig(); }, [fetchProfile, fetchAi, fetchBilling, fetchStorage, fetchPaymentConfig, fetchSmsConfig]);
+  useEffect(() => { if (tab === 'finance') fetchFinanceConfig(); }, [tab, fetchFinanceConfig]);
   useEffect(() => { if (isSuperAdmin) fetchLlm(); }, [isSuperAdmin, fetchLlm]);
 
   const saveProfile = async () => {
@@ -278,6 +302,9 @@ export default function SettingsPage() {
           </TabsTrigger>
           <TabsTrigger value="notifications" className="flex items-center gap-1.5 rounded-lg data-[state=active]:shadow-sm">
             <Bell className="w-4 h-4" /><span className="hidden sm:inline">Notifications</span>
+          </TabsTrigger>
+          <TabsTrigger value="finance" className="flex items-center gap-1.5 rounded-lg data-[state=active]:shadow-sm">
+            <BookOpen className="w-4 h-4" /><span className="hidden sm:inline">Finance</span>
           </TabsTrigger>
         </TabsList>
 
@@ -949,6 +976,124 @@ export default function SettingsPage() {
             {paymentSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Save Payment Settings
           </Button>
+        </TabsContent>
+
+        {/* Finance Tab */}
+        <TabsContent value="finance" className="mt-6 space-y-6">
+          {/* GL Posting Mode */}
+          <Card className="shadow-sm border-border/50">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2"><BookOpen className="w-5 h-5" /> GL Posting Mode</CardTitle>
+              <CardDescription>
+                Choose how journal entries are posted to the General Ledger.
+                <strong> Auto</strong> posts immediately when a transaction is recorded.
+                <strong> End-of-Day (EOD)</strong> saves transactions as DRAFT until you run the EOD process from the Finance dashboard.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-4">
+                {(['AUTO', 'EOD'] as const).map(mode => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setFinanceConfig((prev: any) => ({ ...prev, glPostingMode: mode }))}
+                    className={`flex-1 max-w-xs py-4 px-5 rounded-xl border-2 text-left transition-all ${
+                      financeConfig.glPostingMode === mode
+                        ? 'border-primary bg-primary/5'
+                        : 'border-input hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    <p className="font-semibold text-sm">{mode === 'AUTO' ? 'Auto-Post' : 'End-of-Day (EOD)'}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {mode === 'AUTO'
+                        ? 'Transactions post to GL immediately on save'
+                        : 'Transactions stay as DRAFT until you run EOD from the Finance dashboard'}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* GL Account Mappings */}
+          <Card className="shadow-sm border-border/50">
+            <CardHeader>
+              <CardTitle className="text-lg">GL Account Mappings</CardTitle>
+              <CardDescription>
+                Map transaction types to specific GL accounts. Leave blank to use the account with the matching system tag.
+                Accounts are loaded from your Chart of Accounts.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {glAccounts.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4">
+                  No GL accounts found. Set up your Chart of Accounts in Finance → Chart of Accounts first.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2 pr-4 w-1/3">Account Slot</th>
+                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2 pr-4">Description</th>
+                        <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2">Override Account</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { tag: 'CASH',       label: 'Cash Account',         desc: 'Used for cash sales, cash receipts, and cash payments' },
+                        { tag: 'BANK',       label: 'Bank Account',         desc: 'Used for bank-transfer sales and bank payments' },
+                        { tag: 'AR',         label: 'Accounts Receivable',  desc: 'Debited on credit sales (invoices), credited on customer payments' },
+                        { tag: 'SALES',      label: 'Sales Revenue',        desc: 'Credited on every sale transaction' },
+                        { tag: 'VAT_OUTPUT', label: 'VAT Output',           desc: 'Credited when VAT is charged on sales' },
+                        { tag: 'AP',         label: 'Accounts Payable',     desc: 'Credited on credit purchases, debited when suppliers are paid' },
+                        { tag: 'PURCHASE',   label: 'Purchase / COGS',      desc: 'Debited on purchase and goods-received transactions' },
+                        { tag: 'EXPENSE',    label: 'General Expense',      desc: 'Default expense account for cash and bank payments' },
+                      ].map(row => (
+                        <tr key={row.tag} className="border-b border-border/40">
+                          <td className="py-3 pr-4">
+                            <p className="font-medium">{row.label}</p>
+                            <p className="text-[11px] font-mono text-muted-foreground">{row.tag}</p>
+                          </td>
+                          <td className="py-3 pr-4 text-xs text-muted-foreground">{row.desc}</td>
+                          <td className="py-3">
+                            <Select
+                              value={financeConfig.glAccountMappings?.[row.tag] ?? ''}
+                              onValueChange={v => setFinanceConfig((prev: any) => ({
+                                ...prev,
+                                glAccountMappings: { ...(prev.glAccountMappings ?? {}), [row.tag]: v || undefined },
+                              }))}
+                            >
+                              <SelectTrigger className="h-9 rounded-xl text-sm">
+                                <SelectValue placeholder="Use system default" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Use system default</SelectItem>
+                                {glAccounts
+                                  .filter((a: any) => !a.parentId || a._count?.children === 0)
+                                  .map((a: any) => (
+                                    <SelectItem key={a.id} value={a.id}>
+                                      [{a.code}] {a.name}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end">
+            <Button onClick={saveFinanceConfig} disabled={financeSaving} className="gap-2">
+              {financeSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save Finance Settings
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

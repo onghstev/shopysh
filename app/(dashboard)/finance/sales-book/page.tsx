@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Download, RefreshCw, ChevronLeft, ChevronRight, BookOpen, Plus, X,
-  Hash, Percent, Loader2, RotateCcw, Printer, ReceiptText,
+  Hash, Percent, Loader2, RotateCcw, Printer, ReceiptText, Trash2,
 } from 'lucide-react';
 import { printReceipt } from '@/lib/print-receipt';
 import { Button } from '@/components/ui/button';
@@ -327,8 +327,8 @@ function RefInput({ value, onChange, paymentMethod }: {
     } catch { /* ignore */ } finally { setLoading(false); }
   }, [prefix, onChange]);
 
-  // Auto-generate when modal first renders or payment method changes
-  useEffect(() => { if (!value) generate(); }, [prefix]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Always regenerate when prefix changes (payment method switch) or on first mount
+  useEffect(() => { generate(); }, [prefix]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="relative">
@@ -659,6 +659,7 @@ export default function SalesBookPage() {
   const [showRecord, setShowRecord] = useState(false);
   const [printing, setPrinting]     = useState<any>(null);
   const [biz, setBiz]               = useState<any>(null);
+  const [deleting, setDeleting]     = useState<string | null>(null);
   const limit = 50;
   const { from: defaultFrom, to: defaultTo } = getMonthRange();
   const [from, setFrom] = useState(defaultFrom);
@@ -685,6 +686,16 @@ export default function SalesBookPage() {
       .then(d => setBiz(d.tenant ?? null))
       .catch(() => {});
   }, []);
+
+  const deleteEntry = async (id: string) => {
+    if (!confirm('Delete this DRAFT entry? This cannot be undone.')) return;
+    setDeleting(id);
+    try {
+      const res = await fetch(`/api/finance/journal/${id}`, { method: 'DELETE' });
+      if (res.ok) { toast.success('Entry deleted'); load(); }
+      else { const d = await res.json(); toast.error(d.error || 'Failed to delete'); }
+    } finally { setDeleting(null); }
+  };
 
   const exportCsv = () => {
     const rows = [
@@ -832,29 +843,47 @@ export default function SalesBookPage() {
                         ₦{fmt(Number(e.totalDebit))}
                       </td>
                       <td className="py-3 px-4">
-                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                          e.status === 'POSTED' ? 'bg-emerald-100 text-emerald-700'
+                          : e.status === 'DRAFT' ? 'bg-amber-100 text-amber-700'
+                          : 'bg-muted text-muted-foreground'
+                        }`}>
                           {e.status}
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        {e.entryType === 'SALES_INVOICE' && (
-                          <Button
-                            size="sm" variant="outline"
-                            className="h-7 px-2 text-xs gap-1 whitespace-nowrap"
-                            onClick={() => setPrinting(e)}
-                          >
-                            <Printer className="w-3 h-3" /> Invoice
-                          </Button>
-                        )}
-                        {e.entryType === 'SALES_RECEIPT' && (
-                          <Button
-                            size="sm" variant="outline"
-                            className="h-7 px-2 text-xs gap-1 whitespace-nowrap"
-                            onClick={() => printSaleReceipt(e, biz)}
-                          >
-                            <ReceiptText className="w-3 h-3" /> Receipt
-                          </Button>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {e.entryType === 'SALES_INVOICE' && (
+                            <Button
+                              size="sm" variant="outline"
+                              className="h-7 px-2 text-xs gap-1 whitespace-nowrap"
+                              onClick={() => setPrinting(e)}
+                            >
+                              <Printer className="w-3 h-3" /> Invoice
+                            </Button>
+                          )}
+                          {e.entryType === 'SALES_RECEIPT' && (
+                            <Button
+                              size="sm" variant="outline"
+                              className="h-7 px-2 text-xs gap-1 whitespace-nowrap"
+                              onClick={() => printSaleReceipt(e, biz)}
+                            >
+                              <ReceiptText className="w-3 h-3" /> Receipt
+                            </Button>
+                          )}
+                          {e.status === 'DRAFT' && (
+                            <Button
+                              size="sm" variant="ghost"
+                              className="h-7 px-2 text-xs gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              disabled={deleting === e.id}
+                              onClick={() => deleteEntry(e.id)}
+                            >
+                              {deleting === e.id
+                                ? <Loader2 className="w-3 h-3 animate-spin" />
+                                : <Trash2 className="w-3 h-3" />}
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

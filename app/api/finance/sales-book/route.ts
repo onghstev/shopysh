@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     const where: any = {
       tenantId,
       entryType: { in: SALES_TYPES },
-      status: 'POSTED',
+      status: { in: ['POSTED', 'DRAFT'] },
       entryDate: { gte: new Date(from), lte: new Date(to + 'T23:59:59Z') },
     };
 

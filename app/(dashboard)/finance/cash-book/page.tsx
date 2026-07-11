@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Download, RefreshCw, Banknote, Plus, X, ReceiptText } from 'lucide-react';
+import { Download, RefreshCw, Banknote, Plus, X, ReceiptText, Trash2, Loader2 } from 'lucide-react';
 import { printReceipt } from '@/lib/print-receipt';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -161,6 +161,7 @@ export default function CashBookPage() {
   const [loading, setLoading] = useState(true);
   const [showRecord, setShowRecord] = useState(false);
   const [biz, setBiz] = useState<any>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/settings/profile').then(r => r.ok ? r.json() : null).then(d => { if (d) setBiz(d.tenant ?? d); }).catch(() => {});
@@ -179,6 +180,16 @@ export default function CashBookPage() {
   }, [from, to]);
 
   useEffect(() => { load(); }, [load]);
+
+  const deleteEntry = async (id: string) => {
+    if (!confirm('Delete this DRAFT entry? This cannot be undone.')) return;
+    setDeleting(id);
+    try {
+      const res = await fetch(`/api/finance/journal/${id}`, { method: 'DELETE' });
+      if (res.ok) { toast.success('Entry deleted'); load(); }
+      else { const d = await res.json(); toast.error(d.error || 'Failed to delete'); }
+    } finally { setDeleting(null); }
+  };
 
   const exportCsv = () => {
     if (!data) return;
@@ -303,7 +314,7 @@ export default function CashBookPage() {
                 </tr>
               ) : (
                 lines.map((l: any, idx: number) => (
-                  <tr key={l.id ?? idx} className="border-b border-border/40 hover:bg-accent/40 transition-colors">
+                  <tr key={l.id ?? idx} className={`border-b border-border/40 hover:bg-accent/40 transition-colors ${l.status === 'DRAFT' ? 'bg-amber-50/50' : ''}`}>
                     <td className="py-2.5 px-4 text-muted-foreground whitespace-nowrap text-sm">
                       {new Date(l.date).toLocaleDateString('en-NG')}
                     </td>
@@ -322,23 +333,36 @@ export default function CashBookPage() {
                       ₦{fmt(l.runningBalance)}
                     </td>
                     <td className="py-2.5 px-4">
-                      {l.debit > 0 && (
-                        <button
-                          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-2 py-1 transition-colors whitespace-nowrap"
-                          onClick={() => printReceipt({
-                            receiptNumber: l.reference || l.entryNumber,
-                            date: l.date,
-                            customerName:  l.customer?.name  || l.customer?.phone,
-                            customerPhone: l.customer?.phone,
-                            customerEmail: l.customer?.email,
-                            paymentMethod: 'Cash',
-                            lines: [{ description: l.description || 'Cash Receipt', amount: l.debit }],
-                            total: l.debit,
-                          }, biz)}
-                        >
-                          <ReceiptText className="w-3 h-3" /> Receipt
-                        </button>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {l.debit > 0 && l.status === 'POSTED' && (
+                          <button
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground border border-border rounded-lg px-2 py-1 transition-colors whitespace-nowrap"
+                            onClick={() => printReceipt({
+                              receiptNumber: l.reference || l.entryNumber,
+                              date: l.date,
+                              customerName:  l.customer?.name  || l.customer?.phone,
+                              customerPhone: l.customer?.phone,
+                              customerEmail: l.customer?.email,
+                              paymentMethod: 'Cash',
+                              lines: [{ description: l.description || 'Cash Receipt', amount: l.debit }],
+                              total: l.debit,
+                            }, biz)}
+                          >
+                            <ReceiptText className="w-3 h-3" /> Receipt
+                          </button>
+                        )}
+                        {l.status === 'DRAFT' && (
+                          <button
+                            className="inline-flex items-center gap-1 text-xs text-destructive hover:text-destructive border border-destructive/30 rounded-lg px-2 py-1 transition-colors whitespace-nowrap disabled:opacity-50"
+                            disabled={deleting === l.journalEntryId}
+                            onClick={() => deleteEntry(l.journalEntryId)}
+                          >
+                            {deleting === l.journalEntryId
+                              ? <Loader2 className="w-3 h-3 animate-spin" />
+                              : <Trash2 className="w-3 h-3" />}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

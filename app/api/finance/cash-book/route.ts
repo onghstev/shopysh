@@ -43,30 +43,34 @@ export async function GET(req: NextRequest) {
     const priorMovement = priorLines.reduce((sum, l) => sum + Number(l.debit) - Number(l.credit), 0);
     const openingBalance = Number(account.openingBalance ?? 0) + priorMovement;
 
-    // Get lines within the date range
+    // Get lines within the date range (POSTED and DRAFT)
     const lines = await prisma.journalLine.findMany({
       where: {
         accountId: account.id,
-        journalEntry: { tenantId, status: 'POSTED', entryDate: { gte: fromDate, lte: toDate } },
+        journalEntry: { tenantId, status: { in: ['POSTED', 'DRAFT'] }, entryDate: { gte: fromDate, lte: toDate } },
       },
       include: {
-        journalEntry: { select: { id: true, entryNumber: true, entryDate: true, description: true, reference: true, entryType: true } },
+        journalEntry: { select: { id: true, entryNumber: true, entryDate: true, description: true, reference: true, entryType: true, status: true } },
         customer: { select: { id: true, name: true, phone: true, email: true } },
       },
       orderBy: [{ journalEntry: { entryDate: 'asc' } }, { journalEntry: { entryNumber: 'asc' } }],
     });
 
-    // Compute running balance
+    // Compute running balance (only include POSTED lines for balance calculation)
     let running = openingBalance;
     const linesWithBalance = lines.map(l => {
-      running = running + Number(l.debit) - Number(l.credit);
+      if (l.journalEntry.status === 'POSTED') {
+        running = running + Number(l.debit) - Number(l.credit);
+      }
       return {
         id: l.id,
+        journalEntryId: l.journalEntry.id,
         date: l.journalEntry.entryDate,
         entryNumber: l.journalEntry.entryNumber,
         description: l.description || l.journalEntry.description,
         reference: l.journalEntry.reference,
         entryType: l.journalEntry.entryType,
+        status: l.journalEntry.status,
         debit: Number(l.debit),
         credit: Number(l.credit),
         runningBalance: running,
