@@ -14,6 +14,7 @@ import {
   UsersRound, FileBarChart, BookOpen, Presentation, ExternalLink, Code,
   Sparkles, Wallet, TrendingUp, TrendingDown, Landmark, FileText, PieChart,
   Layers, Building2, Scale, UserCheck, UserX, HardDrive, RefreshCw, CreditCard as BankCard,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -350,6 +351,19 @@ export function DashboardShell({ children, session }: { children: React.ReactNod
 
         {/* Bottom user + settings */}
         <div className="px-3 py-3 border-t border-white/[0.08] space-y-1">
+          <Link
+            href="/audit-trail"
+            onClick={() => setSidebarOpen(false)}
+            className={cn(
+              'flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-200',
+              pathname === '/audit-trail'
+                ? 'bg-white/[0.12] text-white shadow-[0_1px_3px_rgba(0,0,0,0.2)]'
+                : 'text-white/80 hover:bg-white/[0.08] hover:text-white'
+            )}
+          >
+            <ShieldCheck className="w-[18px] h-[18px] shrink-0" />
+            Audit Trail
+          </Link>
           <Link
             href="/settings"
             onClick={() => setSidebarOpen(false)}

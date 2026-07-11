@@ -5,6 +5,7 @@ import { getAuthSession, unauthorized, badRequest, serverError } from '@/lib/api
 import { prisma } from '@/lib/db';
 import { getFinanceSettings, resolveGLAccount } from '@/lib/accounting/gl-mappings';
 import { createJournalEntry, createAndPostJournal } from '@/lib/accounting/engine';
+import { writeAuditLog, getClientIp } from '@/lib/audit';
 
 function generateAssetCode(category: string, count: number) {
   const prefix = category.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3).padEnd(3, 'X');
@@ -160,6 +161,14 @@ export async function POST(req: NextRequest) {
     } catch (e) {
       console.error('[fixed-assets GL posting]', e); // Never fail asset creation over GL errors
     }
+
+    writeAuditLog({
+      tenantId, userId: session.user.id,
+      userName: session.user.name ?? session.user.email ?? undefined,
+      action: 'FIXED_ASSET_CREATED', entity: 'FixedAsset', entityId: asset.id,
+      summary: `Fixed asset added: ${name} (${category}) – cost ${purchaseCost}`,
+      ipAddress: getClientIp(req),
+    });
 
     return NextResponse.json({
       ...asset,

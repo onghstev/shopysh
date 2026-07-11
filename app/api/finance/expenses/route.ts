@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession, unauthorized, badRequest, serverError } from '@/lib/api-helpers';
 import { prisma } from '@/lib/db';
 import { postExpenseRecorded } from '@/lib/accounting/auto-post';
+import { writeAuditLog, getClientIp } from '@/lib/audit';
 
 export async function GET(req: NextRequest) {
   try {
@@ -95,6 +96,14 @@ export async function POST(req: NextRequest) {
       paymentMethod: paymentMethod ?? 'cash',
       description:   description,
       createdById:   session.user.id,
+    });
+
+    writeAuditLog({
+      tenantId, userId: session.user.id,
+      userName: session.user.name ?? session.user.email ?? undefined,
+      action: 'EXPENSE_CREATED', entity: 'Expense', entityId: expense.id,
+      summary: `Expense recorded: ${description} – ${amount}`,
+      ipAddress: getClientIp(req),
     });
 
     return NextResponse.json(expense, { status: 201 });

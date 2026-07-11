@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession, unauthorized, badRequest, notFound, serverError } from '@/lib/api-helpers';
 import { prisma } from '@/lib/db';
 import { postAssetDepreciation } from '@/lib/accounting/auto-post';
+import { writeAuditLog } from '@/lib/audit';
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -193,6 +194,13 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     await prisma.fixedAsset.update({
       where: { id: params.id },
       data: { deletedAt: new Date() },
+    });
+
+    writeAuditLog({
+      tenantId, userId: session.user.id,
+      userName: session.user.name ?? session.user.email ?? undefined,
+      action: 'FIXED_ASSET_DELETED', entity: 'FixedAsset', entityId: params.id,
+      summary: `Fixed asset deleted: ${asset.name} (${asset.category})`,
     });
 
     return NextResponse.json({ message: 'Asset deleted' });

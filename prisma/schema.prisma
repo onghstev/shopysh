@@ -111,7 +111,6 @@ model User {
 
   tenant                Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   accounts              Account[]
-  auditLogs             AuditLog[]
   createdCampaigns      Campaign[]
   assignedConversations Conversation[]
   stockMovements        StockMovement[] @relation("StockMovementCreator")
@@ -915,21 +914,20 @@ model AnalyticsEvent {
 model AuditLog {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId   String   @map("tenant_id") @db.Uuid
-  userId     String   @map("user_id") @db.Uuid
-  action     String   @db.VarChar(100)
-  entityType String   @map("entity_type") @db.VarChar(100)
-  entityId   String   @map("entity_id") @db.Uuid
-  changes    Json?
-  ipAddress  String?  @map("ip_address")
-  userAgent  String?  @map("user_agent") @db.Text
+  userId     String?  @map("user_id") @db.Uuid
+  userName   String?  @map("user_name") @db.VarChar(255)
+  action     String   @db.VarChar(100)   // e.g. ORDER_CREATED, EXPENSE_DELETED
+  entity     String   @db.VarChar(100)   // e.g. Order, Expense, Customer
+  entityId   String?  @map("entity_id") @db.VarChar(255)
+  summary    String   @db.Text
+  metadata   Json?
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
   createdAt  DateTime @default(now()) @map("created_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, createdAt(sort: Desc)], map: "idx_audit_logs_tenant_date")
-  @@index([userId, createdAt(sort: Desc)], map: "idx_audit_logs_user")
-  @@index([entityType, entityId, createdAt(sort: Desc)], map: "idx_audit_logs_entity")
+  @@index([tenantId, entity], map: "idx_audit_logs_entity")
   @@map("audit_logs")
 }
 
@@ -1466,3 +1464,4 @@ model BankStatementLine {
   @@index([tenantId, isMatched], map: "idx_bank_statement_lines_matched")
   @@map("bank_statement_lines")
 }
+

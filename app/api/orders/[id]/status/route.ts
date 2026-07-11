@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthSession, unauthorized, notFound, badRequest, serverError, toNumber } from '@/lib/api-helpers';
 import { postOrderPayment, postOrderCOGS } from '@/lib/accounting/auto-post';
+import { writeAuditLog, getClientIp } from '@/lib/audit';
 
 const STATUS_FLOW: Record<string, string[]> = {
   PENDING:          ['CONFIRMED', 'CANCELLED'],
@@ -96,6 +97,17 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         });
       }
     }
+
+    writeAuditLog({
+      tenantId: session.user.tenantId,
+      userId:   session.user.id,
+      userName: session.user.name ?? session.user.email ?? undefined,
+      action:   `ORDER_${newStatus}`,
+      entity:   'Order',
+      entityId: updated.id,
+      summary:  `Order #${updated.orderNumber} moved from ${order.status} → ${newStatus}`,
+      ipAddress: getClientIp(request),
+    });
 
     return NextResponse.json({
       order: {
