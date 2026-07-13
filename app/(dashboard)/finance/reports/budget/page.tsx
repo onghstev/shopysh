@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Printer, PieChart, ChevronLeft, TrendingUp, TrendingDown } from 'lucide-react';
+import { ReportPrintHeader } from '@/components/finance/report-print-header';
 import Link from 'next/link';
 
 const fmt = (n: number) => new Intl.NumberFormat('en-NG', { minimumFractionDigits: 2 }).format(n);
@@ -91,11 +92,7 @@ export default function BudgetReportPage() {
         </Card>
       )}
 
-      {/* Print header */}
-      <div className="hidden print:block text-center mb-6">
-        <h1 className="text-lg font-bold">Budget vs Actuals Report</h1>
-        <p className="text-sm text-gray-600">{currentFy?.name} — {currentFy?.startDate?.slice(0,10)} to {currentFy?.endDate?.slice(0,10)}</p>
-      </div>
+      <ReportPrintHeader title="Budget vs Actuals" subtitle={currentFy ? `${currentFy.name} — ${currentFy.startDate?.slice(0,10)} to ${currentFy.endDate?.slice(0,10)}` : undefined} />
 
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>

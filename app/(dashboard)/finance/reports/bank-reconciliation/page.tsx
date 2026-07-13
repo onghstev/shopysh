@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Printer, FileBarChart, ChevronLeft, CheckCircle, XCircle, MinusCircle } from 'lucide-react';
+import { ReportPrintHeader } from '@/components/finance/report-print-header';
 import { format } from 'date-fns';
 import Link from 'next/link';
 
@@ -95,11 +96,7 @@ export default function BankReconciliationReportPage() {
         </div>
       ) : selected && (
         <div className="space-y-4">
-          {/* Print header */}
-          <div className="hidden print:block text-center mb-6">
-            <h1 className="text-lg font-bold">Bank Reconciliation Statement</h1>
-            <p className="text-sm text-gray-600">Statement Date: {format(new Date(selected.statementDate), 'dd MMMM yyyy')}</p>
-          </div>
+          <ReportPrintHeader title="Bank Reconciliation Statement" subtitle={`Statement Date: ${format(new Date(selected.statementDate), 'dd MMMM yyyy')}`} />
 
           {/* Reconciliation summary */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

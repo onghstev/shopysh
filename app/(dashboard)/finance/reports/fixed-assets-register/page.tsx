@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Printer, Landmark, ChevronLeft } from 'lucide-react';
+import { ReportPrintHeader } from '@/components/finance/report-print-header';
 import { format } from 'date-fns';
 import Link from 'next/link';
 
@@ -64,11 +65,7 @@ export default function FixedAssetsRegisterPage() {
         </div>
       </div>
 
-      {/* Print header */}
-      <div className="hidden print:block text-center mb-4">
-        <h1 className="text-lg font-bold">Fixed Assets Register</h1>
-        <p className="text-sm text-gray-600">As at {format(new Date(), 'dd MMMM yyyy')}</p>
-      </div>
+      <ReportPrintHeader title="Fixed Assets Register" subtitle={`As at ${format(new Date(), 'dd MMMM yyyy')}`} />
 
       {/* Summary */}
       {summary && (

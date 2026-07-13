@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Printer, BookOpen, ChevronLeft } from 'lucide-react';
+import { ReportPrintHeader } from '@/components/finance/report-print-header';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import Link from 'next/link';
 
@@ -73,11 +74,7 @@ export default function SalesBookReportPage() {
         </CardContent>
       </Card>
 
-      {/* Print header */}
-      <div className="hidden print:block text-center mb-6">
-        <h1 className="text-lg font-bold">Sales Book Report</h1>
-        <p className="text-sm text-gray-600">Period: {from} to {to}</p>
-      </div>
+      <ReportPrintHeader title="Sales Book Report" subtitle={`Period: ${from} to ${to}`} />
 
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>

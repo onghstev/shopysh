@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Printer, Package, ChevronLeft, AlertTriangle } from 'lucide-react';
+import { ReportPrintHeader } from '@/components/finance/report-print-header';
 import Link from 'next/link';
 
 function fmt(n: number) {
@@ -63,6 +64,8 @@ export default function InventoryReportPage() {
         </div>
         <Button variant="outline" size="sm" onClick={() => window.print()}><Printer className="w-4 h-4 mr-2" />Print</Button>
       </div>
+
+      <ReportPrintHeader title="Inventory Report" subtitle={`As at ${new Date().toLocaleDateString('en-NG', { day: '2-digit', month: 'long', year: 'numeric' })}`} />
 
       {/* Filters */}
       <Card className="shadow-sm print:hidden">

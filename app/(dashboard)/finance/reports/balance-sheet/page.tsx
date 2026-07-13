@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { BarChart3, Download, RefreshCw, ChevronLeft } from 'lucide-react';
+import { ReportPrintHeader } from '@/components/finance/report-print-header';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,6 +71,7 @@ export default function BalanceSheetPage() {
 
   return (
     <div className="space-y-5">
+      <ReportPrintHeader title="Balance Sheet" subtitle={`As at ${asOf}`} />
       <div className="flex items-center gap-3">
         <Link href="/finance/reports" className="p-1.5 rounded-lg hover:bg-muted transition-colors">
           <ChevronLeft className="w-4 h-4" />
