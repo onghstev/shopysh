@@ -4,7 +4,7 @@ import Link from 'next/link';
 import {
   BarChart3, Scale, TrendingUp, Activity, FileText, BookOpen,
   ChevronRight, Receipt, Package, Landmark, Wallet, PieChart,
-  FileBarChart, CreditCard,
+  FileBarChart, CreditCard, ShoppingCart, Building2,
 } from 'lucide-react';
 
 const FINANCIAL_STATEMENTS = [
@@ -68,12 +68,36 @@ const OPERATIONAL_REPORTS = [
     tags: ['Stock', 'Inventory'],
   },
   {
+    href: '/finance/reports/sales-book',
+    title: 'Sales Book',
+    description: 'All sales invoices, receipts, and credit notes for a period with DR/CR totals. Printable.',
+    icon: BookOpen,
+    color: 'bg-emerald-50 text-emerald-600',
+    tags: ['Sales', 'Revenue'],
+  },
+  {
+    href: '/finance/reports/purchase-book',
+    title: 'Purchase Book',
+    description: 'All purchase invoices, payments, and debit notes for a period with DR/CR totals. Printable.',
+    icon: ShoppingCart,
+    color: 'bg-orange-50 text-orange-600',
+    tags: ['Purchases', 'Payables'],
+  },
+  {
     href: '/finance/reports/cash-book',
     title: 'Cash Book',
     description: 'Period cash receipts and payments with opening balance, running balance, and closing balance. Printable.',
     icon: Wallet,
     color: 'bg-primary/10 text-primary',
-    tags: ['Cash', 'Bank'],
+    tags: ['Cash'],
+  },
+  {
+    href: '/finance/reports/bank-book',
+    title: 'Bank Book',
+    description: 'Bank account receipts and payments with opening balance, running balance, and closing balance. Printable.',
+    icon: Building2,
+    color: 'bg-sky-50 text-sky-600',
+    tags: ['Bank'],
   },
   {
     href: '/finance/reports/bank-reconciliation',
