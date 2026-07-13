@@ -13,6 +13,24 @@ function fmt(n: number) {
   return new Intl.NumberFormat('en-NG', { minimumFractionDigits: 2 }).format(n);
 }
 
+function monthlyDep(a: any): number {
+  if (a.depreciationMethod === 'straight_line' || !a.depreciationMethod) {
+    return a.usefulLifeYears > 0
+      ? (Number(a.purchaseCost) - Number(a.residualValue)) / (a.usefulLifeYears * 12)
+      : 0;
+  }
+  // For reducing balance / other methods, use the latest posted depreciation amount
+  return Number(a.depreciation?.[0]?.amount ?? 0);
+}
+
+const METHOD_LABELS: Record<string, string> = {
+  straight_line:     'Straight Line',
+  reducing_balance:  'Reducing Balance',
+  double_declining:  'Double Declining',
+  units_of_production: 'Units of Production',
+  sum_of_years:      'Sum of Years',
+};
+
 export default function FixedAssetsRegisterPage() {
   const [data, setData]     = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -104,40 +122,51 @@ export default function FixedAssetsRegisterPage() {
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="bg-muted/30 border-y border-border">
-                          <th className="text-left px-4 py-2 font-semibold text-muted-foreground">Code</th>
-                          <th className="text-left px-4 py-2 font-semibold text-muted-foreground">Asset Name</th>
-                          <th className="text-left px-4 py-2 font-semibold text-muted-foreground">Purchase Date</th>
-                          <th className="text-left px-4 py-2 font-semibold text-muted-foreground">Method</th>
-                          <th className="text-left px-4 py-2 font-semibold text-muted-foreground">Life (yrs)</th>
-                          <th className="text-left px-4 py-2 font-semibold text-muted-foreground">Status</th>
-                          <th className="text-right px-4 py-2 font-semibold text-muted-foreground">Cost</th>
-                          <th className="text-right px-4 py-2 font-semibold text-muted-foreground">Accum. Dep.</th>
-                          <th className="text-right px-4 py-2 font-semibold text-muted-foreground">Book Value</th>
+                          <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Code</th>
+                          <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Asset Name</th>
+                          <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Acq. Date</th>
+                          <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Method</th>
+                          <th className="text-center px-3 py-2 font-semibold text-muted-foreground">Life (yrs)</th>
+                          <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Status</th>
+                          <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Acquisition Cost</th>
+                          <th className="text-right px-3 py-2 font-semibold text-red-700">Accum. Depreciation</th>
+                          <th className="text-right px-3 py-2 font-semibold text-muted-foreground">Salvage Value</th>
+                          <th className="text-right px-3 py-2 font-semibold text-emerald-700">Net Book Value</th>
+                          <th className="text-right px-3 py-2 font-semibold text-blue-700">Monthly Dep.</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {assets.map((a: any) => (
-                          <tr key={a.id} className="border-b border-border/30 hover:bg-muted/10">
-                            <td className="px-4 py-2 font-mono text-muted-foreground">{a.assetCode}</td>
-                            <td className="px-4 py-2 font-medium">{a.name}</td>
-                            <td className="px-4 py-2 text-muted-foreground">{format(new Date(a.purchaseDate), 'dd MMM yyyy')}</td>
-                            <td className="px-4 py-2 text-muted-foreground capitalize">{a.depreciationMethod?.replace('_', ' ')}</td>
-                            <td className="px-4 py-2 text-center text-muted-foreground">{a.usefulLifeYears}</td>
-                            <td className="px-4 py-2">
-                              <Badge variant="outline" className={`text-[10px] ${a.status === 'active' ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-gray-500'}`}>
-                                {a.status}
-                              </Badge>
-                            </td>
-                            <td className="px-4 py-2 text-right font-mono">{fmt(Number(a.purchaseCost))}</td>
-                            <td className="px-4 py-2 text-right font-mono text-muted-foreground">{fmt(Number(a.accumulatedDepreciation))}</td>
-                            <td className="px-4 py-2 text-right font-mono font-semibold">{fmt(Number(a.bookValue))}</td>
-                          </tr>
-                        ))}
+                        {assets.map((a: any) => {
+                          const monthly = monthlyDep(a);
+                          return (
+                            <tr key={a.id} className="border-b border-border/30 hover:bg-muted/10">
+                              <td className="px-3 py-2 font-mono text-muted-foreground whitespace-nowrap">{a.assetCode}</td>
+                              <td className="px-3 py-2 font-medium">{a.name}</td>
+                              <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{format(new Date(a.purchaseDate), 'dd MMM yyyy')}</td>
+                              <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">
+                                {METHOD_LABELS[a.depreciationMethod] ?? a.depreciationMethod?.replace(/_/g, ' ')}
+                              </td>
+                              <td className="px-3 py-2 text-center text-muted-foreground">{a.usefulLifeYears}</td>
+                              <td className="px-3 py-2">
+                                <Badge variant="outline" className={`text-[10px] ${a.status === 'active' ? 'text-emerald-700 border-emerald-200 bg-emerald-50' : 'text-gray-500'}`}>
+                                  {a.status}
+                                </Badge>
+                              </td>
+                              <td className="px-3 py-2 text-right font-mono">{fmt(Number(a.purchaseCost))}</td>
+                              <td className="px-3 py-2 text-right font-mono text-red-700">({fmt(Number(a.accumulatedDepreciation))})</td>
+                              <td className="px-3 py-2 text-right font-mono text-muted-foreground">{fmt(Number(a.residualValue))}</td>
+                              <td className="px-3 py-2 text-right font-mono font-semibold text-emerald-700">{fmt(Number(a.bookValue))}</td>
+                              <td className="px-3 py-2 text-right font-mono text-blue-700">{fmt(monthly)}</td>
+                            </tr>
+                          );
+                        })}
                         <tr className="bg-muted/20 font-semibold border-t border-border">
-                          <td colSpan={6} className="px-4 py-2 text-right text-xs">Subtotal — {category}</td>
-                          <td className="px-4 py-2 text-right font-mono">{fmt(catCost)}</td>
-                          <td className="px-4 py-2 text-right font-mono text-muted-foreground">{fmt(catAccum)}</td>
-                          <td className="px-4 py-2 text-right font-mono">{fmt(catBV)}</td>
+                          <td colSpan={6} className="px-3 py-2 text-right text-xs">Subtotal — {category}</td>
+                          <td className="px-3 py-2 text-right font-mono">{fmt(catCost)}</td>
+                          <td className="px-3 py-2 text-right font-mono text-red-700">({fmt(catAccum)})</td>
+                          <td className="px-3 py-2 text-right font-mono text-muted-foreground">{fmt(assets.reduce((s, a) => s + Number(a.residualValue), 0))}</td>
+                          <td className="px-3 py-2 text-right font-mono text-emerald-700">{fmt(catBV)}</td>
+                          <td className="px-3 py-2 text-right font-mono text-blue-700">{fmt(assets.reduce((s, a) => s + monthlyDep(a), 0))}</td>
                         </tr>
                       </tbody>
                     </table>
