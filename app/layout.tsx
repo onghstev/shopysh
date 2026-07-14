@@ -13,8 +13,8 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL ?? 'http://localhost:3000'),
-  title: 'SHOPYSH - Business Management Assistant',
-  description: 'AI-powered Business Management Assistant for African SMEs. Manage products, orders, and customer conversations.',
+  title: 'Shopysh',
+  description: 'AI-powered Business Management for African SMEs. Manage products, orders, and customer conversations.',
   icons: { icon: '/favicon.svg', shortcut: '/favicon.svg' },
   openGraph: { images: ['/og-image.png'] },
 };
