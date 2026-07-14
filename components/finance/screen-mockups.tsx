@@ -230,7 +230,7 @@ export function JournalEntriesMockup() {
             ['JNL-0123','01 Jul','Sales Receipt','Ngozi Adeyemi — Cash Sale','POSTED','35,000',false],
             ['JNL-0122','01 Jul','General Journal','Opening Balance Adjustment','POSTED','500,000',false],
           ].map(([ref,date,type,desc,status,amt,draft],i)=>(
-            <TR key={ref} stripe={i%2===1}>
+            <TR key={String(ref)} stripe={i%2===1}>
               <TD mono dim>{ref}</TD>
               <TD dim>{date}</TD>
               <TD>{type}</TD>
@@ -273,7 +273,7 @@ export function SalesBookMockup() {
               <TD><Pill label={type} color={type==='INVOICE'?'violet':'sky'}/></TD>
               <TD right mono>₦{net}</TD>
               <TD right mono>₦{vat}</TD>
-              <TD right mono style={{ fontWeight:600, color:JADE }}>₦{total}</TD>
+              <td style={{ padding:'5px 10px', fontSize:9.5, textAlign:'right', fontVariantNumeric:'tabular-nums', fontFamily:'monospace', fontWeight:600, color:JADE, whiteSpace:'nowrap' }}>₦{total}</td>
             </TR>
           ))}
         </tbody>
